@@ -1,0 +1,48 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - fragua-db
+    expose:
+      - "80"
+    environment:
+      APP_NAME: "Fragua Real Burger"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: https://fraguareal.juliangutierrez.online
+      FRONTEND_URL: https://fraguareal.juliangutierrez.online
+      APP_LOCALE: es
+      LOG_CHANNEL: stack
+      LOG_STACK: daily
+      LOG_LEVEL: warning
+      DB_CONNECTION: pgsql
+      DB_HOST: fragua-db
+      DB_PORT: "5432"
+      DB_DATABASE: fragua_real
+      DB_USERNAME: fragua
+      DB_PASSWORD: ${DB_PASSWORD:-FraguaReal_Db_2026}
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      MAIL_MAILER: log
+      PASARELA_PROVEEDOR: manual
+      CORS_ORIGENES: ""
+    volumes:
+      - fragua_storage:/var/www/backend/storage
+
+  fragua-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fragua_real
+      POSTGRES_USER: fragua
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-FraguaReal_Db_2026}
+    volumes:
+      - fragua_db:/var/lib/postgresql/data
+
+volumes:
+  fragua_storage:
+  fragua_db:
