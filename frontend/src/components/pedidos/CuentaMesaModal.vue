@@ -3,11 +3,14 @@
 // pedidos de la visita en curso con su total, lo pagado y el saldo. El Mesero cobra aquí la
 // mesa completa, o una parte si el cliente paga con varios métodos (RF-M06-003/011): el
 // sistema reparte el pago entre los pedidos, del más antiguo al más nuevo.
+// Mejora (26/10/2026): con cuentas separadas, los pedidos se ven por cuenta y se cobra una cuenta a la
+// vez (o toda la mesa); en transferencia hay que tomar la foto del comprobante.
 import { computed, ref, watch } from 'vue'
 import { Banknote, CreditCard, Landmark } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import CampoPesos from '@/components/common/CampoPesos.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import FotoComprobante from '@/components/pagos/FotoComprobante.vue'
 import { mesaService, type CuentaMesa } from '@/services/mesa.service'
 import { mensajeDeError } from '@/services/errors'
 import { formatoHoraPedido, saldoPendiente } from '@/utils/pedidoUi'
@@ -33,6 +36,27 @@ const METODOS: { v: Metodo; t: string; icono: typeof Banknote }[] = [
 const metodo = ref<Metodo>('efectivo')
 const monto = ref(0)
 const cobrando = ref(false)
+const foto = ref<File | null>(null)
+
+// null = toda la mesa. Con una sola cuenta no hay nada que elegir.
+const cuentaElegida = ref<number | null>(null)
+const variasCuentas = computed(() => (cuenta.value?.cuentas.length ?? 0) > 1)
+const saldoElegido = computed(() =>
+  cuentaElegida.value === null
+    ? (cuenta.value?.saldo ?? 0)
+    : (cuenta.value?.cuentas.find((c) => c.numero === cuentaElegida.value)?.saldo ?? 0),
+)
+function elegirCuenta(numero: number | null) {
+  cuentaElegida.value = numero
+  monto.value = saldoElegido.value
+}
+// Cuentas con sus pedidos, para mostrarlas por separado.
+const grupos = computed(() =>
+  (cuenta.value?.cuentas ?? []).map((c) => ({ ...c, lista: cuenta.value!.pedidos.filter((p) => c.pedidos.includes(p.id)) })),
+)
+function cuentaPorDefecto(data: CuentaMesa) {
+  return data.cuentas.length > 1 ? (data.cuentas.find((c) => c.saldo > 0)?.numero ?? null) : null
+}
 
 const ESTADOS: Record<Pedido['estado'], string> = {
   pendiente: 'Pendiente',
@@ -69,8 +93,10 @@ watch(
     try {
       const { data } = await mesaService.cuenta(id)
       cuenta.value = data
-      monto.value = data.saldo
+      cuentaElegida.value = cuentaPorDefecto(data)
+      monto.value = saldoElegido.value
       metodo.value = 'efectivo'
+      foto.value = null
     } catch (e) {
       error.value = mensajeDeError(e, 'No pudimos cargar la cuenta de la mesa.')
     } finally {
@@ -91,20 +117,36 @@ async function cobrar() {
     error.value = 'Ingresa un monto mayor a 0.'
     return
   }
-  if (monto.value > cuenta.value.saldo) {
-    error.value = `El monto supera lo que debe la mesa (${formatoPrecio(cuenta.value.saldo)}).`
+  if (monto.value > saldoElegido.value) {
+    const deQuien = cuentaElegida.value === null ? 'la mesa' : `la cuenta ${cuentaElegida.value}`
+    error.value = `El monto supera lo que debe ${deQuien} (${formatoPrecio(saldoElegido.value)}).`
+    return
+  }
+  if (metodo.value === 'transferencia' && !foto.value) {
+    error.value = 'Toma la foto del comprobante de la transferencia.'
     return
   }
   cobrando.value = true
   error.value = ''
   aviso.value = ''
   try {
-    const { data } = await mesaService.cobrar(props.mesaId, { metodo: metodo.value, monto: monto.value })
+    const cobrada = cuentaElegida.value
+    const { data } = await mesaService.cobrar(props.mesaId, {
+      metodo: metodo.value,
+      monto: monto.value,
+      cuenta: cobrada,
+      comprobante: metodo.value === 'efectivo' ? null : foto.value,
+    })
     cuenta.value = data
-    monto.value = data.saldo
-    if (data.saldo > 0) aviso.value = `Cobro registrado. Falta ${formatoPrecio(data.saldo)}.`
+    foto.value = null
+    const saldoCobrada = cobrada === null ? data.saldo : (data.cuentas.find((c) => c.numero === cobrada)?.saldo ?? 0)
+    if (cobrada !== null && saldoCobrada === 0 && data.saldo > 0) {
+      aviso.value = `Cuenta ${cobrada} pagada. Falta ${formatoPrecio(data.saldo)} de las demás cuentas.`
+      cuentaElegida.value = cuentaPorDefecto(data)
+    } else if (saldoCobrada > 0) aviso.value = `Cobro registrado. Falta ${formatoPrecio(saldoCobrada)}.`
     else if (!data.abierta) aviso.value = 'Cuenta pagada. Los pedidos quedaron finalizados y la mesa está libre.'
     else aviso.value = 'Cuenta pagada. Los pedidos que aún no se preparan se finalizan desde Pedidos.'
+    monto.value = saldoElegido.value
     emit('cobrado', data)
   } catch (e) {
     error.value = mensajeDeError(e, 'No pudimos registrar el cobro.')
@@ -127,8 +169,16 @@ async function cobrar() {
         {{ cuenta.abierta ? 'La mesa está abierta pero todavía no tiene pedidos.' : 'La mesa no tiene una cuenta abierta.' }}
       </p>
 
-      <ul v-else class="space-y-3">
-        <li v-for="pedido in cuenta.pedidos" :key="pedido.id" class="rounded-xl border border-gray-200 px-3.5 py-3">
+      <div v-else class="space-y-4">
+      <section v-for="grupo in (variasCuentas ? grupos : [{ numero: 0, total: cuenta.total, saldo: cuenta.saldo, lista: cuenta.pedidos }])" :key="grupo.numero">
+      <div v-if="variasCuentas" class="mb-2 flex items-baseline justify-between gap-3">
+        <h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-brand-700">Cuenta {{ grupo.numero }}</h3>
+        <span class="text-xs" :class="grupo.saldo > 0 ? 'font-semibold text-ink' : 'font-semibold text-emerald-700'">
+          {{ grupo.saldo > 0 ? `Debe ${formatoPrecio(grupo.saldo)} de ${formatoPrecio(grupo.total)}` : 'Pagada' }}
+        </span>
+      </div>
+      <ul class="space-y-3">
+        <li v-for="pedido in grupo.lista" :key="pedido.id" class="rounded-xl border border-gray-200 px-3.5 py-3">
           <div class="flex items-center justify-between gap-3 text-xs text-gray-500">
             <span>#{{ pedido.id }} · {{ formatoHoraPedido(pedido.created_at) }} · {{ ESTADOS[pedido.estado] }}</span>
             <span v-if="saldoPendiente(pedido) === 0" class="font-semibold text-emerald-700">Pagado</span>
@@ -149,6 +199,8 @@ async function cobrar() {
           <p class="mt-1.5 text-right text-sm font-semibold text-ink">{{ formatoPrecio(pedido.total) }}</p>
         </li>
       </ul>
+      </section>
+      </div>
 
       <dl class="mt-4 space-y-1 border-t border-gray-200 pt-3 text-sm">
         <div class="flex justify-between text-gray-600"><dt>Total de la mesa</dt><dd>{{ formatoPrecio(cuenta.total) }}</dd></div>
@@ -165,6 +217,29 @@ async function cobrar() {
 
       <!-- Cobro por mesa: solo el Mesero (RF-M06-003) -->
       <div v-if="puedeCobrar && cuenta.saldo > 0" class="mt-4 border-t border-gray-200 pt-4">
+        <template v-if="variasCuentas">
+          <p class="field-label">¿Qué cuenta paga?</p>
+          <div class="mb-4 flex flex-wrap gap-2">
+            <button
+              v-for="c in cuenta.cuentas.filter((x) => x.saldo > 0)"
+              :key="c.numero"
+              type="button"
+              class="min-h-11 rounded-xl border px-3.5 py-2 text-sm font-semibold transition active:scale-[0.97]"
+              :class="cuentaElegida === c.numero ? 'border-brand-500 bg-brand-50 text-brand-800' : 'border-gray-200 text-gray-600 hover:border-brand-300'"
+              @click="elegirCuenta(c.numero)"
+            >
+              Cuenta {{ c.numero }} · {{ formatoPrecio(c.saldo) }}
+            </button>
+            <button
+              type="button"
+              class="min-h-11 rounded-xl border px-3.5 py-2 text-sm font-semibold transition active:scale-[0.97]"
+              :class="cuentaElegida === null ? 'border-brand-500 bg-brand-50 text-brand-800' : 'border-gray-200 text-gray-600 hover:border-brand-300'"
+              @click="elegirCuenta(null)"
+            >
+              Toda la mesa · {{ formatoPrecio(cuenta.saldo) }}
+            </button>
+          </div>
+        </template>
         <p class="field-label">Método de pago</p>
         <div class="grid grid-cols-3 gap-2">
           <button
@@ -187,6 +262,7 @@ async function cobrar() {
           </span>
         </label>
         <p class="mt-1.5 text-xs text-gray-400">Para un pago mixto, cobra una parte con cada método.</p>
+        <FotoComprobante v-if="metodo !== 'efectivo'" v-model="foto" :obligatoria="metodo === 'transferencia'" />
         <p v-if="pendientesDePreparar" class="mt-2 text-xs text-amber-700">
           {{ pendientesDePreparar }} {{ pendientesDePreparar === 1 ? 'pedido aún no pasa' : 'pedidos aún no pasan' }} a preparación:
           quedan pagados y se finalizan después.

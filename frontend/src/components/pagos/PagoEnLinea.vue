@@ -7,6 +7,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Check, Copy, FileText, ImageUp, Landmark, Smartphone, X, Zap } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
+import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
 import type { PagosDirectosPublico } from '@/services/configuracion.service'
 import type { PagoEnLineaPayload } from '@/services/pedido.service'
 import type { MedioPagoEnLinea } from '@/types/models'
@@ -260,8 +261,8 @@ function enviar() {
       </template>
       <template v-else>{{ enviando ? 'Enviando comprobante…' : 'Enviar comprobante' }}</template>
     </BaseButton>
-    <p v-if="!automatico" class="text-xs text-[#6c655c]">
+    <AvisoDestacado v-if="!automatico">
       Revisamos la transferencia y te confirmamos. Si algo no cuadra, te decimos por qué y puedes volver a enviarla.
-    </p>
+    </AvisoDestacado>
   </div>
 </template>

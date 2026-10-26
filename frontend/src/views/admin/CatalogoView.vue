@@ -4,15 +4,19 @@
 // combos y promociones. RN-M04-19 a 23: fechas especiales (Navidad, Amor y Amistad, etc.)
 // NO tienen tratamiento propio — son una Promocion más con vigencia_inicio/vigencia_fin,
 // igual que un combo con su propia vigencia. Ver CatalogoController y PromocionController.
+// Eliminar (24/10/2026): un producto que nunca se vendió ni está en un combo se borra; si no, se
+// archiva y se restaura desde «Eliminados» (con contraseña y motivo, EliminarModal).
 import { computed, onMounted, ref, watch } from 'vue'
-import { Boxes, Download, FileSpreadsheet, Image as ImageIcon, Layers, Pencil, Percent, Plus, Tags, Upload } from 'lucide-vue-next'
+import { Boxes, Download, FileSpreadsheet, Image as ImageIcon, Layers, Pencil, Percent, Plus, RotateCcw, Tags, Trash2, Upload } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import CampoPesos from '@/components/common/CampoPesos.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import EliminarModal from '@/components/common/EliminarModal.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { catalogoService, type VistaPreviaImportacion } from '@/services/catalogo.service'
 import { guardarArchivo, mensajeDeBlob } from '@/utils/documentos'
 import { promocionService } from '@/services/promocion.service'
+import { eliminacionService, type ResultadoEliminacion } from '@/services/eliminacion.service'
 import { erroresDeValidacion, mensajeDeError } from '@/services/errors'
 import type { Categoria, Producto, Combo, Extra, Promocion } from '@/types/models'
 
@@ -124,14 +128,14 @@ const extrasGenerales = computed(() => extrasTodos.value.filter((e) => e.alcance
 
 const modalCategoriaAbierto = ref(false)
 const categoriaEditando = ref<Categoria | null>(null)
-const formCategoria = ref({ nombre: '', activo: true })
+const formCategoria = ref({ nombre: '', activo: true, permite_quitar_ingredientes: true })
 const erroresCategoria = ref<Record<string, string>>({})
 const errorCategoria = ref('')
 const guardandoCategoria = ref(false)
 
 function abrirNuevaCategoria() {
   categoriaEditando.value = null
-  formCategoria.value = { nombre: '', activo: true }
+  formCategoria.value = { nombre: '', activo: true, permite_quitar_ingredientes: true }
   erroresCategoria.value = {}
   errorCategoria.value = ''
   modalCategoriaAbierto.value = true
@@ -139,7 +143,11 @@ function abrirNuevaCategoria() {
 
 function abrirEditarCategoria(categoria: Categoria) {
   categoriaEditando.value = categoria
-  formCategoria.value = { nombre: categoria.nombre, activo: categoria.activo }
+  formCategoria.value = {
+    nombre: categoria.nombre,
+    activo: categoria.activo,
+    permite_quitar_ingredientes: categoria.permite_quitar_ingredientes !== false,
+  }
   erroresCategoria.value = {}
   errorCategoria.value = ''
   modalCategoriaAbierto.value = true
@@ -173,6 +181,52 @@ async function confirmarCategoria() {
 
 const filtroCategoria = ref<'todas' | number>('todas')
 const busquedaProducto = ref('')
+
+// ---- Eliminar y restaurar productos (24/10/2026) ----
+const verEliminados = ref(false)
+const productosEliminados = ref<Producto[]>([])
+const cargandoEliminados = ref(false)
+const productoAEliminar = ref<Producto | null>(null)
+const avisoProductos = ref('')
+const restaurandoId = ref<number | null>(null)
+
+async function cargarEliminados() {
+  cargandoEliminados.value = true
+  try {
+    const { data } = await catalogoService.productos({ eliminados: 1 })
+    productosEliminados.value = data
+  } catch (e) {
+    error.value = mensajeDeError(e, 'No pudimos cargar los productos eliminados.')
+  } finally {
+    cargandoEliminados.value = false
+  }
+}
+
+function verProductosEliminados(si: boolean) {
+  verEliminados.value = si
+  avisoProductos.value = ''
+  if (si) cargarEliminados()
+}
+
+async function alEliminarProducto(resultado: ResultadoEliminacion) {
+  productoAEliminar.value = null
+  avisoProductos.value = resultado.mensaje
+  await cargar() // los combos que lo traían también cambian
+}
+
+async function restaurarProducto(producto: Producto) {
+  restaurandoId.value = producto.id
+  error.value = ''
+  try {
+    await eliminacionService.restaurar<Producto>('productos', producto.id)
+    avisoProductos.value = `«${producto.nombre}» volvió al catálogo, inactivo: actívalo al editarlo cuando lo vayas a vender.`
+    await Promise.all([cargarEliminados(), cargar()])
+  } catch (e) {
+    error.value = mensajeDeError(e, 'No pudimos restaurar el producto.')
+  } finally {
+    restaurandoId.value = null
+  }
+}
 
 const productosFiltrados = computed(() => {
   return productos.value.filter((p) => {
@@ -1200,7 +1254,57 @@ onMounted(cargar)
 
     <!-- ---- Productos ---- -->
     <template v-else-if="seccion === 'productos'">
-      <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="mt-6 inline-flex rounded-xl border border-gray-200 bg-white p-1 text-sm">
+        <button
+          type="button"
+          class="rounded-lg px-3.5 py-1.5 font-medium transition"
+          :class="!verEliminados ? 'bg-ink text-white' : 'text-gray-600 hover:text-ink'"
+          @click="verProductosEliminados(false)"
+        >
+          Productos
+        </button>
+        <button
+          type="button"
+          class="rounded-lg px-3.5 py-1.5 font-medium transition"
+          :class="verEliminados ? 'bg-ink text-white' : 'text-gray-600 hover:text-ink'"
+          @click="verProductosEliminados(true)"
+        >
+          Eliminados
+        </button>
+      </div>
+      <p v-if="avisoProductos" class="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ avisoProductos }}</p>
+
+      <!-- Eliminados: solo se pueden restaurar. -->
+      <template v-if="verEliminados">
+        <div v-if="cargandoEliminados" class="loading-state">Cargando…</div>
+        <div v-else-if="!productosEliminados.length" class="mt-10 empty-state">
+          <Boxes :size="32" class="mx-auto text-gray-300" />
+          <p class="mt-3 text-sm text-gray-500">No hay productos eliminados.</p>
+        </div>
+        <ul v-else class="mt-4 space-y-3">
+          <li
+            v-for="producto in productosEliminados"
+            :key="producto.id"
+            class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="min-w-0">
+              <p class="text-[15px] font-semibold text-ink">{{ producto.nombre }}</p>
+              <p class="mt-1 text-xs text-gray-500">
+                {{ formatoMoneda(producto.precio_base) }} · eliminado el
+                {{ producto.eliminado_at ? new Date(producto.eliminado_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '' }}
+                <template v-if="producto.eliminado_motivo"> · «{{ producto.eliminado_motivo }}»</template>
+              </p>
+            </div>
+            <BaseButton v-escritura variant="secondary" size="sm" :disabled="restaurandoId === producto.id" @click="restaurarProducto(producto)">
+              <RotateCcw :size="14" />
+              Restaurar
+            </BaseButton>
+          </li>
+        </ul>
+      </template>
+
+      <template v-else>
+      <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="segmented">
           <button
             type="button"
@@ -1301,9 +1405,21 @@ onMounted(cargar)
               <Pencil :size="14" />
               Editar
             </BaseButton>
+            <BaseButton
+              v-escritura
+              variant="ghost"
+              size="sm"
+              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
+              @click="(productoAEliminar = producto), (avisoProductos = '')"
+            >
+              <Trash2 :size="14" />
+              Eliminar
+            </BaseButton>
           </div>
         </li>
       </ul>
+      </template>
+      <EliminarModal tipo="productos" articulo="el producto" :registro="productoAEliminar" @cerrar="productoAEliminar = null" @eliminado="alEliminarProducto" />
     </template>
 
     <!-- ---- Combos ---- -->
@@ -1441,6 +1557,15 @@ onMounted(cargar)
         <label v-if="categoriaEditando" class="flex items-center gap-2">
           <input v-model="formCategoria.activo" type="checkbox" class="size-[18px] accent-brand-600" />
           <span class="text-sm text-gray-700">Categoría activa</span>
+        </label>
+
+        <!-- Mejora (26/10/2026) -->
+        <label class="flex items-start gap-2">
+          <input v-model="formCategoria.permite_quitar_ingredientes" type="checkbox" class="mt-0.5 size-[18px] accent-brand-600" />
+          <span class="text-sm text-gray-700">
+            Se pueden quitar ingredientes
+            <span class="block text-xs text-gray-500">El menú le pregunta al cliente «¿Quieres quitar algún ingrediente?». Apágalo en Bebidas.</span>
+          </span>
         </label>
 
         <p v-if="errorCategoria" class="alert-error">{{ errorCategoria }}</p>

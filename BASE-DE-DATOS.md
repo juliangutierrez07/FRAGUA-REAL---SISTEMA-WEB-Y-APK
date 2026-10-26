@@ -1,6 +1,6 @@
 # Base de datos — Fragua Real Burger
 
-PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 40 tablas propias del sistema más la de control de migraciones, creadas por 65 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
+PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 41 tablas propias del sistema más la de control de migraciones, creadas por 68 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
 
 ## Contenido
 
@@ -30,7 +30,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `users` | 12 | Cuentas de los roles (`role`: superadmin, administrador, soporte, mesero, cliente; superadmin desde el 19/10/2026, M09, y soporte desde el 20/10/2026, M10), `menus_permitidos` (json, los menús que el SuperAdmin le habilitó; vacío = todos los de su rol), con `username` opcional y único y el permiso `puede_registrar_gastos` del Mesero autorizado. |
+| `users` | 15 | Cuentas de los roles (`role`: superadmin, administrador, soporte, mesero, cliente; superadmin desde el 19/10/2026, M09, y soporte desde el 20/10/2026, M10), `menus_permitidos` (json, los menús que el SuperAdmin le habilitó; vacío = todos los de su rol), con `username` opcional y único y el permiso `puede_registrar_gastos` del Mesero autorizado. Eliminar (24/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (archivado: fuera de las listas, se restaura). |
 | `personal_access_tokens` | 12 | Sesiones (tokens de Sanctum) con IP y dispositivo; vencen por inactividad o duración máxima. |
 | `password_reset_tokens` | 3 | Enlaces de recuperación de contraseña (guardados con hash, vencen a la hora). |
 | `auditorias` | 9 | Historial de acciones críticas: quién, qué, sobre qué registro, antes y después, IP y navegador. Triggers de PostgreSQL impiden cambiarlo o borrarlo. |
@@ -39,8 +39,8 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `categorias` | 5 | Categorías del menú. Desactivar una oculta sus productos y combos. |
-| `productos` | 12 | Productos con precio base, tipo de venta (bebida, alimento u otro), disponibilidad y foto (`imagen_path`, archivo privado). `imagen_url` es una columna antigua que ya no se usa. |
+| `categorias` | 6 | Categorías del menú. Desactivar una oculta sus productos y combos. `permite_quitar_ingredientes` (26/10/2026): si el menú pregunta qué ingrediente quitar (las bebidas no). |
+| `productos` | 15 | Productos con precio base, tipo de venta (bebida, alimento u otro), disponibilidad y foto (`imagen_path`, archivo privado). `imagen_url` es una columna antigua que ya no se usa. Eliminar (24/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (archivado: fuera de las listas, se restaura). |
 | `variantes` | 8 | Presentaciones o tamaños de un producto, con su precio, su disponibilidad y, desde el 16/10/2026, una descripción y una foto propias. |
 | `extras` | 8 | Adicionales: generales (`producto_id` nulo) o específicos de un producto. |
 | `producto_extra` | 5 | Qué extras generales ofrece cada producto. Un extra general sin productos elegidos no se ofrece con ninguno (desde el 16/10/2026). |
@@ -54,7 +54,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `mesas` | 8 | Mesas del local con su QR y su estado (libre, ocupada o reservada). `ocupada_desde` marca el inicio de la visita. |
+| `mesas` | 11 | Mesas del local con su QR y su estado (libre, ocupada o reservada). `ocupada_desde` marca el inicio de la visita. Eliminar (24/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (archivado: fuera de las listas, se restaura). |
 | `reservas` | 35 | Reservas con el depósito: método, estado, en qué turno de caja se recibió o devolvió, abono al pedido, no-show y enlace secreto para el cliente. `descripcion` es la nota opcional del cliente (hasta 500 caracteres). Pago directo: captura del depósito (`deposito_comprobante_path` y `_mime`, en `storage/app/private/comprobantes-pago`), `deposito_referencia` y `deposito_rechazo_motivo`; `deposito_pasarela` acepta `breb`. |
 | `reserva_avisos` | 11 | Cada correo de una reserva (confirmación, recordatorio, cancelación, no-show): destino, estado, intentos y error. |
 
@@ -62,7 +62,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `pedidos` | 43 | Tabla única para Local, QR, Domicilio y Recogida (ADR-001): estado, totales, descuentos, datos de entrega, quién y cuándo en cada paso, y el enlace secreto del invitado. |
+| `pedidos` | 47 | Tabla única para Local, QR, Domicilio y Recogida (ADR-001): estado, totales, descuentos, datos de entrega, quién y cuándo en cada paso, y el enlace secreto del invitado. 26/10/2026: `cuenta` (cuentas separadas de la mesa), `ubicacion_lat`/`ubicacion_lng` (la ubicación que compartió el Cliente) y `paga_con` (billete del domicilio contra entrega). |
 | `pedido_detalles` | 12 | Líneas del pedido: producto, presentación o combo, cantidad, precio congelado (ADR-002), su parte del descuento y si ya se preparó. |
 | `pedido_detalle_extra` | 4 | Extras de cada línea con su precio congelado. |
 | `pedido_modificaciones` | 14 | Historial de cambios a las líneas de un pedido ya enviado: quién, antes, después y el total. No se edita ni se borra. |
@@ -92,7 +92,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
 | `reporte_exportaciones` | 14 | Reportes exportados (PDF o Excel) guardados para volver a descargarlos tal cual. |
-| `configuraciones` | 6 | Valores que edita el Administrador: valor del domicilio, depósito de reserva, tiempos de las reservas y datos del negocio (`negocio_direccion`, `negocio_telefono`, `negocio_logo_path` y, del SuperAdmin, `negocio_nombre`, `negocio_nit`, `negocio_latitud` y `negocio_longitud` (el punto del local en el mapa); la ruta del logo en `storage/app/private/negocio`). Del SuperAdmin también las cuentas para pagos en línea sin Wompi: `pago_nequi_*`, `pago_bancolombia_*` y `pago_breb_*`. |
+| `configuraciones` | 6 | Valores que edita el Administrador: valor del domicilio, depósito de reserva, tiempos de las reservas y datos del negocio (`negocio_direccion`, `negocio_telefono`, `negocio_logo_path` y, del SuperAdmin, `negocio_nombre`, `negocio_nit`, `negocio_latitud` y `negocio_longitud` (el punto del local en el mapa); la ruta del logo en `storage/app/private/negocio`). Del SuperAdmin también las cuentas para pagos en línea sin Wompi: `pago_nequi_*`, `pago_bancolombia_*` y `pago_breb_*`. M12: el formato del ticket (`impresion_*`). |
 
 ### Notificaciones (M11)
 
@@ -100,13 +100,19 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 |---|---|---|
 | `notificaciones` | 10 | La campana del personal: una fila por persona que debe enterarse (`user_id`), con `tipo`, `categoria` (pedidos, reservas, caja, operacion o sistema), `titulo`, `texto`, `enlace` a la pantalla del panel, `leida_at` y `created_at`. `clave` es única por persona (`user_id` + `clave`) para que el mismo aviso no se repita. Se borran solas a los 30 días (`notificaciones:limpiar`). |
 
+### Impresoras (M12)
+
+| Tabla | Columnas | Qué guarda |
+|---|---|---|
+| `equipos_impresion` | 17 | Los equipos del local que imprimen (24/10/2026): `nombre`, `clave` única que identifica al navegador (no viaja en el JSON), `codigo_vinculacion` de 6 números con su vencimiento, qué imprime (`imprime_comandas`, `imprime_comprobantes`), `al_confirmar`, `automatico`, última señal (`ultima_senal_at`, `ultima_senal_por`) y última prueba (`ultima_prueba_at`, `ultima_prueba_resultado`: ok, fallo o cortado, `ultima_prueba_por`) y `registrado_por`. |
+
 ### Tablas de Laravel
 
 `jobs`, `job_batches` y `failed_jobs` (cola de trabajos: correos y latido), `cache` y `cache_locks` (caché y límites de intentos), `sessions` (sesiones web de Laravel; la aplicación no la usa porque se autentica con tokens) y `migrations` (control de migraciones). Las crea la migración `2026_10_18_000001`.
 
 ## Relaciones
 
-Cada diagrama muestra las tablas de un módulo y las llaves foráneas que salen de ellas (generado desde el esquema real). Las referencias a `users` que solo dicen quién hizo una acción (`*_por`, `user_id`) se omiten para que el diagrama se lea; están en las tablas de arriba. El diagrama completo, con las 40 tablas y todas sus columnas, tipos, llaves y valores permitidos, está en la carpeta «Documentacion Fragua Real» como `er_diagram.png` y `er_diagram.pdf` (el PDF se puede ampliar sin perder nitidez).
+Cada diagrama muestra las tablas de un módulo y las llaves foráneas que salen de ellas (generado desde el esquema real). Las referencias a `users` que solo dicen quién hizo una acción (`*_por`, `user_id`) se omiten para que el diagrama se lea; están en las tablas de arriba. El diagrama completo, con las 41 tablas y todas sus columnas, tipos, llaves y valores permitidos, está en la carpeta «Documentacion Fragua Real» como `er_diagram.png` y `er_diagram.pdf` (el PDF se puede ampliar sin perder nitidez).
 
 `}o--||` = muchas a una obligatoria; `}o--o|` = muchas a una opcional (la columna puede quedar vacía).
 
@@ -221,6 +227,9 @@ Además, `transacciones_pasarela` se enlaza con un pago o con una reserva por `p
 | `2026_10_23_000002` | 16/10/2026 | `variantes.descripcion`, `imagen_url` e `imagen_path`. | — |
 | `2026_10_23_000003` | 16/10/2026 | `promociones.variante_id` y `promociones.es_oferta`. | — |
 | `2026_10_26_000001` | 19/10/2026 | `reservas.descripcion`: nota opcional del cliente en su reserva. | — |
+| `2026_11_02_000001` | 26/10/2026 | Mejoras de operación: `pedidos.cuenta`, `ubicacion_lat`, `ubicacion_lng`, `paga_con` y `categorias.permite_quitar_ingredientes` (las categorías de bebidas quedan en falso). | — |
+| `2026_11_01_000001` | 24/10/2026 | Tabla `equipos_impresion` (M12): equipos del local que imprimen, con su clave, código de vinculación, señal y última prueba. | — |
+| `2026_10_31_000001` | 24/10/2026 | Eliminar: `eliminado_at` (con índice), `eliminado_por` (→ `users`, nulo al borrarse) y `eliminado_motivo` en `mesas`, `productos` y `users`. | — |
 | `2026_10_30_000001` | 22/10/2026 | Pago directo: captura, referencia y motivo del rechazo en `pagos` y `reservas`; `pasarela` y `deposito_pasarela` aceptan `breb` (en PostgreSQL cambian `pagos_pasarela_check` y `reservas_deposito_pasarela_check`). Al deshacerla, un `breb` queda en nulo. | — |
 | `2026_10_29_000001` | 21/10/2026 | Tabla `notificaciones` (M11): la campana del personal, con índice único `user_id` + `clave` y los índices para contar las no leídas y limpiar las viejas. | — |
 | `2026_10_28_000001` | 20/10/2026 | `users.role` acepta `soporte` (M10). En PostgreSQL cambia la restricción `users_role_check`; al deshacerla, una cuenta de Soporte queda como Cliente desactivada y sin sesiones (nunca como Administrador). | — |

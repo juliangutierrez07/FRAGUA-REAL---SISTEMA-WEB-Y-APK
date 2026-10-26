@@ -2,15 +2,19 @@
 // M05 — Vista Administrador > Mesas: alta de mesa, baja lógica (y su reverso, para no
 // perder la mesa para siempre) y liberación forzada con motivo (RF-M05-004/009/010/011).
 // Espeja MesaController.php / mesa.service.ts.
+// Eliminar (24/10/2026): una mesa sin pedidos ni reservas se borra; con historial se archiva y se
+// restaura desde «Eliminadas» (con contraseña y motivo, EliminarModal).
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Armchair, CalendarClock, LayoutGrid, Pencil, Plus, QrCode } from 'lucide-vue-next'
+import { Armchair, CalendarClock, LayoutGrid, Pencil, Plus, QrCode, RotateCcw, Trash2 } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import EliminarModal from '@/components/common/EliminarModal.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import PestanasSalon from '@/components/common/PestanasSalon.vue'
 import QrMesaModal from '@/components/common/QrMesaModal.vue'
 import { mesaService } from '@/services/mesa.service'
+import { eliminacionService, type ResultadoEliminacion } from '@/services/eliminacion.service'
 import { erroresDeValidacion, mensajeDeError } from '@/services/errors'
 import type { Mesa } from '@/types/models'
 
@@ -20,12 +24,15 @@ const mesas = ref<Mesa[]>([])
 const cargando = ref(true)
 const error = ref('')
 const procesando = ref<number | null>(null)
+const exito = ref('')
+// Eliminar (24/10/2026): las archivadas se ven aparte, para restaurarlas.
+const verEliminadas = ref(false)
 
 async function cargar() {
   cargando.value = true
   error.value = ''
   try {
-    const { data } = await mesaService.index()
+    const { data } = await mesaService.index({ eliminadas: verEliminadas.value })
     mesas.value = data
   } catch (e) {
     error.value = mensajeDeError(e, 'No pudimos cargar las mesas.')
@@ -169,7 +176,43 @@ async function confirmarForzada() {
   }
 }
 
-const contadorTexto = computed(() => (mesas.value.length === 1 ? '1 mesa' : `${mesas.value.length} mesas`))
+// ---- Eliminar y restaurar (24/10/2026) ----
+const mesaAEliminar = ref<Mesa | null>(null)
+
+function cambiarVista(eliminadas: boolean) {
+  verEliminadas.value = eliminadas
+  exito.value = ''
+  cargar()
+}
+
+async function alEliminar(resultado: ResultadoEliminacion) {
+  mesaAEliminar.value = null
+  exito.value = resultado.mensaje
+  await cargar()
+}
+
+async function restaurar(mesa: Mesa) {
+  procesando.value = mesa.id
+  error.value = ''
+  exito.value = ''
+  try {
+    await eliminacionService.restaurar<Mesa>('mesas', mesa.id)
+    exito.value = `«${mesa.nombre}» volvió a la lista, dada de baja: reactívala cuando la vayas a usar.`
+    await cargar()
+  } catch (e) {
+    error.value = mensajeDeError(e, 'No pudimos restaurar la mesa.')
+  } finally {
+    procesando.value = null
+  }
+}
+
+function fechaCorta(valor?: string | null) {
+  return valor ? new Date(valor).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+}
+
+const contadorTexto = computed(() =>
+  (mesas.value.length === 1 ? '1 mesa' : `${mesas.value.length} mesas`) + (verEliminadas.value ? (mesas.value.length === 1 ? ' eliminada' : ' eliminadas') : ''),
+)
 
 // ---- QR de mesa: ver/descargar/imprimir/regenerar (RF-M05-005/006) ----
 const mesaQr = ref<Mesa | null>(null)
@@ -196,14 +239,54 @@ onMounted(cargar)
     <!-- Corrección (16/10/2026): acceso directo a todas las reservas. -->
     <PestanasSalon />
 
+    <div class="mt-4 inline-flex rounded-xl border border-gray-200 bg-white p-1 text-sm">
+      <button
+        type="button"
+        class="rounded-lg px-3.5 py-1.5 font-medium transition"
+        :class="!verEliminadas ? 'bg-ink text-white' : 'text-gray-600 hover:text-ink'"
+        @click="cambiarVista(false)"
+      >
+        Mesas
+      </button>
+      <button
+        type="button"
+        class="rounded-lg px-3.5 py-1.5 font-medium transition"
+        :class="verEliminadas ? 'bg-ink text-white' : 'text-gray-600 hover:text-ink'"
+        @click="cambiarVista(true)"
+      >
+        Eliminadas
+      </button>
+    </div>
+
     <p v-if="error" class="mt-4 alert-error">{{ error }}</p>
+    <p v-if="exito" class="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ exito }}</p>
 
     <div v-if="cargando" class="loading-state">Cargando mesas…</div>
 
     <div v-else-if="!mesas.length" class="mt-10 empty-state">
       <LayoutGrid :size="32" class="mx-auto text-gray-300" />
-      <p class="mt-3 text-sm text-gray-500">Todavía no hay mesas creadas.</p>
+      <p class="mt-3 text-sm text-gray-500">{{ verEliminadas ? 'No hay mesas eliminadas.' : 'Todavía no hay mesas creadas.' }}</p>
     </div>
+
+    <!-- Eliminadas: solo se pueden restaurar. -->
+    <ul v-else-if="verEliminadas" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <li v-for="mesa in mesas" :key="mesa.id" class="card flex flex-col gap-3 p-4 sm:p-5">
+        <div class="flex items-center gap-3.5">
+          <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-gray-400">
+            <Armchair :size="22" />
+          </span>
+          <div class="min-w-0">
+            <p class="font-display text-lg font-medium leading-tight text-ink">{{ mesa.nombre }}</p>
+            <p class="mt-0.5 text-xs text-gray-500">Eliminada el {{ fechaCorta(mesa.eliminado_at) }}</p>
+          </div>
+        </div>
+        <p v-if="mesa.eliminado_motivo" class="text-xs text-gray-600">Motivo: «{{ mesa.eliminado_motivo }}»</p>
+        <BaseButton v-escritura variant="secondary" size="sm" class="mt-auto" :disabled="procesando === mesa.id" @click="restaurar(mesa)">
+          <RotateCcw :size="14" />
+          Restaurar
+        </BaseButton>
+      </li>
+    </ul>
 
     <template v-else>
       <p class="mt-4 text-xs text-gray-500">{{ contadorTexto }}</p>
@@ -288,10 +371,22 @@ onMounted(cargar)
             >
               Reactivar
             </BaseButton>
+            <BaseButton v-escritura
+              variant="ghost"
+              size="sm"
+              class="col-span-2 !text-red-700 hover:!border-red-300 hover:!bg-red-50"
+              :disabled="procesando === mesa.id"
+              @click="(mesaAEliminar = mesa), (exito = '')"
+            >
+              <Trash2 :size="14" />
+              Eliminar mesa
+            </BaseButton>
           </div>
         </li>
       </ul>
     </template>
+
+    <EliminarModal tipo="mesas" articulo="la mesa" :registro="mesaAEliminar" @cerrar="mesaAEliminar = null" @eliminado="alEliminar" />
 
     <!-- Cambiar nombre (RF-M05-002) -->
     <BaseModal :model-value="!!mesaEditando" title="Cambiar nombre de la mesa" @update:model-value="mesaEditando = null">

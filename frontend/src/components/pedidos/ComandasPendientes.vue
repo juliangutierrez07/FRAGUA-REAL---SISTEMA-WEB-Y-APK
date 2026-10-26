@@ -4,11 +4,15 @@
 // Se actualiza cada 15 segundos y cuando se confirma, cambia o cancela un pedido. Con «Abrir solas»
 // prendido en este equipo, cada comanda nueva se abre sola para imprimir (en la cocina, con Chrome en
 // modo de impresión automática, sale sin pasar por el cuadro de impresión).
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+// M12 (24/10/2026): si este equipo está registrado en Impresoras, sus ajustes los manda el
+// Administrador desde allí; si no, aquí se vincula con un código y se hace la impresión de prueba.
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AlertTriangle, ChefHat, ChevronDown } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
+import PruebaImpresion from '@/components/impresion/PruebaImpresion.vue'
+import { useEquipoImpresionStore } from '@/stores/equipoImpresion'
 import { comandaService, type ComandaPendiente } from '@/services/comanda.service'
-import { mensajeDeError } from '@/services/errors'
+import { erroresDeValidacion, mensajeDeError } from '@/services/errors'
 import { abrirPdf } from '@/utils/documentos'
 import { EVENTO_COMANDAS, TIPOS_COMANDA, imprimirAlConfirmar, imprimirAutomatico } from '@/utils/comandas'
 
@@ -21,6 +25,33 @@ const ultima = ref<ComandaPendiente | null>(null)
 const automatico = ref(imprimirAutomatico.get())
 const alConfirmar = ref(imprimirAlConfirmar.get())
 const vistas = new Set<number>()
+
+// ---- M12: este equipo en Impresoras ----
+const equipoStore = useEquipoImpresionStore()
+watch(
+  () => equipoStore.equipo,
+  (e) => {
+    if (!e) return
+    automatico.value = e.imprime_comandas && e.automatico
+    alConfirmar.value = e.imprime_comandas && e.al_confirmar
+  },
+  { immediate: true },
+)
+const codigo = ref('')
+const vinculando = ref(false)
+const errorVincular = ref('')
+async function vincular() {
+  vinculando.value = true
+  errorVincular.value = ''
+  try {
+    await equipoStore.vincular(codigo.value)
+    codigo.value = ''
+  } catch (e) {
+    errorVincular.value = erroresDeValidacion(e).codigo || mensajeDeError(e, 'No pudimos vincular este equipo.')
+  } finally {
+    vinculando.value = false
+  }
+}
 let primeraCarga = true
 let temporizador: ReturnType<typeof setInterval> | null = null
 
@@ -153,8 +184,20 @@ onBeforeUnmount(() => {
     <p v-if="error" class="alert-error">{{ error }}</p>
 
     <details class="text-xs text-gray-500">
-      <summary class="cursor-pointer select-none">Impresión de comandas en este equipo</summary>
+      <summary class="cursor-pointer select-none">
+        Impresión de comandas en este equipo<template v-if="equipoStore.equipo"> · «{{ equipoStore.equipo.nombre }}»</template>
+      </summary>
       <div class="mt-2 space-y-1.5 rounded-xl bg-white p-3">
+        <!-- M12: registrado en Impresoras; los ajustes los cambia el Administrador allí. -->
+        <template v-if="equipoStore.registrado">
+          <p class="text-gray-700">
+            Este equipo está registrado en Impresoras<template v-if="equipoStore.equipo"> como <strong>«{{ equipoStore.equipo.nombre }}»</strong></template>.
+            Sus ajustes los cambia el Administrador en Impresoras.
+          </p>
+          <p>{{ alConfirmar ? '✓' : '✗' }} Abre la comanda al confirmar un pedido · {{ automatico ? '✓' : '✗' }} Abre solas las comandas nuevas</p>
+          <PruebaImpresion compacto />
+        </template>
+        <template v-else>
         <label class="flex items-center gap-2">
           <input type="checkbox" :checked="alConfirmar" @change="cambiarAlConfirmar" />
           Abrir la comanda al confirmar un pedido
@@ -163,6 +206,14 @@ onBeforeUnmount(() => {
           <input type="checkbox" :checked="automatico" @change="cambiarAutomatico" />
           Abrir solas las comandas nuevas (para el equipo de la cocina)
         </label>
+        <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2">
+          <span>Vincular con un código de Impresoras:</span>
+          <input v-model="codigo" v-formato="'entero'" maxlength="6" class="field-sm w-24 font-mono tracking-widest" placeholder="000000" />
+          <BaseButton size="sm" variant="secondary" :disabled="vinculando || codigo.length !== 6" @click="vincular">Vincular</BaseButton>
+          <span v-if="errorVincular" class="w-full text-red-600">{{ errorVincular }}</span>
+        </div>
+        <PruebaImpresion compacto />
+        </template>
         <p>
           Para que salgan sin el cuadro de impresión, abre Chrome con la opción de impresión automática
           (<code>--kiosk-printing</code>) y la impresora de 80 mm como predeterminada. Permite las ventanas

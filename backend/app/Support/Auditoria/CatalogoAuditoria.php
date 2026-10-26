@@ -64,6 +64,9 @@ final class CatalogoAuditoria
         'cambiar_permiso_gastos' => ['Cambio de permiso de compras y gastos', 'usuarios'],
         'activar_usuario' => ['Activación de usuario', 'usuarios'],
         'desactivar_usuario' => ['Desactivación de usuario', 'usuarios'],
+        'eliminar_usuario' => ['Usuario eliminado (borrado)', 'usuarios'],
+        'archivar_usuario' => ['Usuario eliminado (archivado)', 'usuarios'],
+        'restaurar_usuario' => ['Usuario restaurado', 'usuarios'],
         'actualizar_perfil' => ['Actualización del perfil propio', 'usuarios'],
 
         // Pedidos
@@ -83,6 +86,14 @@ final class CatalogoAuditoria
         'reembolsar_pago' => ['Reembolso de pago', 'caja'],
         'anular_comprobante' => ['Comprobante de pago anulado', 'caja'],
         'imprimir_comprobante' => ['Impresión o reimpresión de comprobante', 'caja'],
+        // M12 — Impresoras (24/10/2026).
+        'registrar_equipo_impresion' => ['Equipo de impresión registrado', 'configuracion'],
+        'vincular_equipo_impresion' => ['Equipo de impresión vinculado con código', 'configuracion'],
+        'editar_equipo_impresion' => ['Cambio en un equipo de impresión', 'configuracion'],
+        'quitar_equipo_impresion' => ['Equipo de impresión quitado', 'configuracion'],
+        'prueba_impresion' => ['Impresión de prueba', 'configuracion'],
+        'editar_formato_impresion' => ['Cambio en el formato de los tickets', 'configuracion'],
+        'descartar_comanda' => ['Comanda descartada (no se imprimirá)', 'pedidos'],
 
         // Compras, gastos y cierre diario
         'registrar_compra_gasto' => ['Registro de compra o gasto', 'compras'],
@@ -98,6 +109,9 @@ final class CatalogoAuditoria
         'editar_categoria' => ['Edición de categoría', 'catalogo'],
         'crear_producto' => ['Creación de producto', 'catalogo'],
         'editar_producto' => ['Edición de producto', 'catalogo'],
+        'eliminar_producto' => ['Producto eliminado (borrado)', 'catalogo'],
+        'archivar_producto' => ['Producto eliminado (archivado)', 'catalogo'],
+        'restaurar_producto' => ['Producto restaurado', 'catalogo'],
         'cambiar_foto_producto' => ['Cambio de foto de producto', 'catalogo'],
         'crear_variante' => ['Creación de variante', 'catalogo'],
         'editar_variante' => ['Edición de variante', 'catalogo'],
@@ -115,6 +129,9 @@ final class CatalogoAuditoria
         'editar_mesa' => ['Cambio de nombre de mesa', 'mesas'],
         'activar_mesa' => ['Activación de mesa', 'mesas'],
         'desactivar_mesa' => ['Desactivación de mesa', 'mesas'],
+        'eliminar_mesa' => ['Mesa eliminada (borrada)', 'mesas'],
+        'archivar_mesa' => ['Mesa eliminada (archivada)', 'mesas'],
+        'restaurar_mesa' => ['Mesa restaurada', 'mesas'],
         'regenerar_qr_mesa' => ['QR de mesa regenerado', 'mesas'],
         'liberar_mesa_forzada' => ['Liberación forzada de mesa', 'mesas'],
         'crear_reserva_manual' => ['Reserva registrada por el personal', 'mesas'],

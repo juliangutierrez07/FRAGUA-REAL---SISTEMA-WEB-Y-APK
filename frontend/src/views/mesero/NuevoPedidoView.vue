@@ -12,7 +12,8 @@
 // recoger, como cualquier pedido remoto (Mesero > Cobrar).
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Armchair, Bike, ChevronUp, Minus, Plus, Search, ShoppingBag, ShoppingBasket, X } from 'lucide-vue-next'
+import { ArrowLeft, Armchair, Bike, ChevronUp, Minus, Plus, ReceiptText, Search, ShoppingBag, ShoppingBasket, SplitSquareHorizontal, X } from 'lucide-vue-next'
+import BaseModal from '@/components/common/BaseModal.vue'
 import { catalogoService } from '@/services/catalogo.service'
 import { extrasDe } from '@/utils/extras'
 import { componentesCombo } from '@/utils/combos'
@@ -89,7 +90,10 @@ const tituloPantalla = computed(
 )
 
 const nombreDestino = computed(() => {
-  if (canal.value === 'local') return mesaSeleccionada.value?.nombre ?? 'Elige la mesa'
+  if (canal.value === 'local') {
+    if (!mesaSeleccionada.value) return 'Elige la mesa'
+    return mesaSeleccionada.value.nombre + (cuentaSeleccionada.value ? ` · Cuenta ${cuentaSeleccionada.value}` : '')
+  }
   return datosListos.value ? datosCliente.nombre.trim() : 'Datos del cliente'
 })
 
@@ -122,9 +126,8 @@ async function cargarMesas() {
     const data = todas.filter((m) => m.activa !== false)
     mesas.value = data
     const mesaQuery = Number(route.query.mesa)
-    if (mesaQuery) {
-      mesaSeleccionada.value = data.find((m) => m.id === mesaQuery) ?? null
-    }
+    const mesa = mesaQuery ? data.find((m) => m.id === mesaQuery) : undefined
+    if (mesa) elegirMesa(mesa)
   } catch (e) {
     errorMesas.value = mensajeDeError(e, 'No pudimos cargar las mesas.')
   } finally {
@@ -132,12 +135,30 @@ async function cargarMesas() {
   }
 }
 
+// Mejora (26/10/2026): cuentas separadas. En una mesa ocupada se elige si el pedido sigue en una de
+// sus cuentas o abre una cuenta nueva, que se cobra aparte.
+const cuentaSeleccionada = ref<number | null>(null)
+const mesaPorElegirCuenta = ref<Mesa | null>(null)
+const siguienteCuenta = computed(() => Math.max(0, ...(mesaPorElegirCuenta.value?.cuentas ?? []).map((c) => c.numero)) + 1)
+
 function elegirMesa(mesa: Mesa) {
+  if (mesa.estado === 'ocupada' && mesa.cuentas?.length) {
+    mesaPorElegirCuenta.value = mesa
+    return
+  }
   mesaSeleccionada.value = mesa
+  cuentaSeleccionada.value = null
+}
+
+function elegirCuenta(numero: number) {
+  mesaSeleccionada.value = mesaPorElegirCuenta.value
+  cuentaSeleccionada.value = numero
+  mesaPorElegirCuenta.value = null
 }
 
 function cambiarMesa() {
   mesaSeleccionada.value = null
+  cuentaSeleccionada.value = null
 }
 
 // ---- Paso 2: catálogo ----
@@ -357,7 +378,13 @@ async function crearPedido() {
 
   try {
     if (canal.value === 'local') {
-      await pedidoService.crear({ tipo: 'local', origen: 'mesero', mesa_id: mesaSeleccionada.value!.id, lineas })
+      await pedidoService.crear({
+        tipo: 'local',
+        origen: 'mesero',
+        mesa_id: mesaSeleccionada.value!.id,
+        cuenta: cuentaSeleccionada.value ?? undefined,
+        lineas,
+      })
     } else {
       await pedidoService.crear({
         tipo: canal.value,
@@ -573,6 +600,7 @@ onMounted(() => {
         >
           <Armchair :size="26" class="text-gray-400" />
           <span class="font-display text-lg font-medium text-ink">{{ mesa.nombre }}</span>
+          <span v-if="(mesa.cuentas?.length ?? 0) > 1" class="text-[11px] font-semibold text-amber-700">{{ mesa.cuentas!.length }} cuentas</span>
           <span
             class="badge capitalize"
             :class="{
@@ -908,5 +936,46 @@ onMounted(() => {
         </span>
       </button>
     </div>
+
+    <!-- Mejora (26/10/2026): mesa ocupada → seguir una cuenta o abrir una cuenta separada. -->
+    <BaseModal
+      :model-value="!!mesaPorElegirCuenta"
+      :title="mesaPorElegirCuenta ? `${mesaPorElegirCuenta.nombre} está ocupada` : ''"
+      @update:model-value="mesaPorElegirCuenta = null"
+    >
+      <template v-if="mesaPorElegirCuenta">
+        <p class="text-sm text-gray-600">¿A qué cuenta va este pedido?</p>
+        <div class="mt-4 space-y-2.5">
+          <button
+            v-for="c in mesaPorElegirCuenta.cuentas"
+            :key="c.numero"
+            type="button"
+            class="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-gray-200 px-4 py-3 text-left transition hover:border-brand-400 hover:bg-brand-50/50 active:scale-[0.99]"
+            @click="elegirCuenta(c.numero)"
+          >
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><ReceiptText :size="19" /></span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-ink">Continuar la cuenta {{ c.numero }}</span>
+              <span class="block text-xs text-gray-500">
+                {{ c.pedidos.length }} pedido{{ c.pedidos.length === 1 ? '' : 's' }} · {{ formatoPrecio(c.total) }}
+                <template v-if="c.saldo > 0"> · debe {{ formatoPrecio(c.saldo) }}</template>
+                <template v-else> · pagada</template>
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-brand-400 bg-brand-50/60 px-4 py-3 text-left transition hover:bg-brand-100/60 active:scale-[0.99]"
+            @click="elegirCuenta(siguienteCuenta)"
+          >
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-ink"><SplitSquareHorizontal :size="19" /></span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-ink">Nueva cuenta separada (cuenta {{ siguienteCuenta }})</span>
+              <span class="block text-xs text-gray-600">Para quien paga aparte: se cobra sola, sin mezclarse con las demás.</span>
+            </span>
+          </button>
+        </div>
+      </template>
+    </BaseModal>
   </div>
 </template>

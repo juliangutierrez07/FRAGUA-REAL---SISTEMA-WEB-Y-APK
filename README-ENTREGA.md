@@ -6,7 +6,7 @@ sistema y dónde está cada documento, empieza por [`README.md`](README.md); la 
 backend está en [`README-BACKEND.md`](README-BACKEND.md), la base de datos en
 [`BASE-DE-DATOS.md`](BASE-DE-DATOS.md) y los endpoints en [`API.md`](API.md).
 
-**Estado al 22/10/2026**: plan de implementación completo (Fases 0 a 7), mejoras del 16/10/2026, correcciones y datos del negocio del 19/10/2026 el rol SuperAdmin con permisos de menú (M09), el rol Soporte de solo consulta (M10) las notificaciones del personal (M11) la contraseña segura con bloqueo por intentos (21/10/2026) y el pago en línea por transferencia con captura mientras no haya Wompi y el formato de todos los campos (22/10/2026), 407 pruebas automáticas que
+**Estado al 26/10/2026**: plan de implementación completo (Fases 0 a 7), mejoras del 16/10/2026, correcciones y datos del negocio del 19/10/2026 el rol SuperAdmin con permisos de menú (M09), el rol Soporte de solo consulta (M10) las notificaciones del personal (M11) la contraseña segura con bloqueo por intentos (21/10/2026) el pago en línea por transferencia con captura mientras no haya Wompi y el formato de todos los campos (22/10/2026), eliminar mesas, productos y usuarios y el menú Impresoras (M12, 24/10/2026), las mejoras de operación del 26/10/2026 (cuentas separadas, cerrar caja con todo finalizado, foto del comprobante, ubicación y billete del domicilio), 432 pruebas automáticas que
 pasan en SQLite y PostgreSQL. Falta solo lo que no es código: la cuenta comercial de Wompi, el
 proveedor de SMS y el agente local de impresión (ver «Qué falta a propósito»).
 
@@ -340,6 +340,12 @@ confirmarse solos y aparecer en Caja como «Confirmado por Wompi».
    el teléfono del Mesero) y `QA-ADMINISTRADOR.md`.
 6. Cuando ya haya historia real, `sudo -u www-data php artisan reportes:medir`: todos los reportes
    deben decir «OK».
+7. **Impresoras (M12):** en el equipo de la caja, Administrador > Impresoras > «Registrar este equipo»;
+   para la tablet de la cocina (con la sesión del Mesero), «Agregar equipo con código» y escribir el
+   código en Pedidos > «Impresión de comandas en este equipo». En cada uno: seguir la pestaña «Guía»
+   (impresora predeterminada, papel de 80 mm y el acceso directo de Chrome con `--kiosk-printing`),
+   hacer la impresión de prueba y responder «Salió bien». Ajustar el formato del ticket y dejar «Abre
+   solas las comandas nuevas» prendido solo en el equipo de la cocina.
 
 ## Después de cada despliegue
 
@@ -759,6 +765,9 @@ Al escribir `QA-CLIENTE.md` y `QA-MESERO.md` se cruzó cada pantalla con el cód
 - App instalable en el teléfono (PWA): botón «Instalar app», ícono en la pantalla de inicio, pantalla
   completa y página «Sin conexión» (ver «App instalable en el teléfono (PWA)»). Hay que volver a copiar
   `nginx-fragua-real.conf` al VPS.
+- 26/10/2026: hay que volver a copiar `nginx-fragua-real.conf` al VPS y recargar nginx
+  (`sudo nginx -t && sudo systemctl reload nginx`). Ahora permite la ubicación del navegador
+  (`Permissions-Policy … geolocation=(self)`); sin esto «Usar mi ubicación actual» del domicilio no funciona.
 - Revisión antes de producción: ya no avisa «LOG_LEVEL=debug» cuando el `.env` dice `warning` con
   `LOG_STACK=daily` (leía el canal equivocado).
 - En el servidor: `php artisan migrate --force` (tres migraciones `2026_10_23_*`); las fotos de las

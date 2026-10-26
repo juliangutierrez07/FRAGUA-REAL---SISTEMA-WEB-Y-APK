@@ -9,6 +9,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { CalendarClock, CheckCircle2, XCircle } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
+import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
 import PagoEnLinea from '@/components/pagos/PagoEnLinea.vue'
 import { usePagosEnLinea } from '@/composables/usePagosEnLinea'
 import { reservaService } from '@/services/reserva.service'
@@ -166,10 +167,10 @@ onMounted(cargar)
           El pago anterior no se aprobó<template v-if="reserva.deposito_rechazo_motivo">: {{ reserva.deposito_rechazo_motivo }}</template>.
           Revisa los datos y vuelve a intentarlo.
         </p>
-        <p class="mt-1 text-xs text-[#6c655c]">
+        <AvisoDestacado class="mt-2">
           <template v-if="reserva.deposito_estado === 'pendiente'">Si no terminaste el pago anterior, puedes intentarlo de nuevo. </template>
           Tu reserva se confirma en cuanto el pago quede aprobado.
-        </p>
+        </AvisoDestacado>
         <PagoEnLinea
           class="mt-4"
           :config="configPagos"

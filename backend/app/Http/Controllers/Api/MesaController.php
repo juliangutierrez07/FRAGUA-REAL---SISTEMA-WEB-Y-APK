@@ -32,6 +32,9 @@ class MesaController extends Controller
         if (! $usuario || ! $usuario->esAdministrador()) {
             $query->where('activa', true);
         }
+        // Eliminar (24/10/2026): las archivadas solo salen con ?eliminadas=1 (para restaurarlas).
+        $eliminadas = $request->boolean('eliminadas') && $usuario?->esAdministrador();
+        $eliminadas ? $query->whereNotNull('eliminado_at') : $query->whereNull('eliminado_at');
 
         $mesas = $query->get();
 
@@ -57,6 +60,8 @@ class MesaController extends Controller
                 $mesa->setAttribute('cuenta_total', round($total, 2));
                 $mesa->setAttribute('cuenta_saldo', round(max(0, $total - $pagado), 2));
                 $mesa->setAttribute('cuenta_pedidos', $pedidos->count());
+                // Mejora (26/10/2026): cuentas separadas, para elegir a cuál va un pedido nuevo.
+                $mesa->setAttribute('cuentas', app(MesaCuentaService::class)->porCuenta($pedidos));
             });
         }
 
@@ -97,6 +102,7 @@ class MesaController extends Controller
     // cambia (sigue apuntando a la misma mesa) ni se tocan su estado ni su historial.
     public function update(UpdateMesaRequest $request, Mesa $mesa)
     {
+        abort_if($mesa->eliminado_at !== null, 422, 'La mesa está eliminada: restáurala primero desde «Eliminadas».');
         $anterior = $mesa->nombre;
         $mesa->nombre = trim($request->nombre);
         $mesa->save();
@@ -165,7 +171,16 @@ class MesaController extends Controller
     {
         abort_if(! $request->user()->esMesero(), 403, 'Solo el Mesero registra cobros (RF-M06-003).');
 
-        return response()->json($cuentas->cobrar($mesa, $request->user(), $request->metodo, (float) $request->monto));
+        // Mejora (26/10/2026): se cobra una cuenta de la mesa (o toda, sin `cuenta`) y, si viene, con la
+        // foto del comprobante (obligatoria en transferencia).
+        $comprobante = $request->hasFile('comprobante')
+            ? app(\App\Services\PagoDirectoService::class)->guardarComprobante($request->file('comprobante'), "cobro-mesa-{$mesa->id}")
+            : null;
+
+        return response()->json($cuentas->cobrar(
+            $mesa, $request->user(), $request->metodo, (float) $request->monto,
+            $request->filled('cuenta') ? (int) $request->cuenta : null, $comprobante,
+        ));
     }
 
     // Baja lógica (RF-M05-004): nunca se borra una mesa con historial de pedidos/reservas.
@@ -187,6 +202,7 @@ class MesaController extends Controller
     public function activar(Request $request, Mesa $mesa)
     {
         abort_if(! $request->user()->esAdministrador(), 403);
+        abort_if($mesa->eliminado_at !== null, 422, 'La mesa está eliminada: restáurala primero desde «Eliminadas».');
 
         $mesa->activa = true;
         $mesa->save();

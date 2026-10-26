@@ -1,15 +1,19 @@
 <script setup lang="ts">
 // M01 — Usuarios del Administrador: listar (staff y clientes), crear cuentas de
 // Mesero/Administrador, activar/desactivar y revocar sesiones. Ver UsuarioController.
+// Eliminar (24/10/2026): una cuenta sin acciones ni pedidos se borra; con historial se archiva (no
+// vuelve a entrar) y se restaura desde «Eliminadas» (con contraseña y motivo, EliminarModal).
 import { computed, onMounted, ref } from 'vue'
-import { History, KeyRound, LayoutGrid, Pencil, Plus, Users as UsersIcon } from 'lucide-vue-next'
+import { History, KeyRound, LayoutGrid, Pencil, Plus, RotateCcw, Trash2, Users as UsersIcon } from 'lucide-vue-next'
 import SesionesLista from '@/components/common/SesionesLista.vue'
 import RequisitosContrasena from '@/components/common/RequisitosContrasena.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
+import EliminarModal from '@/components/common/EliminarModal.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usuarioService, type MenusDeCuenta } from '@/services/usuario.service'
+import { eliminacionService, type ResultadoEliminacion } from '@/services/eliminacion.service'
 import { erroresDeValidacion, mensajeDeError } from '@/services/errors'
 import type { PoliticaSesiones, Rol, SesionAbierta, Usuario } from '@/types/models'
 
@@ -23,6 +27,10 @@ const procesando = ref<number | null>(null)
 
 const filtroRol = ref<'todos' | Rol>('todos')
 const busqueda = ref('')
+// Eliminar (24/10/2026): las cuentas archivadas se ven aparte, para restaurarlas.
+const verEliminadas = ref(false)
+const usuarioAEliminar = ref<Usuario | null>(null)
+const avisoEliminar = ref('')
 
 // M10 (20/10/2026): la cuenta de Soporte solo la ven el SuperAdmin y la propia cuenta de Soporte.
 const OPCIONES_ROL = computed<{ v: typeof filtroRol.value; t: string }[]>(() => [
@@ -58,6 +66,7 @@ async function cargar() {
     const { data } = await usuarioService.index({
       rol: filtroRol.value === 'todos' ? undefined : filtroRol.value,
       busqueda: busqueda.value.trim() || undefined,
+      eliminados: verEliminadas.value ? 1 : undefined,
     })
     usuarios.value = data.data
     total.value = data.total
@@ -95,6 +104,34 @@ async function alternarActivo(usuario: Usuario) {
 }
 
 const mensajeRevocar = ref('')
+
+// ---- Eliminar y restaurar (24/10/2026) ----
+function cambiarVista(eliminadas: boolean) {
+  verEliminadas.value = eliminadas
+  avisoEliminar.value = ''
+  cargar()
+}
+
+async function alEliminar(resultado: ResultadoEliminacion) {
+  usuarioAEliminar.value = null
+  avisoEliminar.value = resultado.mensaje
+  await cargar()
+}
+
+async function restaurar(usuario: Usuario) {
+  procesando.value = usuario.id
+  error.value = ''
+  avisoEliminar.value = ''
+  try {
+    await eliminacionService.restaurar<Usuario>('usuarios', usuario.id)
+    avisoEliminar.value = `La cuenta de «${usuario.nombre}» volvió a la lista, desactivada: actívala para que pueda entrar.`
+    await cargar()
+  } catch (e) {
+    error.value = mensajeDeError(e, 'No pudimos restaurar la cuenta.')
+  } finally {
+    procesando.value = null
+  }
+}
 
 // ---- Sesiones de una cuenta (Fase 3, tarea 4: RF-M01-010/023/024, HU-M01-010) ----
 // "Sesiones" abre la lista de dispositivos donde la cuenta está abierta: se cierra una en
@@ -356,7 +393,26 @@ onMounted(cargar)
       </template>
     </PageHeader>
 
-    <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="mt-6 inline-flex rounded-xl border border-gray-200 bg-white p-1 text-sm">
+      <button
+        type="button"
+        class="rounded-lg px-3.5 py-1.5 font-medium transition"
+        :class="!verEliminadas ? 'bg-ink text-white' : 'text-gray-600 hover:text-ink'"
+        @click="cambiarVista(false)"
+      >
+        Cuentas
+      </button>
+      <button
+        type="button"
+        class="rounded-lg px-3.5 py-1.5 font-medium transition"
+        :class="verEliminadas ? 'bg-ink text-white' : 'text-gray-600 hover:text-ink'"
+        @click="cambiarVista(true)"
+      >
+        Eliminadas
+      </button>
+    </div>
+
+    <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="segmented">
         <button
           v-for="opcion in OPCIONES_ROL"
@@ -380,13 +436,14 @@ onMounted(cargar)
 
     <p v-if="error" class="mt-4 alert-error">{{ error }}</p>
     <p v-if="mensajeRevocar" class="mt-4 alert-success">{{ mensajeRevocar }}</p>
+    <p v-if="avisoEliminar" class="mt-4 alert-success">{{ avisoEliminar }}</p>
     <p v-if="mensajeEdicion" class="mt-4 alert-success">{{ mensajeEdicion }}</p>
 
     <div v-if="cargando" class="loading-state">Cargando usuarios…</div>
 
     <div v-else-if="!usuarios.length" class="mt-10 empty-state">
       <UsersIcon :size="32" class="mx-auto text-gray-300" />
-      <p class="mt-3 text-sm text-gray-500">No hay usuarios en este filtro.</p>
+      <p class="mt-3 text-sm text-gray-500">{{ verEliminadas ? 'No hay cuentas eliminadas en este filtro.' : 'No hay usuarios en este filtro.' }}</p>
     </div>
 
     <template v-else>
@@ -423,11 +480,30 @@ onMounted(cargar)
               <p class="mt-1 truncate text-xs text-gray-500">
                 {{ usuario.email }}<template v-if="usuario.username"> · @{{ usuario.username }}</template><template v-if="usuario.telefono"> · {{ usuario.telefono }}</template>
               </p>
+              <p v-if="usuario.eliminado_at" class="mt-0.5 text-xs text-gray-500">
+                Eliminada el {{ new Date(usuario.eliminado_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) }}<template v-if="usuario.eliminado_motivo"> · «{{ usuario.eliminado_motivo }}»</template>
+              </p>
             </div>
           </div>
 
+          <!-- Eliminadas: solo se restauran (si quien mira puede gestionar la cuenta). -->
+          <div v-if="verEliminadas" class="flex gap-2 xl:shrink-0">
+            <router-link
+              v-if="auth.tieneMenu('auditoria')"
+              :to="{ name: 'admin-auditoria', query: { user_id: String(usuario.id) } }"
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 hover:text-ink sm:min-h-9"
+            >
+              <History :size="14" />
+              Actividad
+            </router-link>
+            <BaseButton v-if="sePuedeGestionar(usuario)" v-escritura variant="secondary" size="sm" :disabled="procesando === usuario.id" @click="restaurar(usuario)">
+              <RotateCcw :size="14" />
+              Restaurar
+            </BaseButton>
+          </div>
+
           <!-- M09: con el botón «Permisos» ya no caben al lado del nombre en tablet: bajan y se acomodan. -->
-          <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:shrink-0 xl:flex-nowrap">
+          <div v-else class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:shrink-0 xl:flex-nowrap">
             <!-- Fase 3, tarea 1 (RF-M01-025): lo que hizo este usuario, en Auditoría. -->
             <router-link
               v-if="auth.tieneMenu('auditoria')"
@@ -476,11 +552,24 @@ onMounted(cargar)
             >
               {{ usuario.activo ? 'Desactivar' : 'Activar' }}
             </BaseButton>
+            <BaseButton
+              v-escritura
+              size="sm"
+              variant="ghost"
+              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
+              :disabled="procesando === usuario.id"
+              @click="(usuarioAEliminar = usuario), (avisoEliminar = '')"
+            >
+              <Trash2 :size="14" />
+              Eliminar
+            </BaseButton>
             </template>
           </div>
         </li>
       </ul>
     </template>
+
+    <EliminarModal tipo="usuarios" articulo="la cuenta" :registro="usuarioAEliminar" @cerrar="usuarioAEliminar = null" @eliminado="alEliminar" />
 
     <!-- Crear usuario (Mesero/Administrador — el Cliente se autorregistra en el sitio público) -->
     <BaseModal v-model="modalAbierto" title="Nuevo usuario">

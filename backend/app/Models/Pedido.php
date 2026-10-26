@@ -25,10 +25,10 @@ class Pedido extends Model
     }
 
     protected $fillable = [
-        'tipo', 'origen', 'mesa_id', 'cliente_id',
+        'tipo', 'origen', 'mesa_id', 'cuenta', 'cliente_id',
         'cliente_invitado_nombre', 'cliente_invitado_telefono', 'cliente_invitado_correo', 'telefono_contacto',
-        'direccion_entrega', 'barrio', 'referencia', 'observaciones_entrega', 'valor_domicilio',
-        'metodo_pago_preferido', 'pasarela_preferida',
+        'direccion_entrega', 'barrio', 'referencia', 'ubicacion_lat', 'ubicacion_lng', 'observaciones_entrega', 'valor_domicilio',
+        'metodo_pago_preferido', 'pasarela_preferida', 'paga_con',
         'estado', 'subtotal', 'descuento', 'total',
         'promociones_vigentes', 'promociones_aplicadas',
         'descuento_manual', 'descuento_manual_motivo', 'descuento_manual_por', 'descuento_manual_at',
@@ -53,6 +53,10 @@ class Pedido extends Model
         'descuento_manual' => 'array',
         'descuento_manual_at' => 'datetime',
         'valor_domicilio' => 'decimal:2',
+        'paga_con' => 'decimal:2',
+        'ubicacion_lat' => 'float',
+        'ubicacion_lng' => 'float',
+        'cuenta' => 'integer',
         'confirmado_at' => 'datetime',
         'preparando_at' => 'datetime',
         'listo_at' => 'datetime',
@@ -146,6 +150,9 @@ class Pedido extends Model
     {
         return rtrim((string) config('fragua_real.frontend_url'), '/').'/seguimiento/'.$this->token_publico;
     }
+
+    // Pedidos que todavía no terminan (ni finalizados ni cancelados).
+    public const ESTADOS_ACTIVOS = ['pendiente', 'confirmado', 'preparando'];
 
     // ---- Helpers de negocio ----
     public function esLocal(): bool { return $this->tipo === 'local'; }

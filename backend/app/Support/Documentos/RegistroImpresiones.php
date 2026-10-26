@@ -43,10 +43,12 @@ final class RegistroImpresiones
         });
         $documento->setAttribute('impresiones', $vez);
 
+        // M12 (24/10/2026): en qué equipo se imprimió (si el navegador está registrado en Impresoras).
+        $equipo = app(\App\Services\ImpresionService::class)->equipoActual();
         app(AuditoriaService::class)->registrar($accion, $entidad, $entidadId, $detalles + [
             'vez' => $vez,
             'reimpresion' => $vez > 1,
-        ], $actor);
+        ] + ($equipo ? ['equipo' => $equipo->nombre] : []), $actor);
 
         return $vez > 1 ? ['vez' => $vez, 'fecha' => now()->toIso8601String()] : null;
     }

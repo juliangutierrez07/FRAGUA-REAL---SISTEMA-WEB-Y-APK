@@ -3,8 +3,9 @@
 //  · editable  → Configuración (SuperAdmin): tocar el mapa o arrastrar el marcador fija el punto.
 //  · solo ver  → Inicio (sección Contacto) y Configuración del Administrador.
 // Leaflet se carga aparte (import dinámico) para no engordar la primera carga del Inicio.
-// Las teselas son imágenes (la CSP de nginx permite img-src https:); no se pide la ubicación
-// del teléfono (Permissions-Policy geolocation=()) ni se consulta ningún servicio externo.
+// Las teselas son imágenes (la CSP de nginx permite img-src https:); no se consulta ningún servicio externo.
+// 26/10/2026: también en el Checkout, para que el Cliente confirme o mueva el punto de su domicilio
+// (`centroInicial`: dónde abrir el mapa sin punto, p. ej. el local).
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Map as MapaLeaflet, Marker } from 'leaflet'
 
@@ -14,8 +15,9 @@ const props = withDefaults(
     longitud: number | null
     editable?: boolean
     etiqueta?: string
+    centroInicial?: [number, number] | null
   }>(),
-  { editable: false, etiqueta: 'Ubicación del negocio' },
+  { editable: false, etiqueta: 'Ubicación del negocio', centroInicial: null },
 )
 
 const emit = defineEmits<{ elegir: [latitud: number, longitud: number] }>()
@@ -79,7 +81,7 @@ onMounted(async () => {
 
   const hayPunto = props.latitud !== null && props.longitud !== null
   mapa = L.map(contenedor.value, {
-    center: hayPunto ? [props.latitud!, props.longitud!] : CENTRO_POR_DEFECTO,
+    center: hayPunto ? [props.latitud!, props.longitud!] : (props.centroInicial ?? CENTRO_POR_DEFECTO),
     zoom: hayPunto ? (props.editable ? ZOOM_PUNTO : ZOOM_PUNTO_VER) : ZOOM_CIUDAD,
     // En el Inicio la rueda del mouse y el dedo siguen moviendo la página, no el mapa.
     scrollWheelZoom: props.editable,

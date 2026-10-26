@@ -340,14 +340,26 @@ onMounted(() => {
           </button>
 
           <div v-if="expandido === registro.id" class="mt-3 border-t border-gray-100 pt-3 text-sm">
-            <dl v-if="filasDetalle(registro.detalles).length" class="grid gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(8rem,auto)_1fr]">
+            <!-- Mejora (26/10/2026): quién lo hizo, también dentro del detalle. -->
+            <dl class="mb-2 grid gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(8rem,auto)_1fr]">
+              <dt class="text-xs font-semibold text-gray-500">Hecho por</dt>
+              <dd class="break-words font-medium text-ink">
+                <template v-if="registro.usuario">
+                  {{ registro.usuario.nombre }} · {{ ROLES[registro.usuario.role] }}
+                  <span class="block text-xs font-normal text-gray-500">{{ registro.usuario.email }}</span>
+                </template>
+                <template v-else>Sin sesión iniciada (el cliente, un invitado o el sistema)</template>
+              </dd>
+              <dt class="text-xs font-semibold text-gray-500">Cuándo</dt>
+              <dd class="text-gray-800">{{ formatoFechaHora(registro.created_at) }}</dd>
+            </dl>
+            <dl v-if="filasDetalle(registro.detalles).length" class="grid gap-x-4 gap-y-1.5 border-t border-gray-100 pt-2 sm:grid-cols-[minmax(8rem,auto)_1fr]">
               <template v-for="(fila, i) in filasDetalle(registro.detalles)" :key="i">
                 <dt class="text-xs font-semibold text-gray-500">{{ fila.campo }}</dt>
                 <dd class="break-words text-gray-800">{{ fila.valor }}</dd>
               </template>
             </dl>
             <p v-else class="text-xs text-gray-500">Esta acción no guarda detalles adicionales.</p>
-            <p v-if="registro.usuario" class="mt-2 text-xs text-gray-500">Correo de quien la hizo: {{ registro.usuario.email }}</p>
             <p v-if="registro.user_agent" class="mt-1 break-all text-[11px] text-gray-400">Navegador completo: {{ registro.user_agent }}</p>
             <p class="mt-1 text-[11px] text-gray-400">Registro de auditoría #{{ registro.id }}</p>
           </div>

@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   ShieldCheck,
+  Printer,
   LogOut,
   Menu,
   X,
@@ -62,6 +63,9 @@ function cerrar() {
 
 // Al navegar (o al cambiar de tamaño de pantalla a tablet) el menú deslizable se cierra solo.
 watch(() => route.fullPath, cerrar)
+// Con el menú abierto en el teléfono, la página de atrás no se desplaza.
+watch(abierto, (si) => document.documentElement.classList.toggle('overflow-hidden', si))
+onBeforeUnmount(() => document.documentElement.classList.remove('overflow-hidden'))
 
 interface Enlace {
   to: string
@@ -86,6 +90,7 @@ const enlacesAdmin: Enlace[] = [
   { to: '/admin/reportes', label: 'Reportes', corto: 'Reportes', icon: BarChart3, menu: 'reportes' }, // M08
   { to: '/admin/auditoria', label: 'Auditoría', corto: 'Auditoría', icon: ShieldCheck, menu: 'auditoria' }, // M01 (Fase 3)
   { to: '/admin/configuracion', label: 'Configuración', corto: 'Ajustes', icon: Settings, menu: 'configuracion' }, // M05/M07
+  { to: '/admin/impresoras', label: 'Impresoras', corto: 'Impresoras', icon: Printer, menu: 'impresoras' }, // M12
 ]
 
 const enlacesMesero: Enlace[] = [
@@ -144,7 +149,7 @@ const iniciales = computed(() =>
        hacia abajo); el panel deslizable de abajo es lo único que queda "flotando". -->
   <header
     v-if="!pantallaCompleta"
-    class="z-30 flex h-14 shrink-0 items-center gap-3 bg-ink-900 px-3 text-white shadow-[0_1px_0_rgba(255,255,255,0.06)] md:hidden"
+    class="z-30 flex min-h-14 shrink-0 items-center gap-3 bg-ink-900 px-3 pt-[env(safe-area-inset-top)] text-white shadow-[0_1px_0_rgba(255,255,255,0.06)] md:hidden"
   >
     <button
       v-if="variant === 'admin'"
@@ -169,6 +174,7 @@ const iniciales = computed(() =>
       <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-400">{{ rolTexto }}</p>
     </div>
 
+    <BotonInstalarApp v-if="variant === 'mesero'" compacto />
     <BotonNotificaciones variante="barra" />
     <button
       type="button"
@@ -198,7 +204,7 @@ const iniciales = computed(() =>
     class="z-50 flex-col bg-ink-900 text-white transition-transform duration-200 ease-out md:static md:z-auto md:flex md:h-full md:w-[5.5rem] md:shrink-0 md:translate-x-0 lg:w-64"
     :class="
       variant === 'admin'
-        ? ['fixed inset-y-0 left-0 flex h-dvh w-72 max-w-[85vw]', abierto ? 'translate-x-0' : '-translate-x-full']
+        ? ['fixed inset-y-0 left-0 flex w-72 max-w-[85vw] pt-[env(safe-area-inset-top)]', abierto ? 'translate-x-0' : '-translate-x-full']
         : 'hidden'
     "
   >
@@ -226,7 +232,9 @@ const iniciales = computed(() =>
       </button>
     </div>
 
-    <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-2 md:px-2 lg:px-3">
+    <!-- CORREGIDO (26/10/2026): sin min-h-0 la lista no se encogía en pantallas bajas y empujaba el
+         perfil y «Cerrar sesión» fuera de la pantalla; ahora la lista se desplaza y el pie queda fijo. -->
+    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-2 md:px-2 lg:px-3">
       <router-link
         v-for="item in enlaces"
         :key="item.to"
@@ -254,7 +262,7 @@ const iniciales = computed(() =>
       </router-link>
     </nav>
 
-    <div class="space-y-1 border-t border-white/10 p-3 md:px-2 lg:px-3">
+    <div class="shrink-0 space-y-1 border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-2 lg:px-3">
       <!-- Mejora (16/10/2026): instalar la app (PWA) en la tableta o el teléfono del personal. -->
       <div class="md:hidden lg:block"><BotonInstalarApp tono="oscuro" /></div>
       <!-- M11: en el teléfono la campana está en la barra de arriba. -->

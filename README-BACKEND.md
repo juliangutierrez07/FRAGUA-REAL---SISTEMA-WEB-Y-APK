@@ -23,7 +23,7 @@ armado el backend hoy y guarda el historial de los 60 cambios técnicos que lo l
 
 Cada petición pasa por las mismas capas:
 
-1. **Ruta** (`routes/api.php`): 172 endpoints bajo `/api`, agrupados por nivel de acceso con los
+1. **Ruta** (`routes/api.php`): 195 endpoints bajo `/api`, agrupados por nivel de acceso con los
    middleware `auth:sanctum`, `activo` y `role:...`, y límites de peticiones en las rutas públicas.
 2. **Form Request** (`app/Http/Requests/Api`, 38 clases): valida los datos y devuelve los mensajes
    en español (`lang/es/validation.php`).
@@ -160,7 +160,7 @@ partir de la copia guardada en la base, así una reimpresión dice exactamente l
 
 ## Pruebas automáticas
 
-`backend/tests/Feature` tiene 58 archivos y 406 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
+`backend/tests/Feature` tiene 61 archivos y 431 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
 En total son 344.
 
 ```bash
@@ -1830,4 +1830,93 @@ inconsistencias con lo que existía o era correcto en Laravel:
     - `FormatosCamposTest` (6 pruebas, con los casos que salían en Configuración); 4 pruebas ajustadas
       porque el teléfono y el NIT ahora se guardan limpios. Documentación oficial: M00 v1.6
       (RNF-TRANS-040 a 044), notas en M01, M05, M06 y M07, Estructura técnica, Cronograma y Flujos por rol.
+
+74. **Eliminar mesas, productos y usuarios (24/10/2026, RF-M05-043, RF-M04-055, RF-M01-033).** Migración
+    `2026_10_31_000001_eliminar_mesas_productos_usuarios`.
+    - Decisión del negocio: lo que nunca se usó se borra de verdad; lo que tiene historial se archiva.
+      `mesas`, `productos` y `users` ganan `eliminado_at`, `eliminado_por` y `eliminado_motivo`.
+    - `EliminacionService`: `vistaPrevia()` dice si se borra o se archiva y por qué (una mesa con pedidos o
+      reservas, un producto vendido o en un combo, una cuenta con acciones en la auditoría o pedidos), o
+      qué lo impide ahora (mesa ocupada, con pedidos activos o reservas próximas; la propia cuenta; una
+      cuenta que quien elimina no gestiona, M09). `eliminar()` pide la contraseña de quien lo hace y un
+      motivo, borra (si la base se opone por un vínculo no contado, archiva) o archiva: desactiva la mesa,
+      el producto (y sus combos, como al darlo de baja) o la cuenta (y cierra sus sesiones). `restaurar()`
+      lo devuelve desactivado. Auditoría: `eliminar_*`, `archivar_*` y `restaurar_*`.
+    - `EliminacionController`: `GET /{mesas|productos|usuarios}/{id}/eliminacion`, `POST …/eliminar`
+      (`password`, `motivo`) y `POST …/restaurar`, solo Administrador y SuperAdmin.
+    - Lo archivado no sale en `GET /mesas`, `GET /productos` ni `GET /usuarios`; con `eliminadas=1` /
+      `eliminados=1` salen solo los archivados. No se edita ni se reactiva sin restaurarlo antes. Su nombre
+      o correo sigue ocupado: `Support\Validacion\Eliminados` responde «restáurala desde Eliminados».
+    - Frontend: `EliminarModal.vue` (qué va a pasar, motivo y contraseña) y el filtro «Eliminadas» /
+      «Eliminados» con «Restaurar» en Mesas, Catálogo › Productos y Usuarios.
+    - `EliminarRegistrosTest` (7 pruebas). Documentación oficial: M05 v1.3, M04 v1.2, M01, notas en M00 y
+      M09, Catálogo de Pantallas, Estructura técnica, Cronograma, diagrama entidad-relación y Flujos por rol.
+
+75. **M12 — Impresoras (24/10/2026, RF-M12-001 a 014).** Migración `2026_11_01_000001_crear_equipos_impresion`.
+    - El servidor no ve la impresora: imprime el navegador de un equipo del local (D5). Tabla
+      `equipos_impresion`: nombre, `clave` (identifica al navegador; solo se entrega una vez),
+      `codigo_vinculacion` de 6 números (30 min, una vez), qué imprime, `al_confirmar`, `automatico`,
+      última señal (y de quién) y última prueba (resultado y de quién).
+    - `ImpresionService`: registrar el equipo desde el que se mira o crearlo con código; vincular;
+      señal (se guarda como mucho cada 30 s); ajustes; ticket de prueba (`resources/views/impresion/prueba`);
+      resultado de la prueba; formato en `configuraciones` (`impresion_ticket_logo`, `_ticket_letra`,
+      `_ticket_mensaje_pie`, `_comanda_letra_grande`, `_comanda_mostrar_hora`, `_comanda_mostrar_mesero`,
+      `_copias_comprobante`, `_copias_comanda`); vista previa con datos de muestra sin guardar; estado
+      (comandas por imprimir e historial desde la auditoría) y `revisarDesconectados()`.
+    - La clave viaja en la cabecera `X-Equipo-Impresion` (frontend `services/api.ts`):
+      `RegistroImpresiones` guarda en la auditoría el `equipo` de cada impresión.
+    - Tickets: `ComandaService::ticketPdf()` y `ComprobanteService::ticketPdf()` aplican el formato
+      (letra, logo, mensaje al pie, hora, quién atiende y copias en hojas separadas). La comanda guarda
+      `atiende` (quien confirmó). `ComandaService::descartar()` + `POST /comandas/{comanda}/descartar`.
+    - Rutas: del equipo (personal) `POST /impresion/equipos/vincular`, `POST /impresion/equipos/senal`,
+      `GET /impresion/prueba`, `POST /impresion/equipos/prueba`; del Administrador (menú `impresoras`)
+      `GET/POST /impresion/equipos`, `PUT/DELETE /impresion/equipos/{equipo}`,
+      `POST /impresion/equipos/{equipo}/codigo`, `GET/PUT /impresion/formato`, `POST /impresion/vista-previa`
+      (permitida a Soporte) y `GET /impresion/estado`.
+    - M11: aviso `equipo_desconectado` (operación, menú Impresoras) desde `notificaciones:revisar` cuando
+      la caja está abierta y un equipo de comandas lleva más de 10 minutos sin señal.
+    - Configuración: `fragua_real.impresion` (`FRAGUA_REAL_IMPRESION_MINUTOS_EN_LINEA`,
+      `_MINUTOS_DESCONECTADO`, `_MINUTOS_CODIGO`). `MenusPorRol` suma `impresoras` al Administrador.
+    - Frontend: `ImpresorasView` (pestañas Equipos, Formato del ticket, Estado y Guía) con
+      `components/impresion/*`; store `equipoImpresion` (señal cada minuto desde AdminLayout y
+      MeseroLayout; sus ajustes pasan a la franja de comandas); `ComandasPendientes` (vincular con código
+      y prueba).
+    - `ImpresorasTest` (7 pruebas); `MenusPorCuentaTest` ajustada al menú nuevo. Documentación oficial:
+      M12 nuevo, M00 v1.7, notas en M02, M06, M09, M10 y M11, Catálogo de Pantallas, Estructura técnica,
+      Idea de negocio, Cronograma, diagrama entidad-relación y Flujos por rol (página 37, 38 páginas).
+
+76. **Mejoras de operación (26/10/2026).** Migración `2026_11_02_000001_mejoras_operacion_26_10`
+    (`pedidos.cuenta`, `ubicacion_lat`, `ubicacion_lng`, `paga_con`; `categorias.permite_quitar_ingredientes`).
+    - Cerrar caja: `CajaService::pedidosSinFinalizar()` (pendientes, confirmados o en preparación, de
+      cualquier día) bloquea `cerrar()` con la lista; `GET /caja/turno-actual` la trae como
+      `pedidos_sin_finalizar` y la ventana «Cerrar turno» la muestra y no deja confirmar.
+    - Cuentas separadas: `PedidoService::cuentaDelPedido()` (mesa libre → 1; ocupada → una cuenta de la
+      visita o la siguiente), `Mesa::cuentasDeLaVisita()`, `MesaCuentaService::porCuenta()` (en el resumen
+      y en `GET /mesas`) y `cobrar(..., $cuenta)`. La comanda dice «Mesa 3 · Cuenta 2» cuando hay varias.
+      Frontend: «Nuevo pedido» pregunta «Continuar la cuenta N» o «Nueva cuenta separada»;
+      `CuentaMesaModal` muestra las cuentas por separado y cobra una o toda la mesa.
+    - Foto del comprobante: `RegistrarCobroRequest` acepta `comprobante` (obligatorio en transferencia) en
+      `POST /pedidos/{pedido}/cobrar` y `POST /mesas/{mesa}/cobrar`; se guarda con
+      `PagoDirectoService::guardarComprobante()` en `pagos.comprobante_path` y se ve con
+      `GET /pagos/{pago}/comprobante` (Caja > detalle del turno > «Ver foto»). Frontend: `FotoComprobante`
+      (cámara trasera) y `utils/imagen.ts` (reduce la foto a 1600 px antes de subirla).
+    - Domicilio: `ubicacion_lat/lng` (botón «Usar mi ubicación actual») y `paga_con` (Pago exacto, billetes
+      o «Otro valor»; 422 si no alcanza para el total). `DatosEntregaPedido` muestra «Ver la ubicación en
+      el mapa» y el cambio que debe llevar el domiciliario.
+    - CORREGIDO (26/10/2026): la ubicación salía en otro lugar (en un computador o sin GPS el navegador la
+      calcula por la red, y se aceptaba una lectura de hasta un minuto). `utils/ubicacion.ts` escucha hasta
+      12 s sin datos guardados y se queda con la lectura más precisa (termina antes con 30 m o menos); el
+      Checkout muestra el punto en `MapaUbicacion` (nuevo `centroInicial`: abre en el local) para
+      confirmarlo o moverlo, avisa si el error pasa de 100 m y permite «Marcar en el mapa» sin GPS. Además
+      `deploy/nginx-fragua-real.conf` decía `Permissions-Policy … geolocation=()`, que bloqueaba la
+      ubicación en el VPS: ahora `geolocation=(self)`.
+    - Catálogo: la categoría guarda `permite_quitar_ingredientes`; Bebidas quedó apagada. El menú no
+      pregunta qué ingrediente quitar en esas categorías.
+    - Frontend: medios de pago en línea como tarjetas; `AvisoDestacado` para las notas que el Cliente debe
+      leer; el seguimiento y «Mis pedidos» se ponen al día cada 10 s y al volver a la pestaña; el detalle
+      de la auditoría empieza por «Hecho por»; en la barra lateral del teléfono la lista se desplaza
+      (`min-h-0`), el pie respeta la barra de gestos y «Instalar app» aparece en todo teléfono (sin el
+      aviso del navegador muestra los pasos), también arriba para el Mesero.
+    - `MejorasOperacionTest` (11 pruebas); `CajaCuadreTest`, `AuditoriaBaseTest` y
+      `AbonoDepositoReservaTest` ajustadas a la regla de cerrar caja.
 

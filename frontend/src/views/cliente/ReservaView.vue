@@ -13,6 +13,7 @@ import { CalendarClock, CheckCircle2, Clock, Mail, MessageCircle, Phone, Receipt
 import { HORARIO_POR_DEFECTO, fechaMinimaReserva, horasDelDia, textoHorario, type HorarioReservas } from '@/utils/horarioReservas'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
 import PagoEnLinea from '@/components/pagos/PagoEnLinea.vue'
 import { usePagosEnLinea } from '@/composables/usePagosEnLinea'
 import { useAuthStore } from '@/stores/auth'
@@ -326,9 +327,7 @@ async function pagarDeposito(datosPago: PagoEnLineaPayload) {
           </div>
           <span v-if="errores.fecha_hora" class="mt-1.5 block text-xs text-red-600">{{ errores.fecha_hora }}</span>
           <p v-else-if="fechaHoraLegible" class="mt-2 text-xs text-[#6c655c]">{{ fechaHoraLegible }}</p>
-          <p class="mt-2 flex items-start gap-1.5 text-xs text-[#6c655c]">
-            <Clock :size="13" class="mt-px shrink-0" /> {{ textoHorario(horario) }}
-          </p>
+          <AvisoDestacado class="mt-3">{{ textoHorario(horario) }}</AvisoDestacado>
         </section>
 
         <!-- 2. Mesa -->
@@ -394,7 +393,7 @@ async function pagarDeposito(datosPago: PagoEnLineaPayload) {
               <span class="text-[#a39b8f]">{{ form.descripcion.length }}/{{ MAX_DESCRIPCION }}</span>
             </span>
           </label>
-          <p class="text-xs text-[#6c655c]">Te enviamos al correo la confirmación y un enlace para ver o cancelar la reserva.</p>
+          <AvisoDestacado>Te enviamos al correo la confirmación y un enlace para ver o cancelar la reserva.</AvisoDestacado>
         </section>
 
         <p v-if="errorGeneral" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ errorGeneral }}</p>

@@ -38,7 +38,7 @@ class RegisterClienteRequest extends FormRequest
     {
         return [
             'nombre' => ['required', 'string', 'max:80', 'regex:'.\App\Support\Validacion\Formatos::PERSONA],
-            'email' => ['required', 'email', 'unique:users,email'],
+            'email' => ['bail', 'required', 'email', \App\Support\Validacion\Eliminados::libre('users', 'email', 'Ese correo ya tuvo una cuenta. Escríbenos para recuperarla.'), 'unique:users,email'],
             // Fase 3, tarea 3 (RF-M01-007/011): nombre de usuario opcional para iniciar sesión.
             'username' => NombreUsuario::reglas(),
             'telefono' => ['nullable', 'string', 'regex:'.\App\Support\Validacion\Formatos::CELULAR],

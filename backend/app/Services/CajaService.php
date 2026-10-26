@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CajaTurno;
 use App\Models\CompraGasto;
 use App\Models\Pago;
+use App\Models\Pedido;
 use App\Models\Reserva;
 use App\Models\User;
 use RuntimeException;
@@ -226,10 +227,43 @@ class CajaService
         return [$inicio->copy()->utc(), $inicio->copy()->endOfDay()->utc()];
     }
 
+    /**
+     * Mejora (26/10/2026): la caja solo cierra con todos los pedidos finalizados o cancelados. Un pedido
+     * pendiente, confirmado o en preparación (con o sin saldo) queda en esta lista, de cualquier día.
+     *
+     * @return array<int, array{id: int, tipo: string, estado: string, destino: string, saldo: float}>
+     */
+    public function pedidosSinFinalizar(): array
+    {
+        return Pedido::with(['mesa:id,nombre', 'pagos'])
+            ->whereIn('estado', Pedido::ESTADOS_ACTIVOS)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Pedido $p) => [
+                'id' => $p->id,
+                'tipo' => $p->tipo,
+                'estado' => $p->estado,
+                'destino' => $p->esLocal()
+                    ? trim(($p->mesa?->nombre ?? 'Mesa').($p->cuenta > 1 ? " · Cuenta {$p->cuenta}" : ''))
+                    : ($p->esDomicilio() ? 'Domicilio' : 'Recogida'),
+                'saldo' => round(max(0, (float) $p->total - $p->totalPagado()), 2),
+            ])
+            ->all();
+    }
+
     public function cerrar(CajaTurno $turno, User $actor, float $efectivoContado, ?string $justificacion = null): CajaTurno
     {
         if (! $turno->estaAbierta()) {
             throw new RuntimeException('Este turno ya está cerrado.');
+        }
+
+        $abiertos = $this->pedidosSinFinalizar();
+        if ($abiertos) {
+            $lista = implode(', ', array_map(fn ($p) => "#{$p['id']} ({$p['destino']})", array_slice($abiertos, 0, 5)));
+            $mas = count($abiertos) > 5 ? ' y '.(count($abiertos) - 5).' más' : '';
+            throw new RuntimeException(count($abiertos) === 1
+                ? "No puedes cerrar la caja: el pedido {$lista} no está finalizado. Cóbralo y finalízalo, o cancélalo con su motivo."
+                : 'No puedes cerrar la caja: hay '.count($abiertos)." pedidos sin finalizar: {$lista}{$mas}. Cóbralos y finalízalos, o cancélalos con su motivo.");
         }
 
         $esperado = $this->recalcularEfectivoEsperado($turno);

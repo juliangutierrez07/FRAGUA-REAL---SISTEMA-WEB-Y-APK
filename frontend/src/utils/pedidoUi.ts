@@ -22,7 +22,14 @@ export function formatoHoraPedido(valor: string): string {
 // Quién/dónde: la mesa para el canal Local, o el cliente (invitado o con cuenta) para
 // domicilio/recogida; "Pedido #id" solo si no hay ninguno.
 export function titularPedido(pedido: Pedido): string {
-  return pedido.mesa?.nombre ?? pedido.cliente_invitado_nombre ?? pedido.cliente?.nombre ?? `Pedido #${pedido.id}`
+  // Mejora (26/10/2026): con cuentas separadas, la mesa dice a qué cuenta va el pedido.
+  if (pedido.mesa) return pedido.mesa.nombre + ((pedido.cuenta ?? 1) > 1 ? ` · Cuenta ${pedido.cuenta}` : '')
+  return pedido.cliente_invitado_nombre ?? pedido.cliente?.nombre ?? `Pedido #${pedido.id}`
+}
+
+// Mejora (26/10/2026): enlace para abrir en el mapa la ubicación que compartió el Cliente.
+export function enlaceMapa(lat: number, lng: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
 }
 
 // Réplica de Pedido::totalPagado() del backend: solo pagos aprobados y no anulados.

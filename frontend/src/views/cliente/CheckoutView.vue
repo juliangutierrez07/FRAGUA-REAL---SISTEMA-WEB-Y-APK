@@ -13,9 +13,14 @@
 // el Cliente ve las cuentas del negocio, transfiere el total exacto y sube la captura.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Banknote, Bike, CheckCircle2, MapPin, ShoppingBag, Smartphone } from 'lucide-vue-next'
+import { Banknote, Bike, Check, CheckCircle2, Landmark, LocateFixed, Map as IconoMapa, MapPin, ShoppingBag, Smartphone, X, Zap } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
+import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
+import CampoPesos from '@/components/common/CampoPesos.vue'
+import MapaUbicacion from '@/components/common/MapaUbicacion.vue'
+import { useNegocioStore } from '@/stores/negocio'
+import { MENSAJE_ERROR_UBICACION, obtenerUbicacion, type ErrorUbicacion, type Ubicacion } from '@/utils/ubicacion'
 import PagoEnLinea from '@/components/pagos/PagoEnLinea.vue'
 import { usePagosEnLinea } from '@/composables/usePagosEnLinea'
 import { useAuthStore } from '@/stores/auth'
@@ -122,12 +127,78 @@ const promociones = computed(() => cotizacion.value?.promociones ?? [])
 const descuento = computed(() => cotizacion.value?.descuento ?? 0)
 const totalEstimado = computed(() => subtotal.value - descuento.value + costoDomicilio.value)
 
+// ---- Mejora (26/10/2026): ubicación actual del Cliente (domicilio) ----
+// CORREGIDO (26/10/2026): la ubicación del navegador puede caer lejos (en un computador o sin GPS sale de
+// la red). Se toma la lectura más precisa de unos segundos (utils/ubicacion.ts) y el Cliente la confirma
+// en el mapa: tocar el mapa o arrastrar el pin la corrige. También puede marcarla sin GPS.
+const ubicacion = ref<Ubicacion | null>(null)
+const mostrarMapa = ref(false)
+const buscandoUbicacion = ref(false)
+const errorUbicacion = ref('')
+const negocio = useNegocioStore()
+void negocio.cargar() // el punto del local, para abrir el mapa ahí
+const centroLocal = computed<[number, number] | null>(() =>
+  negocio.datos.latitud != null && negocio.datos.longitud != null ? [negocio.datos.latitud, negocio.datos.longitud] : null,
+)
+// Más de 100 m de error: casi seguro no es la puerta; se pide mover el pin.
+const ubicacionAproximada = computed(() => !!ubicacion.value && ubicacion.value.precision > 100)
+
+async function usarMiUbicacion() {
+  errorUbicacion.value = ''
+  buscandoUbicacion.value = true
+  try {
+    ubicacion.value = await obtenerUbicacion()
+    mostrarMapa.value = true
+  } catch (e) {
+    errorUbicacion.value = MENSAJE_ERROR_UBICACION[e as ErrorUbicacion] ?? MENSAJE_ERROR_UBICACION.fallo
+  } finally {
+    buscandoUbicacion.value = false
+  }
+}
+function marcarEnMapa(lat: number, lng: number) {
+  ubicacion.value = { lat, lng, precision: 0 }
+  errorUbicacion.value = ''
+}
+function quitarUbicacion() {
+  ubicacion.value = null
+  mostrarMapa.value = false
+}
+
+// ---- Mejora (26/10/2026): con qué billete paga contra entrega (para llevar el cambio) ----
+const pagaCon = ref<number | null>(null) // null = valor exacto
+const otroValor = ref(false)
+const valorOtro = ref(0)
+const pideBillete = computed(() => tipo.value === 'domicilio' && metodoPago.value === 'contra_entrega')
+const opcionesBillete = computed(() => {
+  const total = totalEstimado.value
+  if (!(total > 0)) return []
+  const redondear = (paso: number) => Math.ceil(total / paso) * paso
+  return [...new Set([10000, 20000, 50000, 100000].map(redondear))].filter((v) => v > total).sort((a, b) => a - b).slice(0, 4)
+})
+const valorPagaCon = computed(() => (otroValor.value ? valorOtro.value || null : pagaCon.value))
+const cambioEstimado = computed(() => (valorPagaCon.value ? valorPagaCon.value - totalEstimado.value : 0))
+function elegirBillete(valor: number | null) {
+  otroValor.value = false
+  pagaCon.value = valor
+}
+// Si el total cambia y el billete ya no alcanza, vuelve a «Pago exacto».
+watch(totalEstimado, (total) => {
+  if (pagaCon.value !== null && pagaCon.value < total) pagaCon.value = null
+})
+
+// Íconos de los medios de pago en línea (no hay logos de las marcas).
+const ICONO_MEDIO: Record<MedioPagoEnLinea, typeof Smartphone> = { nequi: Smartphone, bancolombia: Landmark, breb: Zap }
+
 async function confirmarPedido() {
   errores.value = {}
   errorGeneral.value = ''
   enviando.value = true
 
   try {
+    if (pideBillete.value && otroValor.value && valorOtro.value > 0 && valorOtro.value < totalEstimado.value) {
+      errores.value = { paga_con: `Ese valor no alcanza para el total (${formatoPrecio(totalEstimado.value)}).` }
+      return
+    }
     const payload = {
       tipo: tipo.value,
       origen: 'cliente_web' as const,
@@ -137,6 +208,9 @@ async function confirmarPedido() {
             direccion_entrega: form.direccion_entrega,
             barrio: form.barrio,
             referencia: form.referencia,
+            ubicacion_lat: ubicacion.value?.lat,
+            ubicacion_lng: ubicacion.value?.lng,
+            paga_con: pideBillete.value ? (valorPagaCon.value ?? undefined) : undefined,
           }
         : {}),
       observaciones_entrega: form.observaciones_entrega.trim() || undefined,
@@ -252,7 +326,7 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
         >
           {{ enlaceSeguimiento }}
         </router-link>
-        <p class="mt-1 text-xs text-[#6c655c]">Guárdalo: sin cuenta, es la única forma de ver el estado o cancelarlo mientras esté pendiente.</p>
+        <AvisoDestacado tono="atencion" class="mt-3">Guárdalo: sin cuenta, es la única forma de ver el estado o cancelarlo mientras esté pendiente.</AvisoDestacado>
       </div>
       <!-- Pagar (sin Wompi) o reintentar solo el pago, sobre el mismo pedido (RF-M06-008). -->
       <div v-if="metodoPago === 'en_linea' && !pagoRegistrado && !redirigiendo" class="mt-6 text-left">
@@ -336,6 +410,57 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
               :icon="MapPin"
               :error="errores.direccion_entrega"
             />
+            <!-- Mejora (26/10/2026): compartir la ubicación para que el domiciliario llegue directo; el Cliente
+                 la confirma o la corrige en el mapa. -->
+            <div class="space-y-2.5">
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  class="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-brand-400 bg-white px-4 py-2.5 text-sm font-semibold text-brand-800 transition hover:bg-brand-50 active:scale-[0.99] disabled:opacity-60"
+                  :disabled="buscandoUbicacion"
+                  @click="usarMiUbicacion"
+                >
+                  <LocateFixed :size="17" />
+                  {{ buscandoUbicacion ? 'Buscando tu ubicación… (unos segundos)' : ubicacion ? 'Volver a buscar mi ubicación' : 'Usar mi ubicación actual' }}
+                </button>
+                <button
+                  v-if="!mostrarMapa"
+                  type="button"
+                  class="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#e3ded4] bg-white px-4 py-2.5 text-sm font-semibold text-[#4a443c] transition hover:border-brand-300 active:scale-[0.99]"
+                  @click="mostrarMapa = true"
+                >
+                  <IconoMapa :size="17" />
+                  Marcar en el mapa
+                </button>
+              </div>
+              <p v-if="errorUbicacion" class="text-xs text-red-600">{{ errorUbicacion }}</p>
+              <p v-else-if="!mostrarMapa" class="text-xs text-[#6c655c]">Opcional: el domiciliario la abre en el mapa. Igual escribe la dirección.</p>
+
+              <template v-if="mostrarMapa">
+                <AvisoDestacado v-if="ubicacionAproximada" tono="atencion">
+                  Tu ubicación es aproximada (unos {{ ubicacion!.precision }} m): sin GPS, el navegador la calcula por la
+                  red. Toca el mapa o arrastra el pin hasta tu puerta.
+                </AvisoDestacado>
+                <AvisoDestacado v-else-if="!ubicacion">Toca el mapa en el lugar de la entrega.</AvisoDestacado>
+                <div v-else class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-emerald-900">
+                  <CheckCircle2 :size="17" class="shrink-0 text-emerald-600" />
+                  <span class="font-medium">{{ ubicacion.precision === 0 ? 'Punto marcado por ti.' : `Ubicación encontrada (unos ${ubicacion.precision} m).` }}</span>
+                  <span class="text-xs text-[#6c655c]">Si no es tu puerta, toca el mapa o arrastra el pin.</span>
+                </div>
+                <MapaUbicacion
+                  class="h-64 sm:h-72"
+                  editable
+                  etiqueta="Lugar de la entrega"
+                  :latitud="ubicacion?.lat ?? null"
+                  :longitud="ubicacion?.lng ?? null"
+                  :centro-inicial="centroLocal"
+                  @elegir="marcarEnMapa"
+                />
+                <button type="button" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6c655c] underline-offset-2 hover:underline" @click="quitarUbicacion">
+                  <X :size="14" /> No enviar ubicación
+                </button>
+              </template>
+            </div>
             <div class="grid gap-4 sm:grid-cols-2">
               <BaseInput formato="nombre" :maxlength="80" v-model="form.barrio" label="Barrio" placeholder="Tu barrio" :error="errores.barrio" />
               <BaseInput formato="nombre" :maxlength="160"
@@ -362,13 +487,13 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
           <!-- Datos de contacto (solo invitado) -->
           <section v-if="!esCliente" class="space-y-4">
             <h2 class="font-display text-lg text-ink">Tus datos de contacto</h2>
-            <p class="text-xs text-[#6c655c]">
+            <AvisoDestacado>
               Pides como invitado.
-              <router-link :to="{ name: 'login', query: { redirect: '/checkout' } }" class="text-brand-700 underline"
+              <router-link :to="{ name: 'login', query: { redirect: '/checkout' } }" class="font-semibold text-brand-800 underline"
                 >Inicia sesión</router-link
               >
               si prefieres guardar tu historial de pedidos.
-            </p>
+            </AvisoDestacado>
             <div class="grid gap-4 sm:grid-cols-2">
               <BaseInput formato="persona" v-model="form.nombre_invitado" label="Nombre" placeholder="Tu nombre" :error="errores.cliente_invitado_nombre" />
               <BaseInput formato="celular"
@@ -435,6 +560,51 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
               </span>
             </label>
 
+            <!-- Mejora (26/10/2026): con qué billete paga, para que el domiciliario lleve el cambio completo. -->
+            <div v-if="pideBillete" class="rounded-2xl border border-[#e3ded4] bg-white p-4">
+              <p class="text-sm font-medium text-ink">Si pagas en efectivo, ¿con cuánto vas a pagar?</p>
+              <p class="mt-0.5 text-xs text-[#6c655c]">Así el domiciliario lleva el cambio completo.</p>
+              <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  class="min-h-11 rounded-xl border px-3 py-2 text-sm font-semibold transition active:scale-[0.98]"
+                  :class="!otroValor && pagaCon === null ? 'border-brand-500 bg-brand-500/15 text-ink' : 'border-[#e3ded4] text-[#4a443c] hover:border-brand-300'"
+                  @click="elegirBillete(null)"
+                >
+                  Pago exacto
+                </button>
+                <button
+                  v-for="valor in opcionesBillete"
+                  :key="valor"
+                  type="button"
+                  class="min-h-11 rounded-xl border px-3 py-2 text-sm font-semibold transition active:scale-[0.98]"
+                  :class="!otroValor && pagaCon === valor ? 'border-brand-500 bg-brand-500/15 text-ink' : 'border-[#e3ded4] text-[#4a443c] hover:border-brand-300'"
+                  @click="elegirBillete(valor)"
+                >
+                  {{ formatoPrecio(valor) }}
+                </button>
+                <button
+                  type="button"
+                  class="min-h-11 rounded-xl border px-3 py-2 text-sm font-semibold transition active:scale-[0.98]"
+                  :class="otroValor ? 'border-brand-500 bg-brand-500/15 text-ink' : 'border-[#e3ded4] text-[#4a443c] hover:border-brand-300'"
+                  @click="otroValor = true"
+                >
+                  Otro valor
+                </button>
+              </div>
+              <label v-if="otroValor" class="mt-3 block">
+                <span class="mb-1 block text-xs font-medium text-ink">¿Con cuánto pagas?</span>
+                <span class="relative block">
+                  <span class="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-[#9b9389]">$</span>
+                  <CampoPesos v-model="valorOtro" class="field pl-9" />
+                </span>
+              </label>
+              <p v-if="errores.paga_con" class="mt-2 text-xs text-red-600">{{ errores.paga_con }}</p>
+              <p v-else-if="valorPagaCon && cambioEstimado >= 0" class="mt-3 text-sm font-medium text-emerald-800">
+                Te llevamos {{ formatoPrecio(cambioEstimado) }} de cambio.
+              </p>
+            </div>
+
             <label
               v-if="enLineaDisponible"
               class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition"
@@ -465,11 +635,32 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
               </span>
             </label>
 
-            <div v-if="enLineaDisponible && metodoPago === 'en_linea'" class="flex flex-wrap gap-x-4 gap-y-2 pl-8">
-              <label v-for="m in opcionesMedio" :key="m" class="flex items-center gap-2 text-sm text-ink">
-                <input v-model="pasarela" type="radio" :value="m" />
-                {{ nombreMedio(m) }}
-              </label>
+            <!-- Mejora (26/10/2026): el medio en línea se elige con tarjetas, no con radios sueltos. -->
+            <div v-if="enLineaDisponible && metodoPago === 'en_linea'" role="radiogroup" aria-label="Medio de pago en línea" class="grid gap-2.5 sm:grid-cols-2">
+              <button
+                v-for="m in opcionesMedio"
+                :key="m"
+                type="button"
+                role="radio"
+                :aria-checked="pasarela === m"
+                class="flex min-h-14 items-center gap-3 rounded-2xl border bg-white px-4 py-3 text-left transition active:scale-[0.99]"
+                :class="pasarela === m ? 'border-brand-500 shadow-[0_0_0_3px_rgba(214,164,58,0.18)]' : 'border-[#e3ded4] hover:border-brand-300'"
+                @click="pasarela = m"
+              >
+                <span
+                  class="flex size-10 shrink-0 items-center justify-center rounded-xl"
+                  :class="pasarela === m ? 'bg-brand-500 text-ink' : 'bg-[#f3efe7] text-[#6c655c]'"
+                >
+                  <component :is="ICONO_MEDIO[m]" :size="19" />
+                </span>
+                <span class="flex-1 text-sm font-semibold text-ink">{{ nombreMedio(m) }}</span>
+                <span
+                  class="flex size-6 shrink-0 items-center justify-center rounded-full border"
+                  :class="pasarela === m ? 'border-brand-500 bg-brand-500 text-ink' : 'border-[#d6cfc3]'"
+                >
+                  <Check v-if="pasarela === m" :size="14" :stroke-width="3" />
+                </span>
+              </button>
             </div>
           </section>
 

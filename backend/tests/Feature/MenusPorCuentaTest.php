@@ -44,6 +44,7 @@ class MenusPorCuentaTest extends TestCase
         Sanctum::actingAs($this->admin);
         $this->getJson('/api/auth/me')->assertOk()->assertJsonPath('menus', [
             'dashboard', 'usuarios', 'pedidos', 'compras_gastos', 'catalogo', 'mesas', 'caja', 'reportes', 'auditoria', 'configuracion',
+            'impresoras', // M12 (24/10/2026)
         ]);
         Sanctum::actingAs($this->mesero);
         $this->getJson('/api/auth/me')->assertOk()->assertJsonPath('menus', ['pedidos', 'mesas', 'reservas', 'menu', 'cobrar', 'gastos']);

@@ -50,12 +50,18 @@ class CajaCuadreTest extends TestCase
         return now('America/Bogota')->toDateString();
     }
 
-    private function cobrarEnEfectivo(float $monto): Pago
+    // $preparado: el pedido pasa por la cocina antes del cobro y queda finalizado (26/10/2026: la caja
+    // solo cierra con todos los pedidos finalizados).
+    private function cobrarEnEfectivo(float $monto, bool $preparado = false): Pago
     {
         $pedido = app(PedidoService::class)->crear([
             'tipo' => 'local', 'origen' => 'mesero', 'mesa_id' => $this->mesa->id,
             'lineas' => [['producto_id' => $this->producto->id, 'cantidad' => 1]],
         ]);
+        if ($preparado) {
+            app(PedidoService::class)->confirmar($pedido, $this->mesero);
+            $pedido = app(PedidoService::class)->marcarPreparando($pedido->fresh());
+        }
 
         return app(PagoService::class)->registrarCobro($pedido, $this->mesero, ['metodo' => 'efectivo', 'monto' => $monto]);
     }
@@ -101,7 +107,7 @@ class CajaCuadreTest extends TestCase
 
     public function test_el_cierre_usa_el_esperado_con_gastos_y_no_marca_descuadre_falso(): void
     {
-        $this->cobrarEnEfectivo(20000);
+        $this->cobrarEnEfectivo(20000, preparado: true);
         $this->registrarGasto(15000);
 
         $this->postJson("/api/caja/turnos/{$this->turno->id}/cerrar", ['efectivo_contado' => 105000])
@@ -140,7 +146,7 @@ class CajaCuadreTest extends TestCase
 
     public function test_RF_M06_019_con_la_caja_cerrada_anular_exige_la_contrasena_del_administrador(): void
     {
-        $pago = $this->cobrarEnEfectivo(20000);
+        $pago = $this->cobrarEnEfectivo(20000, preparado: true);
         app(CajaService::class)->cerrar($this->turno->fresh(), $this->admin, 120000);
 
         Sanctum::actingAs($this->admin);
@@ -152,7 +158,7 @@ class CajaCuadreTest extends TestCase
 
     public function test_RF_M06_019_con_autorizacion_queda_un_ajuste_extraordinario_y_el_turno_cerrado_no_cambia(): void
     {
-        $pago = $this->cobrarEnEfectivo(20000);
+        $pago = $this->cobrarEnEfectivo(20000, preparado: true);
         app(CajaService::class)->cerrar($this->turno->fresh(), $this->admin, 120000);
 
         Sanctum::actingAs($this->admin);

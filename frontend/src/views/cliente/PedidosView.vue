@@ -3,7 +3,7 @@
 // cuando el usuario autenticado es Cliente (PedidoController::index); GET /mis-reservas
 // identifica las reservas propias por correo de contacto, ya que Reserva no tiene
 // cliente_id (RN-M05-12 — ver ReservaController::misReservas()).
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { CalendarClock, ChevronDown, PackageSearch, XCircle } from 'lucide-vue-next'
 import mascota from '@/assets/img/mascota-fragua-real.png'
 import BotonComprobante from '@/components/pedidos/BotonComprobante.vue'
@@ -119,18 +119,37 @@ function formatoFecha(valor: string) {
   return new Date(valor).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-async function cargarPedidos() {
-  cargando.value = true
+async function cargarPedidos(silencioso = false) {
+  if (!silencioso) cargando.value = true
   error.value = ''
   try {
     const { data } = await pedidoService.index()
     pedidos.value = data.data
+    // El detalle abierto se vuelve a pedir para que su estado y sus pagos también estén al día.
+    const id = abierto.value
+    if (silencioso && id) detalleCache.value[id] = (await pedidoService.show(id)).data
   } catch (e) {
-    error.value = mensajeDeError(e, 'No pudimos cargar tus pedidos.')
+    if (!silencioso) error.value = mensajeDeError(e, 'No pudimos cargar tus pedidos.')
   } finally {
     cargando.value = false
   }
 }
+
+// Mejora (26/10/2026): mientras haya un pedido en curso, la lista se pone al día cada 10 s (con la
+// página a la vista) y al volver a ella.
+let temporizador: ReturnType<typeof setInterval> | undefined
+const hayEnCurso = () => pedidos.value.some((p) => ['pendiente', 'confirmado', 'preparando'].includes(p.estado))
+function alVolver() {
+  if (document.visibilityState === 'visible' && hayEnCurso()) void cargarPedidos(true)
+}
+onMounted(() => {
+  temporizador = setInterval(alVolver, 10000)
+  document.addEventListener('visibilitychange', alVolver)
+})
+onBeforeUnmount(() => {
+  clearInterval(temporizador)
+  document.removeEventListener('visibilitychange', alVolver)
+})
 
 async function alternar(pedido: Pedido) {
   if (abierto.value === pedido.id) {
@@ -264,7 +283,7 @@ function seleccionarTab(nuevo: 'pedidos' | 'reservas') {
 
 const sinNada = computed(() => tab.value === 'pedidos' ? pedidos.value.length === 0 : reservas.value.length === 0)
 
-onMounted(cargarPedidos)
+onMounted(() => cargarPedidos())
 </script>
 
 <template>

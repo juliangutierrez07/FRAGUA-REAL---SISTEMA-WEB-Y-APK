@@ -9,7 +9,7 @@ class Mesa extends Model
 {
     protected $fillable = ['nombre', 'estado', 'ocupada_desde', 'qr_code', 'activa'];
 
-    protected $casts = ['activa' => 'boolean', 'ocupada_desde' => 'datetime'];
+    protected $casts = ['activa' => 'boolean', 'ocupada_desde' => 'datetime', 'eliminado_at' => 'datetime'];
 
     public function reservas(): HasMany
     {
@@ -51,6 +51,19 @@ class Mesa extends Model
             ->where('estado', '!=', 'cancelado')
             ->where('created_at', '>=', $this->ocupada_desde)
             ->orderBy('id');
+    }
+
+    /**
+     * Mejora (26/10/2026): cuentas separadas. Los números de cuenta de la visita en curso (1, 2, 3…),
+     * de menor a mayor. Un pedido sin número (anterior a esta mejora) es de la cuenta 1.
+     *
+     * @return array<int, int>
+     */
+    public function cuentasDeLaVisita(): array
+    {
+        return $this->pedidosDeLaCuenta()->get(['cuenta'])
+            ->map(fn ($p) => (int) ($p->cuenta ?? 1))
+            ->unique()->sort()->values()->all();
     }
 
     // RF-M05-010: no puede liberarse con pedidos PENDIENTE o CONFIRMADO

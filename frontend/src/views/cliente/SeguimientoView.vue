@@ -3,13 +3,14 @@
 // 011). El invitado no tiene cuenta: entra con el enlace privado que recibió al crear su pedido
 // (/seguimiento/<token>). Ve el estado, los productos, el total y lo pagado; mientras el pedido
 // está PENDIENTE puede pagarlo en línea o reintentar el pago (RF-M06-005/008) y cancelarlo
-// (RF-M07-016, RF-M07-R-009). La página se actualiza sola cada 30 segundos.
+// (RF-M07-016, RF-M07-R-009). La página se actualiza sola cada 10 segundos (26/10/2026).
 // Pago directo (22/10/2026, RF-M06-030 a 033): sin Wompi, paga transfiriendo y subiendo la captura;
 // mientras se revisa lo dice, y si se rechaza ve el motivo y puede enviarla de nuevo.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Bike, CheckCircle2, ShoppingBag, XCircle, CircleX } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
+import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
 import BotonComprobante from '@/components/pedidos/BotonComprobante.vue'
 import PagoEnLinea from '@/components/pagos/PagoEnLinea.vue'
 import { usePagosEnLinea } from '@/composables/usePagosEnLinea'
@@ -41,14 +42,27 @@ async function cargar(silencioso = false) {
   }
 }
 
+// Mejora (26/10/2026): el estado tardaba hasta 30 s en cambiar. Ahora se pregunta cada 10 s mientras
+// la página está a la vista, y de inmediato al volver a ella (el teléfono pausa las pestañas ocultas).
+const CADA_MS = 10000
 let temporizador: ReturnType<typeof setInterval> | undefined
+const sigueActivo = () => !!pedido.value && !['finalizado', 'cancelado'].includes(pedido.value.estado)
+function alVolver() {
+  if (document.visibilityState === 'visible' && sigueActivo()) cargar(true)
+}
 onMounted(() => {
   cargar()
   temporizador = setInterval(() => {
-    if (pedido.value && !['finalizado', 'cancelado'].includes(pedido.value.estado)) cargar(true)
-  }, 30000)
+    if (document.visibilityState === 'visible' && sigueActivo()) cargar(true)
+  }, CADA_MS)
+  document.addEventListener('visibilitychange', alVolver)
+  window.addEventListener('focus', alVolver)
 })
-onBeforeUnmount(() => clearInterval(temporizador))
+onBeforeUnmount(() => {
+  clearInterval(temporizador)
+  document.removeEventListener('visibilitychange', alVolver)
+  window.removeEventListener('focus', alVolver)
+})
 
 function formatoPrecio(valor: number) {
   return Number(valor).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
@@ -244,10 +258,10 @@ async function cancelar() {
           Tu pago anterior no se aprobó<template v-if="rechazado.rechazo_motivo">: {{ rechazado.rechazo_motivo }}</template>.
           Revisa los datos y vuelve a enviar el comprobante.
         </p>
-        <p class="mt-1 text-xs text-[#6c655c]">
+        <AvisoDestacado class="mt-2">
           <template v-if="intentoEnPasarela">¿No terminaste el pago? Puedes intentarlo de nuevo. </template>
           También puedes pagar {{ pedido.tipo === 'domicilio' ? 'contra entrega' : 'al recoger' }}.
-        </p>
+        </AvisoDestacado>
         <PagoEnLinea
           class="mt-4"
           :config="configPagos"
@@ -298,7 +312,7 @@ async function cancelar() {
         </div>
       </section>
 
-      <p class="mt-8 text-xs text-[#a59d90]">Guarda este enlace: es la única forma de ver tu pedido sin cuenta.</p>
+      <AvisoDestacado tono="atencion" class="mt-8">Guarda este enlace: es la única forma de ver tu pedido sin cuenta.</AvisoDestacado>
     </template>
   </div>
 </template>

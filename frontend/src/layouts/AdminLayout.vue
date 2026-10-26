@@ -2,10 +2,13 @@
 import { Eye } from 'lucide-vue-next'
 import AppSidebar from '@/components/common/AppSidebar.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useEquipoImpresionStore } from '@/stores/equipoImpresion'
 
 // M10 (20/10/2026): la cuenta de Soporte ve todo, pero solo para consultar; la franja lo recuerda
 // en cada pantalla.
 const auth = useAuthStore()
+// M12 (24/10/2026): si este equipo imprime, manda su señal a Impresoras cada minuto.
+useEquipoImpresionStore().iniciar()
 </script>
 
 <template>

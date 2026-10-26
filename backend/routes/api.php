@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\AuditoriaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CajaController;
 use App\Http\Controllers\Api\CatalogoController;
+use App\Http\Controllers\Api\EliminacionController;
+use App\Http\Controllers\Api\ImpresionController;
 use App\Http\Controllers\Api\ComandaController;
 use App\Http\Controllers\Api\CompraGastoController;
 use App\Http\Controllers\Api\ComprobanteController;
@@ -186,6 +188,13 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         Route::get('/comandas/{comanda}/ticket', [ComandaController::class, 'ticket']);
         Route::post('/comandas/{comanda}/no-impresa', [ComandaController::class, 'noImpresa']);
 
+        // M12 — Impresoras (24/10/2026): lo que hace cada equipo del local que imprime, con su clave en
+        // la cabecera X-Equipo-Impresion (también con la sesión de un Mesero).
+        Route::post('/impresion/equipos/vincular', [ImpresionController::class, 'vincular'])->middleware('throttle:10,1');
+        Route::post('/impresion/equipos/senal', [ImpresionController::class, 'senal']);
+        Route::get('/impresion/prueba', [ImpresionController::class, 'prueba']);
+        Route::post('/impresion/equipos/prueba', [ImpresionController::class, 'resultadoPrueba']);
+
         // Confirmar/rechazar manualmente un pago en línea (mismo patrón que el depósito de
         // reserva de abajo). Fase 6, tarea 1: con la pasarela activa el pago se confirma solo y
         // esto queda como respaldo (decisión D4). Historia: sin esto, un
@@ -316,6 +325,30 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         // M09 (20/10/2026): los menús que ve cada Administrador o Mesero (solo el SuperAdmin los cambia).
         Route::get('/usuarios/{usuario}/menus', [UsuarioController::class, 'menus'])->middleware('menu:usuarios');
         Route::put('/usuarios/{usuario}/menus', [UsuarioController::class, 'actualizarMenus'])->middleware('menu:usuarios');
+
+        // M12 — Impresoras (24/10/2026): equipos, formato del ticket, vista previa y estado.
+        Route::get('/impresion/equipos', [ImpresionController::class, 'equipos'])->middleware('menu:impresoras');
+        Route::post('/impresion/equipos', [ImpresionController::class, 'crear'])->middleware('menu:impresoras');
+        Route::put('/impresion/equipos/{equipo}', [ImpresionController::class, 'actualizar'])->middleware('menu:impresoras');
+        Route::delete('/impresion/equipos/{equipo}', [ImpresionController::class, 'quitar'])->middleware('menu:impresoras');
+        Route::post('/impresion/equipos/{equipo}/codigo', [ImpresionController::class, 'codigo'])->middleware('menu:impresoras');
+        Route::get('/impresion/formato', [ImpresionController::class, 'formato'])->middleware('menu:impresoras');
+        Route::put('/impresion/formato', [ImpresionController::class, 'actualizarFormato'])->middleware('menu:impresoras');
+        Route::post('/impresion/vista-previa', [ImpresionController::class, 'vistaPrevia'])->middleware('menu:impresoras');
+        Route::get('/impresion/estado', [ImpresionController::class, 'estado'])->middleware('menu:impresoras');
+        Route::post('/comandas/{comanda}/descartar', [ComandaController::class, 'descartar'])->middleware('menu:impresoras,pedidos');
+
+        // Eliminar (24/10/2026): lo que nunca se usó se borra; lo que tiene historial se archiva y se
+        // restaura desde «Eliminados». Con contraseña y motivo (EliminacionService).
+        Route::get('/mesas/{mesa}/eliminacion', [EliminacionController::class, 'vistaMesa'])->middleware('menu:mesas');
+        Route::post('/mesas/{mesa}/eliminar', [EliminacionController::class, 'eliminarMesa'])->middleware('menu:mesas');
+        Route::post('/mesas/{mesa}/restaurar', [EliminacionController::class, 'restaurarMesa'])->middleware('menu:mesas');
+        Route::get('/productos/{producto}/eliminacion', [EliminacionController::class, 'vistaProducto'])->middleware('menu:catalogo');
+        Route::post('/productos/{producto}/eliminar', [EliminacionController::class, 'eliminarProducto'])->middleware('menu:catalogo');
+        Route::post('/productos/{producto}/restaurar', [EliminacionController::class, 'restaurarProducto'])->middleware('menu:catalogo');
+        Route::get('/usuarios/{usuario}/eliminacion', [EliminacionController::class, 'vistaUsuario'])->middleware('menu:usuarios');
+        Route::post('/usuarios/{usuario}/eliminar', [EliminacionController::class, 'eliminarUsuario'])->middleware('menu:usuarios');
+        Route::post('/usuarios/{usuario}/restaurar', [EliminacionController::class, 'restaurarUsuario'])->middleware('menu:usuarios');
 
         // Fase 3, tarea 1 (RF-M01-025, HU-M01-020, RNF-TRANS-023): consulta de la auditoría y
         // de los eventos de seguridad. Solo lectura.

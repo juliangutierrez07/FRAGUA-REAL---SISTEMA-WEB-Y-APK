@@ -1,6 +1,7 @@
 // M02/M07 — espeja StorePedidoRequest y RegistrarPagoEnLineaRequest del backend
 // (routes/api.php: POST /pedidos, GET /pedidos, GET /pedidos/{id}, POST /pedidos/{id}/pagar-en-linea).
 import api from './api'
+import { formularioCobro } from './mesa.service'
 import type { CheckoutPasarela, Comprobante, MedioPagoEnLinea, Pago, Pedido, PromocionAplicada, TipoPedido } from '@/types/models'
 
 export interface LineaPedidoPayload {
@@ -19,6 +20,8 @@ export interface CrearPedidoPayload {
   tipo: TipoPedido
   origen: 'cliente_web' | 'mesero' | 'qr'
   mesa_id?: number
+  // Mejora (26/10/2026): a qué cuenta de la mesa va (sin dato, la 1).
+  cuenta?: number
   cliente_invitado_nombre?: string
   cliente_invitado_telefono?: string
   // Fase 4, tarea 5: opcional, para avisarle al invitado que su pedido está listo.
@@ -29,6 +32,10 @@ export interface CrearPedidoPayload {
   direccion_entrega?: string
   barrio?: string
   referencia?: string
+  // Mejora (26/10/2026): ubicación actual del Cliente y con qué billete paga contra entrega.
+  ubicacion_lat?: number
+  ubicacion_lng?: number
+  paga_con?: number
   observaciones_entrega?: string
   // Sin dato, el backend asume contra entrega / al recoger.
   metodo_pago_preferido?: 'contra_entrega' | 'en_linea'
@@ -60,6 +67,8 @@ export function formularioPagoEnLinea(payload: PagoEnLineaPayload): FormData {
 export interface CobrarPayload {
   metodo: 'efectivo' | 'tarjeta' | 'transferencia'
   monto: number
+  // Mejora (26/10/2026): la foto del comprobante (obligatoria en transferencia).
+  comprobante?: File | null
 }
 
 // Fase 2, tarea 1 (RF-M04-035): POST /pedidos/cotizacion — total del carrito con las
@@ -209,6 +218,6 @@ export const pedidoService = {
   // un mensaje claro si no hay turno de caja abierto (RN-M06-03) — el Mesero no puede
   // abrir turno, eso es exclusivo del Administrador (RN-M06-01).
   cobrar(id: number, payload: CobrarPayload) {
-    return api.post<Pedido>(`/pedidos/${id}/cobrar`, payload)
+    return api.post<Pedido>(`/pedidos/${id}/cobrar`, formularioCobro(payload))
   },
 }

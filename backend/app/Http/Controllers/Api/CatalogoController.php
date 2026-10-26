@@ -122,6 +122,8 @@ class CatalogoController extends Controller
                 ->where(fn ($q) => $q->whereDoesntHave('variantes')
                     ->orWhereHas('variantes', fn ($v) => $v->where('activa', true)->where('disponible', true)));
         }
+        // Eliminar (24/10/2026): los archivados solo salen con ?eliminados=1 (para restaurarlos).
+        $request->boolean('eliminados') && ! $esPublico ? $query->whereNotNull('eliminado_at') : $query->whereNull('eliminado_at');
         if ($request->filled('q')) {
             $texto = '%'.mb_strtolower(trim((string) $request->input('q'))).'%';
             $query->whereRaw('LOWER(nombre) LIKE ?', [$texto]);
@@ -254,6 +256,7 @@ class CatalogoController extends Controller
     // el de precio, queda en la auditoría (RF-M04-022).
     public function updateProducto(StoreProductoRequest $request, Producto $producto)
     {
+        abort_if($producto->eliminado_at !== null, 422, 'El producto está eliminado: restáuralo primero desde «Eliminados».');
         $data = $request->validated();
         $generales = $data['extras_generales'] ?? null;
         unset($data['extras_generales']);

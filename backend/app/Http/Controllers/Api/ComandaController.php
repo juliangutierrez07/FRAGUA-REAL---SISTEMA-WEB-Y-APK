@@ -45,6 +45,19 @@ class ComandaController extends Controller
         return $this->comandas->imprimir($comanda, $request->user());
     }
 
+    // POST /api/comandas/{comanda}/descartar — M12: ya no hace falta imprimirla (Administrador, con motivo).
+    public function descartar(Request $request, Comanda $comanda)
+    {
+        abort_if(! $request->user()->esAdministrador(), 403);
+        $datos = $request->validate(['motivo' => ['required', 'string', 'min:3', 'max:255']], ['motivo.required' => 'Escribe por qué no se imprime.']);
+
+        try {
+            return response()->json(ComandaService::resumen($this->comandas->descartar($comanda, $request->user(), $datos['motivo'])));
+        } catch (\RuntimeException $e) {
+            abort(422, $e->getMessage());
+        }
+    }
+
     // POST /api/comandas/{comanda}/no-impresa — HU-M02-016: no salió; vuelve a pendientes.
     public function noImpresa(Request $request, Comanda $comanda)
     {

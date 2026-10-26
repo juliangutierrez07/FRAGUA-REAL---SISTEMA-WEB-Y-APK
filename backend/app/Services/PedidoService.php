@@ -54,6 +54,8 @@ class PedidoService
             // RF-M06-005: con este token el invitado paga en línea y consulta su pedido.
             $pedido->token_publico = Str::random(48);
             $pedido->mesa_id = $data['mesa_id'] ?? null;
+            // Mejora (26/10/2026): cuentas separadas en la mesa.
+            $pedido->cuenta = $data['tipo'] === 'local' ? $this->cuentaDelPedido($data) : null;
             $pedido->cliente_id = $data['cliente_id'] ?? null;
             $pedido->cliente_invitado_nombre = $data['cliente_invitado_nombre'] ?? null;
             $pedido->cliente_invitado_telefono = $data['cliente_invitado_telefono'] ?? null;
@@ -70,9 +72,17 @@ class PedidoService
             $pedido->direccion_entrega = $esDomicilio ? trim($data['direccion_entrega']) : null;
             $pedido->barrio = $esDomicilio ? trim($data['barrio']) : null;
             $pedido->referencia = $esDomicilio ? trim($data['referencia']) : null;
+            // Mejora (26/10/2026): la ubicación que compartió el Cliente, para abrirla en el mapa.
+            $conUbicacion = $esDomicilio && isset($data['ubicacion_lat'], $data['ubicacion_lng']);
+            $pedido->ubicacion_lat = $conUbicacion ? round((float) $data['ubicacion_lat'], 7) : null;
+            $pedido->ubicacion_lng = $conUbicacion ? round((float) $data['ubicacion_lng'], 7) : null;
             $pedido->observaciones_entrega = $esRemoto ? (trim($data['observaciones_entrega'] ?? '') ?: null) : null;
             $pedido->metodo_pago_preferido = $esRemoto ? ($data['metodo_pago_preferido'] ?? 'contra_entrega') : null;
             $pedido->pasarela_preferida = $pedido->metodo_pago_preferido === 'en_linea' ? ($data['pasarela_preferida'] ?? null) : null;
+            // Mejora (26/10/2026): el billete con el que paga el domicilio contra entrega.
+            $pedido->paga_con = $esDomicilio && $pedido->metodo_pago_preferido === 'contra_entrega' && isset($data['paga_con'])
+                ? round((float) $data['paga_con'], 2)
+                : null;
             // RF-M07-012: se copia el valor vigente de domicilio al momento de crear el pedido.
             // La tabla `configuraciones` para editar ese valor vigente sigue pendiente (ver README
             // de la base de datos) — mientras tanto el valor vigente se recibe como parámetro.
@@ -90,6 +100,11 @@ class PedidoService
             }
 
             $this->recalcularTotales($pedido);
+
+            if ($pedido->paga_con !== null && (float) $pedido->paga_con < (float) $pedido->total) {
+                throw new RuntimeException('El billete con el que pagas ($'.number_format((float) $pedido->paga_con, 0, ',', '.')
+                    .') no alcanza para el total ($'.number_format((float) $pedido->total, 0, ',', '.').'). Elige uno mayor o «Pago exacto».');
+            }
 
             // RN-M05-04: el primer pedido local de una mesa la marca ocupada (venía de una
             // mesa libre o reservada — de cualquier forma, ya hay alguien sentado ahí).
@@ -118,6 +133,28 @@ class PedidoService
         app(NotificacionService::class)->pedidoNuevo($pedido);
 
         return $pedido;
+    }
+
+    /**
+     * Mejora (26/10/2026): a qué cuenta de la mesa va un pedido local. Con la mesa libre es la 1. Con la
+     * mesa ocupada, una cuenta que ya existe en la visita o la siguiente (cuenta nueva, separada). Sin
+     * número (el QR del Cliente, o el Mesero en una mesa con una sola cuenta) va a la 1.
+     */
+    private function cuentaDelPedido(array $data): int
+    {
+        $mesa = Mesa::whereKey($data['mesa_id'])->lockForUpdate()->first();
+        $existentes = $mesa ? $mesa->cuentasDeLaVisita() : [];
+        $pedida = isset($data['cuenta']) ? (int) $data['cuenta'] : null;
+
+        if ($pedida === null || $existentes === []) {
+            return 1;
+        }
+        $siguiente = max($existentes) + 1;
+        if (! in_array($pedida, $existentes, true) && $pedida !== $siguiente) {
+            throw new InvalidArgumentException("La cuenta {$pedida} no existe en esta mesa. Elige una de sus cuentas o abre la cuenta {$siguiente}.");
+        }
+
+        return $pedida;
     }
 
     private function validarReglasDeCanal(array $data): void

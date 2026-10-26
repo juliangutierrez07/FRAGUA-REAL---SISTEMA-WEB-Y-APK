@@ -3,8 +3,11 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/common/AppSidebar.vue'
 import ComandasPendientes from '@/components/pedidos/ComandasPendientes.vue'
+import { useEquipoImpresionStore } from '@/stores/equipoImpresion'
 
 const route = useRoute()
+// M12 (24/10/2026): si este equipo imprime, manda su señal a Impresoras cada minuto.
+useEquipoImpresionStore().iniciar()
 
 // Pantallas "a pantalla completa" (meta.pantallaCompleta, p. ej. Nuevo pedido) traen su propio
 // encabezado y su propia barra inferior (el carrito) — sin márgenes del layout ni barra de

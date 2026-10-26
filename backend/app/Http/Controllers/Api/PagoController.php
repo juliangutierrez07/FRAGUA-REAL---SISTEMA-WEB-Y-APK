@@ -30,7 +30,14 @@ class PagoController extends Controller
     {
         $this->authorize('cobrar', $pedido); // PedidoPolicy::cobrar() — RF-M06-003/004, RNF-M06-004
 
-        $pago = $this->pagoService->registrarCobro($pedido, $request->user(), $request->validated());
+        // Mejora (26/10/2026): la foto del comprobante (obligatoria en transferencia) queda con el pago.
+        $data = $request->safe()->only(['metodo', 'monto']);
+        if ($request->hasFile('comprobante')) {
+            $archivo = app(\App\Services\PagoDirectoService::class)->guardarComprobante($request->file('comprobante'), "cobro-pedido-{$pedido->id}");
+            $data['comprobante_path'] = $archivo['path'];
+            $data['comprobante_mime'] = $archivo['mime'];
+        }
+        $pago = $this->pagoService->registrarCobro($pedido, $request->user(), $data);
 
         // Pedido completo (no solo los pagos): la pantalla Cobrar reemplaza la tarjeta con
         // esta respuesta, y el cobro puede haberlo finalizado (RN-PED-32).

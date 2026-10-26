@@ -15,13 +15,24 @@ backend (API en Laravel) y el frontend (aplicación web en Vue).
 
 - El plan de implementación está completo: Fases 0 a 7, más el endurecimiento de seguridad, la prueba
   de un día completo de operación y las listas de revisión manual por rol.
-- 407 pruebas automáticas, que pasan en SQLite y en PostgreSQL.
+- 432 pruebas automáticas, que pasan en SQLite y en PostgreSQL.
 - Pago en línea sin Wompi (22/10/2026): el Cliente transfiere a Nequi, a la cuenta Bancolombia o a la
   llave Bre-B del negocio y sube la captura; el personal la revisa y aprueba o rechaza con motivo. Las
   cuentas las pone el SuperAdmin en Configuración; al activar Wompi vuelve el pago automático.
 - Formato en todos los campos (22/10/2026): mientras se escribe o se pega, cada campo descarta lo que
   no le corresponde (letras en un teléfono, números en un nombre…), los pesos se ven con punto de miles
   y el servidor valida con las mismas reglas (teléfonos de 10 dígitos, cédula o NIT, cuenta de 11 dígitos).
+- Eliminar mesas, productos y usuarios (24/10/2026): lo que nunca se usó se borra; lo que tiene
+  historial se archiva (sale de las listas, los reportes lo siguen nombrando) y se restaura desde
+  «Eliminados». Administrador y SuperAdmin, con contraseña y motivo.
+- Menú «Impresoras» (M12, 24/10/2026): los equipos del local que imprimen (registrados o vinculados con
+  un código), su señal y su última prueba, la impresión de prueba de 80 mm, el formato del ticket con
+  vista previa, lo que falta por imprimir y una guía para dejar un equipo listo. Sin instalar nada.
+- Mejoras de operación (26/10/2026): la caja solo cierra con todos los pedidos finalizados o cancelados;
+  cuentas separadas en una mesa ocupada; foto del comprobante con la cámara al cobrar por transferencia
+  (obligatoria) o tarjeta; en el domicilio, «Usar mi ubicación actual» y con qué billete paga contra
+  entrega; las bebidas no preguntan qué ingrediente quitar; el seguimiento se pone al día cada 10 s; la
+  auditoría dice quién hizo cada cosa también en el detalle; y la barra lateral del teléfono corregida.
 - Contraseña segura en toda contraseña nueva (8 caracteres como mínimo, con al menos una mayúscula, una minúscula y un número) y bloqueo de 15 minutos del inicio de sesión
   tras 5 intentos fallidos de una cuenta o 20 desde una IP (21/10/2026).
 - Campana de notificaciones para el personal (M11, 21/10/2026): pedidos nuevos por la web o el QR,
@@ -73,7 +84,7 @@ FRAGUA-REAL---SISTEMA-WEB-Y-APK/
 ├── README-ENTREGA.md        Cómo correrlo, cómo ponerlo en el servidor y qué cambió por fase
 ├── README-BACKEND.md        Arquitectura del backend e historial técnico de cambios
 ├── BASE-DE-DATOS.md         Tablas, relaciones, migraciones y decisiones de diseño
-├── API.md                   Los 172 endpoints, por módulo, con quién puede usarlos
+├── API.md                   Los 195 endpoints, por módulo, con quién puede usarlos
 ├── PRUEBA-DIA-COMPLETO.md   Recorrido a mano de un día de operación, con las cifras esperadas
 └── QA-CLIENTE.md, QA-MESERO.md, QA-ADMINISTRADOR.md
                              Listas de revisión manual por rol
@@ -108,7 +119,7 @@ con la contraseña `password`. El detalle, la puesta en producción y la configu
 
 ```bash
 cd backend
-php artisan test              # 407 pruebas (SQLite en memoria)
+php artisan test              # 432 pruebas (SQLite en memoria)
 ```
 
 Cada prueba lleva en su nombre o en su comentario el requisito que cubre. `DiaCompletoTest` recorre un
@@ -123,8 +134,8 @@ QA por rol.
 |---|---|
 | [`README-ENTREGA.md`](README-ENTREGA.md) | Instalar, poner en producción en el VPS, decisiones del negocio y cambios de comportamiento por fase |
 | [`README-BACKEND.md`](README-BACKEND.md) | Cómo está armado el backend (capas, módulos, tareas programadas, configuración) y el historial de los 60 cambios |
-| [`BASE-DE-DATOS.md`](BASE-DE-DATOS.md) | Las 40 tablas, sus relaciones, las 65 migraciones y las decisiones de diseño (ADR) |
-| [`API.md`](API.md) | Los 172 endpoints con rol, uso y límite de peticiones |
+| [`BASE-DE-DATOS.md`](BASE-DE-DATOS.md) | Las 41 tablas, sus relaciones, las 68 migraciones y las decisiones de diseño (ADR) |
+| [`API.md`](API.md) | Los 195 endpoints con rol, uso y límite de peticiones |
 | [`PRUEBA-DIA-COMPLETO.md`](PRUEBA-DIA-COMPLETO.md) | Prueba manual de un día completo |
 | [`QA-CLIENTE.md`](QA-CLIENTE.md), [`QA-MESERO.md`](QA-MESERO.md), [`QA-ADMINISTRADOR.md`](QA-ADMINISTRADOR.md) | Revisión manual pantalla por pantalla |
 | [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md) | Notas de cada proyecto |
@@ -138,7 +149,7 @@ QA por rol.
 | Estructura técnica (docx) | Resumen técnico del proyecto para entregar |
 | Flujos por rol (PDF) | Diagramas de los flujos de cada rol y sus reglas (37 páginas, con la app instalable, las notificaciones, el SuperAdmin, Soporte, el carrito, las ofertas, la importación y la caja del turno) |
 | Cronograma (xlsx) | Tareas, fechas y estado de cada fase; la hoja «Mejoras en producción» tiene el despliegue y las mejoras del 15 y 16/10/2026 |
-| `er_diagram.png` y `er_diagram.pdf` | Diagrama completo de la base de datos (65 migraciones) |
+| `er_diagram.png` y `er_diagram.pdf` | Diagrama completo de la base de datos (68 migraciones) |
 
 El documento **«Plan de implementación — Fragua Real Burger»** (en Claude) tiene el plan por fases, las
 decisiones D1 a D7 y el estado de cada tarea.

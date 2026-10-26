@@ -114,20 +114,35 @@ class ComprobanteService
 
     private function pdf(Comprobante $comprobante, string $formato, ?array $reimpresion = null): DomPdf
     {
+        if ($formato === 'ticket') {
+            return $this->ticketPdf($comprobante, $reimpresion);
+        }
         $datos = ['c' => $comprobante->detalle, 'comprobante' => $comprobante, 'reimpresion' => $reimpresion,
             'logo' => app(NegocioService::class)->logoParaPdf()];
 
-        if ($formato === 'ticket') {
-            $d = $comprobante->detalle;
-            // dompdf no ajusta el alto solo: se calcula con lo que lleva el ticket.
-            // Un renglón por línea (dos si el nombre es largo o lleva extras), pagos, descuentos y lo fijo.
-            $renglones = collect($d['lineas'] ?? [])->sum(fn ($l) => 1 + (mb_strlen($l['nombre']) > 24 ? 1 : 0) + (empty($l['extras']) ? 0 : 1))
-                + count($d['pagos'] ?? []) + count($d['descuentos'] ?? []) + ($comprobante->anulado_at ? 3 : 0) + ($reimpresion ? 2 : 0) + 17;
-
-            return Pdf::loadView('comprobantes.ticket', $datos)->setOption(self::OPCIONES)->setPaper([0, 0, self::ANCHO_TICKET_PUNTOS, 30 + $renglones * 11.5]);
-        }
-
         return Pdf::loadView('comprobantes.pdf', $datos)->setOption(self::OPCIONES)->setPaper('a5', 'portrait');
+    }
+
+    /**
+     * El ticket de 80 mm. M12 (24/10/2026): con el formato de Impresoras (logo, letra, mensaje al pie y
+     * copias); `$formatoTicket` sirve para la vista previa sin guardar.
+     */
+    public function ticketPdf(Comprobante $comprobante, ?array $reimpresion, ?array $formatoTicket = null): DomPdf
+    {
+        $f = $formatoTicket ?? app(ImpresionService::class)->formato();
+        $logo = $f['ticket_logo'] ? app(NegocioService::class)->logoParaPdf() : null;
+        $grande = $f['ticket_letra'] === 'grande';
+        $d = $comprobante->detalle;
+        // dompdf no ajusta el alto solo: se calcula con lo que lleva el ticket.
+        // Un renglón por línea (dos si el nombre es largo o lleva extras), pagos, descuentos y lo fijo.
+        $renglones = collect($d['lineas'] ?? [])->sum(fn ($l) => 1 + (mb_strlen($l['nombre']) > ($grande ? 19 : 24) ? 1 : 0) + (empty($l['extras']) ? 0 : 1))
+            + count($d['pagos'] ?? []) + count($d['descuentos'] ?? []) + ($comprobante->anulado_at ? 3 : 0) + ($reimpresion ? 2 : 0) + 17
+            + ($logo ? 5 : 0) + (int) ceil(mb_strlen((string) $f['ticket_mensaje_pie']) / ($grande ? 30 : 38)) - 1
+            + ((int) $f['copias_comprobante'] > 1 ? 1 : 0);
+        $datos = ['c' => $d, 'comprobante' => $comprobante, 'reimpresion' => $reimpresion, 'logo' => $logo, 'f' => $f];
+
+        return Pdf::loadView('comprobantes.ticket', $datos)->setOption(self::OPCIONES)
+            ->setPaper([0, 0, self::ANCHO_TICKET_PUNTOS, 30 + $renglones * ($grande ? 12.6 : 11.5)]);
     }
 
     // ───────────── internos ─────────────

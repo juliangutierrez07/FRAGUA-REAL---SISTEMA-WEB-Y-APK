@@ -127,4 +127,13 @@ return [
         'revision_hora' => env('FRAGUA_REAL_NOTIF_REVISION_HORA', '07:00'),
         'dias_guardadas' => (int) env('FRAGUA_REAL_NOTIF_DIAS', 30),
     ],
+
+    // M12 — Impresoras (24/10/2026). Un equipo está «en línea» si mandó su señal en estos minutos (la
+    // manda cada minuto). Con la caja abierta, si un equipo que imprime comandas lleva más de
+    // 'minutos_desconectado' sin señal, la campana avisa.
+    'impresion' => [
+        'minutos_en_linea' => (int) env('FRAGUA_REAL_IMPRESION_MINUTOS_EN_LINEA', 3),
+        'minutos_desconectado' => (int) env('FRAGUA_REAL_IMPRESION_MINUTOS_DESCONECTADO', 10),
+        'minutos_codigo' => (int) env('FRAGUA_REAL_IMPRESION_MINUTOS_CODIGO', 30),
+    ],
 ];

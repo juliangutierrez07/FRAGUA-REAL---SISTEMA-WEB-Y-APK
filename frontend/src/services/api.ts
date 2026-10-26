@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { claveEquipo } from '@/utils/equipoImpresion'
 
 // Cliente HTTP central. Autenticación por TOKEN de Sanctum (no por cookie),
 // igual que documenta README-BACKEND.md del backend: cada request autenticado
@@ -14,6 +15,11 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('fragua_real_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  // M12 (24/10/2026): si este navegador es un equipo de Impresoras, el servidor sabe desde dónde se imprime.
+  const equipo = claveEquipo()
+  if (equipo) {
+    config.headers['X-Equipo-Impresion'] = equipo
   }
   return config
 })

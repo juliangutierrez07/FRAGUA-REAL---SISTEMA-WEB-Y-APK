@@ -17,7 +17,7 @@ class UpdateMesaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre' => ['required', 'string', 'max:255', Rule::unique('mesas', 'nombre')->ignore($this->route('mesa'))],
+            'nombre' => ['bail', 'required', 'string', 'max:255', \App\Support\Validacion\Eliminados::libre('mesas', 'nombre', 'Ya hay una mesa eliminada con ese nombre: restáurala desde Mesas › Eliminadas o usa otro nombre.', $this->route('mesa')), Rule::unique('mesas', 'nombre')->ignore($this->route('mesa'))],
         ];
     }
 

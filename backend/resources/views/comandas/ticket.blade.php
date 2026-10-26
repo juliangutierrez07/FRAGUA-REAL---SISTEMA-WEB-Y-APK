@@ -5,6 +5,10 @@
     $titulos = ['inicial' => 'COMANDA', 'actualizacion' => 'CAMBIOS AL PEDIDO', 'cancelacion' => 'PEDIDO CANCELADO'];
     $acciones = ['agregar' => 'AGREGAR', 'quitar' => 'QUITAR', 'cambiar' => 'CAMBIAR'];
     $reimpresion = $reimpresion ?? null;
+    // M12 (24/10/2026): formato de Impresoras.
+    $f = $f ?? \App\Services\ImpresionService::FORMATO;
+    $g = (bool) $f['comanda_letra_grande'];
+    $copias = max(1, (int) $f['copias_comanda']);
 @endphp
 <!doctype html>
 <html lang="es">
@@ -13,16 +17,19 @@
 <title>Comanda {{ $c['pedido'] }}-{{ $comanda->numero }}</title>
 <style>
     @page { margin: 10px 9px; }
-    body { font-family: 'DejaVu Sans Mono', monospace; font-size: 10px; color: #000; line-height: 1.35; }
+    body { font-family: 'DejaVu Sans Mono', monospace; font-size: {{ $g ? '12.5px' : '10px' }}; color: #000; line-height: 1.35; }
     .centro { text-align: center; }
-    .grande { font-size: 13px; font-weight: bold; }
-    .linea { font-size: 11.5px; font-weight: bold; margin-top: 3px; }
+    .grande { font-size: {{ $g ? '16px' : '13px' }}; font-weight: bold; }
+    .linea { font-size: {{ $g ? '14.5px' : '11.5px' }}; font-weight: bold; margin-top: 3px; }
     .detalle { padding-left: 14px; }
     hr { border: 0; border-top: 1px dashed #000; margin: 5px 0; }
     .preparado { text-decoration: line-through; }
 </style>
 </head>
 <body>
+@for ($copia = 1; $copia <= $copias; $copia++)
+<div @if ($copia < $copias) style="page-break-after: always;" @endif>
+@if ($copias > 1)<div class="centro">Copia {{ $copia }} de {{ $copias }}</div>@endif
 <div class="centro grande">{{ $titulos[$comanda->tipo] ?? 'COMANDA' }}</div>
 @if ($comanda->tipo === 'actualizacion')
     <div class="centro">Hoja {{ $comanda->numero }} del pedido: solo lo que cambió</div>
@@ -33,9 +40,10 @@
 @endif
 <hr>
 <div class="grande">Pedido #{{ $c['pedido'] }} · {{ $c['canal'] }}</div>
-@if (! empty($c['mesa']))<div class="grande">{{ $c['mesa'] }}</div>@endif
+@if (! empty($c['mesa']))<div class="grande">{{ $c['mesa'] }}@if (! empty($c['cuenta'])) · Cuenta {{ $c['cuenta'] }}@endif</div>@endif
 @if (! empty($c['cliente']))<div>Cliente: {{ $c['cliente'] }}</div>@endif
-<div>{{ $hora($c['generada_at'] ?? $comanda->created_at) }}</div>
+@if ($f['comanda_mostrar_hora'])<div>{{ $hora($c['generada_at'] ?? $comanda->created_at) }}</div>@endif
+@if ($f['comanda_mostrar_mesero'] && ! empty($c['atiende']))<div>Atiende: {{ $c['atiende'] }}</div>@endif
 <hr>
 @foreach ($c['lineas'] ?? [] as $l)
     @php
@@ -55,5 +63,7 @@
 @endif
 <hr>
 <div class="centro">Comanda {{ $c['pedido'] }}-{{ $comanda->numero }}</div>
+</div>
+@endfor
 </body>
 </html>

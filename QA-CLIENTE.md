@@ -316,6 +316,20 @@ Antes: el SuperAdmin puso al menos una cuenta en Configuración > «Cuentas para
       celular); el nombre no acepta números; el correo no acepta espacios. Pegar «300 123 4567» deja
       «3001234567».
 
+## 13d. Mejoras del 26/10/2026
+
+- [ ] Domicilio: «Usar mi ubicación actual» pide permiso, busca unos segundos y muestra el punto en un mapa;
+      si es aproximado (más de 100 m) lo avisa. Tocar el mapa o arrastrar el pin lo corrige («Punto marcado
+      por ti»); «Marcar en el mapa» sirve sin GPS. Sin permiso explica qué hacer. La dirección sigue siendo
+      obligatoria. Probarlo en el teléfono con el GPS encendido y en el VPS (HTTPS).
+- [ ] Pago contra entrega: «¿Con cuánto vas a pagar?» con «Pago exacto», billetes mayores al total y «Otro
+      valor»; dice cuánto cambio llevan. Un valor menor al total no deja confirmar.
+- [ ] Pago en línea: Nequi, Bancolombia (y Bre-B si está) son tarjetas con ícono y check.
+- [ ] Las notas importantes («Pides como invitado…», «Guárdalo…», «Revisamos la transferencia…», el horario
+      de las reservas) se ven resaltadas.
+- [ ] Seguimiento: al confirmar o preparar el pedido en el panel, la página cambia en unos 10 segundos (o
+      apenas se vuelve a la pestaña). «Mis pedidos» también.
+
 ## 14. Correcciones del 19/10/2026 (reservas)
 
 - [ ] Reservar: la hora es una lista de 4:00 p. m. a 11:00 p. m., cada 30 minutos; debajo dice «Las

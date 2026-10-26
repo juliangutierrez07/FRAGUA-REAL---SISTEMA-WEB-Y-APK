@@ -21,6 +21,7 @@ class Producto extends Model
         'disponible' => 'boolean',
         'activo' => 'boolean',
         'precio_base' => 'decimal:2',
+        'eliminado_at' => 'datetime',
     ];
 
     public function categoria(): BelongsTo

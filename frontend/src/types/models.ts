@@ -28,6 +28,9 @@ export interface Usuario {
   gestionable?: boolean
   // M09 (20/10/2026): los menús que ve esta cuenta (los decide el SuperAdmin; por defecto, todos los de su rol).
   menus?: string[]
+  // Eliminar (24/10/2026): si está archivado (fuera de las listas), cuándo, quién y por qué.
+  eliminado_at?: string | null
+  eliminado_motivo?: string | null
 }
 
 // Espeja app/Models/Mesa.php. OJO: el backend usa "nombre" y "qr_code" (no
@@ -45,10 +48,25 @@ export interface Mesa {
   cuenta_total?: number
   cuenta_saldo?: number
   cuenta_pedidos?: number
+  // Mejora (26/10/2026): cuentas separadas de la visita (solo mesas ocupadas, para el personal).
+  cuentas?: CuentaDeMesa[]
+  // Eliminar (24/10/2026): si está archivado (fuera de las listas), cuándo, quién y por qué.
+  eliminado_at?: string | null
+  eliminado_motivo?: string | null
 }
 
 // Espeja app/Models/Variante.php — presentación/tamaño con su propio precio
 // fijo (no un delta sobre precio_base).
+// Mejora (26/10/2026): una cuenta de la mesa (MesaCuentaService::porCuenta).
+export interface CuentaDeMesa {
+  numero: number
+  pedidos: number[]
+  total: number
+  pagado: number
+  saldo: number
+  pedidos_activos: number
+}
+
 export interface Variante {
   id: number
   producto_id: number
@@ -96,6 +114,9 @@ export interface Producto {
   extras_generales?: Pick<Extra, 'id' | 'nombre'>[]
   // Respuesta de editar un producto: combos que se desactivaron al darlo de baja (RN-M04-12).
   combos_desactivados?: string[]
+  // Eliminar (24/10/2026): si está archivado (fuera de las listas), cuándo, quién y por qué.
+  eliminado_at?: string | null
+  eliminado_motivo?: string | null
   // Fase 2, tarea 1 (RF-M04-035): promociones automáticas de producto o categoría vigentes ahora.
   promociones_vigentes?: PromocionVigente[]
   // Mejora (16/10/2026): solo para el personal, la oferta activa del producto (atajo del Catálogo).
@@ -148,6 +169,8 @@ export interface Categoria {
   id: number
   nombre: string
   activo: boolean
+  // Mejora (26/10/2026): el menú pregunta «¿Quieres quitar algún ingrediente?» (las bebidas no).
+  permite_quitar_ingredientes?: boolean
   productos?: Producto[]
 }
 
@@ -338,6 +361,8 @@ export interface CajaTurno {
   cerrado_por: number | null
   cerrado_at: string | null
   estado: EstadoCajaTurno
+  // Mejora (26/10/2026): solo en GET /caja/turno-actual — lo que impide cerrar la caja.
+  pedidos_sin_finalizar?: PedidoSinFinalizar[]
   abierto_por_usuario?: Usuario
   cerrado_por_usuario?: Usuario | null
   pagos?: Pago[]
@@ -355,6 +380,15 @@ export interface CajaTurno {
   resumen?: ResumenCaja
   depositos_efectivo?: number
   reembolsos_deposito_efectivo?: number
+}
+
+// Mejora (26/10/2026): un pedido pendiente, confirmado o en preparación (CajaService::pedidosSinFinalizar).
+export interface PedidoSinFinalizar {
+  id: number
+  tipo: TipoPedido
+  estado: EstadoPedido
+  destino: string
+  saldo: number
 }
 
 // Espeja app/Models/AjusteCaja.php — RF-M06-019, RN-M06-10.
@@ -378,6 +412,8 @@ export interface Pedido {
   origen: 'mesero' | 'qr' | 'cliente_web'
   estado: EstadoPedido
   mesa_id: number | null
+  // Mejora (26/10/2026): cuenta de la mesa a la que va (1, 2…); solo pedidos locales.
+  cuenta?: number | null
   cliente_id: number | null
   cliente_invitado_nombre: string | null
   cliente_invitado_telefono: string | null
@@ -388,6 +424,10 @@ export interface Pedido {
   direccion_entrega: string | null
   barrio: string | null
   referencia: string | null
+  // Mejora (26/10/2026): la ubicación que compartió el Cliente y con qué billete paga contra entrega.
+  ubicacion_lat?: number | null
+  ubicacion_lng?: number | null
+  paga_con?: number | null
   // RF-M07-010: observaciones de entrega del pedido completo.
   observaciones_entrega?: string | null
   // RF-M07-013/015, RF-M07-R-007/008: cómo dijo el cliente que iba a pagar.

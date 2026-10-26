@@ -87,6 +87,12 @@ async function cargar() {
 onMounted(cargar)
 
 const enCombos = computed(() => categoriaActivaId.value === CATEGORIA_COMBOS)
+// Mejora (26/10/2026): a una bebida no se le pregunta qué ingrediente quitar (interruptor de la categoría).
+const permiteQuitarIngredientes = computed(() => {
+  const producto = productoSeleccionado.value
+  if (!producto) return true
+  return categorias.value.find((c) => c.id === producto.categoria_id)?.permite_quitar_ingredientes !== false
+})
 
 const productosDeCategoria = computed(() =>
   productos.value.filter((p) => p.categoria_id === categoriaActivaId.value),
@@ -485,7 +491,7 @@ function formatoPrecio(valor: number) {
               </div>
             </template>
 
-            <label class="mt-5 block pb-5 text-xs text-ink">
+            <label v-if="permiteQuitarIngredientes" class="mt-5 block pb-5 text-xs text-ink">
               ¿Quieres quitar algún ingrediente?
               <input v-formato="'texto'" maxlength="500"
                 v-model="notas"
@@ -494,6 +500,7 @@ function formatoPrecio(valor: number) {
                 class="mt-2 w-full rounded-lg border border-[#dfd8cd] px-3 py-2 text-xs focus:border-brand-500 focus:outline-none"
               />
             </label>
+            <div v-else class="pb-5" />
           </div>
 
           <!-- Pie: fijo, siempre visible — nunca hace falta bajar para encontrar "Agregar". -->

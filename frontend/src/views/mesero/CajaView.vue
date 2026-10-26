@@ -17,6 +17,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import BotonComprobante from '@/components/pedidos/BotonComprobante.vue'
 import CuentaMesaModal from '@/components/pedidos/CuentaMesaModal.vue'
 import RevisarComprobanteModal from '@/components/pagos/RevisarComprobanteModal.vue'
+import FotoComprobante from '@/components/pagos/FotoComprobante.vue'
 import { pedidoService } from '@/services/pedido.service'
 import { cajaService, type EstadoCaja } from '@/services/caja.service'
 import { pagoService } from '@/services/pago.service'
@@ -146,6 +147,8 @@ const metodo = ref<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
 const monto = ref(0)
 const errorCobro = ref('')
 const cobrando = ref(false)
+// Mejora (26/10/2026): foto del comprobante (obligatoria en transferencia, opcional en tarjeta).
+const fotoCobro = ref<File | null>(null)
 
 const METODOS: { v: 'efectivo' | 'tarjeta' | 'transferencia'; t: string; icono: typeof Banknote }[] = [
   { v: 'efectivo', t: 'Efectivo', icono: Banknote },
@@ -158,6 +161,7 @@ function abrirCobro(pedido: Pedido) {
   metodo.value = 'efectivo'
   monto.value = saldoPendiente(pedido)
   errorCobro.value = ''
+  fotoCobro.value = null
 }
 
 function cerrarCobro() {
@@ -170,12 +174,17 @@ async function confirmarCobro() {
     errorCobro.value = 'Ingresa un monto mayor a 0.'
     return
   }
+  if (metodo.value === 'transferencia' && !fotoCobro.value) {
+    errorCobro.value = 'Toma la foto del comprobante de la transferencia.'
+    return
+  }
   cobrando.value = true
   errorCobro.value = ''
   try {
     const { data } = await pedidoService.cobrar(pedidoACobrar.value.id, {
       metodo: metodo.value,
       monto: monto.value,
+      comprobante: metodo.value === 'efectivo' ? null : fotoCobro.value,
     })
     reemplazarPedido(data)
     pedidoACobrar.value = null
@@ -495,6 +504,7 @@ onMounted(cargar)
         <p class="mt-1.5 text-xs text-gray-400">
           Puedes cobrar menos del saldo si es un pago mixto (ej. parte en efectivo, parte en tarjeta).
         </p>
+        <FotoComprobante v-if="metodo !== 'efectivo'" v-model="fotoCobro" :obligatoria="metodo === 'transferencia'" />
 
         <p v-if="errorCobro" class="mt-3 alert-error">{{ errorCobro }}</p>
 

@@ -5,7 +5,7 @@
 // así que esta vista también cubre abrir/cerrar — si no, no habría ninguna forma de
 // hacerlo desde la app a pesar de que CajaService ya lo soporta del todo.
 import { computed, onMounted, ref } from 'vue'
-import { Banknote, CreditCard, Landmark, RefreshCw, Smartphone, Wallet } from 'lucide-vue-next'
+import { Banknote, Camera, CreditCard, Landmark, RefreshCw, Smartphone, Wallet } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import CampoPesos from '@/components/common/CampoPesos.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -128,13 +128,20 @@ const justificacionDescuadre = ref('')
 const errorCerrar = ref('')
 const cerrando = ref(false)
 
-function abrirModalCerrar() {
+async function abrirModalCerrar() {
+  if (!turnoActual.value) return
+  // Mejora (26/10/2026): se trae el turno al día para ver qué pedidos faltan por finalizar.
+  await actualizarResumen()
   if (!turnoActual.value) return
   efectivoContado.value = Number(turnoActual.value.efectivo_esperado)
   justificacionDescuadre.value = ''
   errorCerrar.value = ''
   modalCerrarOpen.value = true
 }
+
+// Mejora (26/10/2026): la caja solo cierra con todos los pedidos finalizados o cancelados.
+const pedidosSinFinalizar = computed(() => turnoActual.value?.pedidos_sin_finalizar ?? [])
+const ESTADO_TEXTO: Record<string, string> = { pendiente: 'Pendiente', confirmado: 'Confirmado', preparando: 'En preparación' }
 
 async function confirmarCerrar() {
   if (!turnoActual.value) return
@@ -182,6 +189,23 @@ async function cargarHistorial(page = 1) {
 }
 
 const contadorTexto = computed(() => (total.value === 1 ? '1 turno' : `${total.value} turnos`))
+
+// Mejora (26/10/2026): la foto del comprobante que tomó el Mesero al cobrar.
+const fotoPago = ref<{ pago: Pago; url: string } | null>(null)
+const errorFoto = ref('')
+async function verFoto(pago: Pago) {
+  errorFoto.value = ''
+  try {
+    const { data } = await pagoService.comprobante(pago.id)
+    fotoPago.value = { pago, url: URL.createObjectURL(data) }
+  } catch (e) {
+    errorFoto.value = mensajeDeError(e, 'No pudimos abrir la foto del comprobante.')
+  }
+}
+function cerrarFoto() {
+  if (fotoPago.value) URL.revokeObjectURL(fotoPago.value.url)
+  fotoPago.value = null
+}
 
 // ---- Detalle de un turno (sus pagos) ----
 const turnoDetalle = ref<CajaTurno | null>(null)
@@ -434,6 +458,21 @@ onMounted(() => {
 
     <!-- Cerrar turno -->
     <BaseModal v-model="modalCerrarOpen" title="Cerrar turno de caja">
+      <div v-if="pedidosSinFinalizar.length" class="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" role="alert">
+        <p class="font-semibold">
+          {{ pedidosSinFinalizar.length === 1 ? 'Falta finalizar 1 pedido' : `Faltan ${pedidosSinFinalizar.length} pedidos por finalizar` }}
+        </p>
+        <p class="mt-1 text-xs text-amber-800">La caja solo cierra cuando todos los pedidos están finalizados o cancelados.</p>
+        <ul class="mt-3 max-h-48 space-y-1.5 overflow-y-auto">
+          <li v-for="p in pedidosSinFinalizar" :key="p.id" class="flex items-center justify-between gap-3 rounded-lg bg-white/70 px-3 py-2 text-xs">
+            <span class="min-w-0"><strong>#{{ p.id }}</strong> · {{ p.destino }} · {{ ESTADO_TEXTO[p.estado] ?? p.estado }}</span>
+            <span class="shrink-0 font-semibold" :class="p.saldo > 0 ? 'text-red-700' : 'text-emerald-700'">
+              {{ p.saldo > 0 ? `Debe ${formatoPrecio(p.saldo)}` : 'Pagado' }}
+            </span>
+          </li>
+        </ul>
+        <router-link to="/admin/pedidos" class="mt-3 inline-block text-xs font-semibold text-amber-900 underline">Ir a Pedidos</router-link>
+      </div>
       <label class="block text-xs font-medium text-gray-700">
         Efectivo contado
         <CampoPesos
@@ -459,10 +498,14 @@ onMounted(() => {
 
       <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <BaseButton variant="ghost" @click="modalCerrarOpen = false">Cancelar</BaseButton>
-        <BaseButton variant="danger" :disabled="cerrando" @click="confirmarCerrar">
+        <BaseButton variant="danger" :disabled="cerrando || pedidosSinFinalizar.length > 0" @click="confirmarCerrar">
           {{ cerrando ? 'Cerrando…' : 'Cerrar turno' }}
         </BaseButton>
       </div>
+    </BaseModal>
+
+    <BaseModal :model-value="!!fotoPago" :title="fotoPago ? `Comprobante · pedido #${fotoPago.pago.pedido_id}` : ''" @update:model-value="cerrarFoto">
+      <img v-if="fotoPago" :src="fotoPago.url" alt="Foto del comprobante" class="mx-auto max-h-[70vh] rounded-xl object-contain" />
     </BaseModal>
 
     <!-- Detalle de un turno: sus pagos, con anular por fila -->
@@ -514,11 +557,17 @@ onMounted(() => {
                 </template>
               </p>
             </div>
-            <BaseButton v-escritura v-if="!pago.anulado" variant="danger-soft" size="sm" class="shrink-0" @click="abrirAnular(pago)">
-              Anular
-            </BaseButton>
+            <div class="flex shrink-0 gap-2">
+              <BaseButton v-if="pago.tiene_comprobante" variant="ghost" size="sm" @click="verFoto(pago)">
+                <Camera :size="15" class="mr-1" /> Ver foto
+              </BaseButton>
+              <BaseButton v-escritura v-if="!pago.anulado" variant="danger-soft" size="sm" @click="abrirAnular(pago)">
+                Anular
+              </BaseButton>
+            </div>
           </li>
         </ul>
+        <p v-if="errorFoto" class="mt-2 alert-error">{{ errorFoto }}</p>
 
         <!-- Pagos en línea del día: no pasan por la caja física, pero también se anulan o
              reembolsan desde aquí (RF-M06-017). -->

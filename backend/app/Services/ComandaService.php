@@ -157,7 +157,7 @@ class ComandaService
             'tipo' => $comanda->tipo,
         ], $actor);
 
-        return $this->pdf($comanda, $marca)->stream("comanda-{$comanda->pedido_id}-{$comanda->numero}.pdf");
+        return $this->ticketPdf($comanda, $marca)->stream("comanda-{$comanda->pedido_id}-{$comanda->numero}.pdf");
     }
 
     /**
@@ -182,6 +182,26 @@ class ComandaService
                 'comanda' => $fila->numero, 'tipo' => $fila->tipo, 'motivo' => $fila->ultimo_error,
             ], $actor);
             app(NotificacionService::class)->comandaNoSalio($fila, $actor); // M11
+
+            return $fila;
+        });
+    }
+
+    /**
+     * M12 (24/10/2026): el Administrador descarta una comanda que ya no hace falta imprimir (la cocina
+     * ya lo tiene a mano, o era de prueba). Sale de las pendientes; el pedido no cambia.
+     */
+    public function descartar(Comanda $comanda, User $actor, string $motivo): Comanda
+    {
+        return DB::transaction(function () use ($comanda, $actor, $motivo) {
+            $fila = Comanda::whereKey($comanda->id)->lockForUpdate()->firstOrFail();
+            if (! $fila->porImprimir()) {
+                throw new RuntimeException('Esta comanda ya no está por imprimir.');
+            }
+            $fila->forceFill(['estado_impresion' => 'descartada', 'ultimo_error' => mb_substr($motivo, 0, 255)])->save();
+            app(AuditoriaService::class)->registrar('descartar_comanda', 'Pedido', $fila->pedido_id, [
+                'comanda' => $fila->numero, 'tipo' => $fila->tipo, 'motivo' => $fila->ultimo_error,
+            ], $actor);
 
             return $fila;
         });
@@ -297,7 +317,13 @@ class ComandaService
             'canal' => self::CANALES[$pedido->tipo] ?? strtoupper($pedido->tipo),
             'origen' => $pedido->origen,
             'mesa' => $pedido->mesa?->nombre,
+            // Mejora (26/10/2026): con cuentas separadas en la mesa, la comanda dice a cuál va.
+            'cuenta' => $pedido->esLocal() && $pedido->mesa && ($pedido->cuenta > 1 || count($pedido->mesa->cuentasDeLaVisita()) > 1)
+                ? (int) ($pedido->cuenta ?? 1)
+                : null,
             'cliente' => $pedido->esLocal() ? null : ($pedido->cliente?->nombre ?? $pedido->cliente_invitado_nombre),
+            // M12 (24/10/2026): quién confirmó el pedido, por si el formato pide mostrarlo.
+            'atiende' => $pedido->confirmadoPor?->nombre,
             'generada_at' => now()->toIso8601String(),
         ];
     }
@@ -356,17 +382,26 @@ class ComandaService
         ];
     }
 
-    private function pdf(Comanda $comanda, ?array $reimpresion)
+    /**
+     * El ticket de 80 mm de una comanda. M12 (24/10/2026): con el formato de Impresoras (letra grande,
+     * hora, quién atiende y copias); `$formato` sirve para la vista previa sin guardar.
+     */
+    public function ticketPdf(Comanda $comanda, ?array $reimpresion, ?array $formato = null)
     {
+        $f = $formato ?? app(ImpresionService::class)->formato();
         $c = $comanda->contenido;
+        $c['atiende'] ??= $comanda->pedido?->confirmadoPor?->nombre;
         $lineas = $c['lineas'] ?? [];
+        $grande = (bool) $f['comanda_letra_grande'];
         // dompdf no ajusta el alto solo: un renglón por línea, más extras, componentes y notas.
-        $renglones = collect($lineas)->sum(fn ($l) => 1 + (mb_strlen($l['nombre']) > 20 ? 1 : 0)
+        $renglones = collect($lineas)->sum(fn ($l) => 1 + (mb_strlen($l['nombre']) > ($grande ? 15 : 20) ? 1 : 0)
             + (empty($l['extras']) ? 0 : 1) + count($l['componentes'] ?? []) + (empty($l['observaciones']) ? 0 : 2))
-            + ($reimpresion ? 2 : 0) + (empty($c['motivo']) ? 0 : 2) + 9;
+            + ($reimpresion ? 2 : 0) + (empty($c['motivo']) ? 0 : 2) + 9
+            + ($f['comanda_mostrar_mesero'] && ! empty($c['atiende']) ? 1 : 0) - ($f['comanda_mostrar_hora'] ? 0 : 1)
+            + ((int) $f['copias_comanda'] > 1 ? 1 : 0);
 
-        return Pdf::loadView('comandas.ticket', ['comanda' => $comanda, 'c' => $c, 'reimpresion' => $reimpresion])
+        return Pdf::loadView('comandas.ticket', ['comanda' => $comanda, 'c' => $c, 'reimpresion' => $reimpresion, 'f' => $f])
             ->setOption(RegistroImpresiones::OPCIONES_PDF)
-            ->setPaper([0, 0, self::ANCHO_TICKET_PUNTOS, 40 + $renglones * 13]);
+            ->setPaper([0, 0, self::ANCHO_TICKET_PUNTOS, 40 + $renglones * ($grande ? 16.5 : 13)]);
     }
 }

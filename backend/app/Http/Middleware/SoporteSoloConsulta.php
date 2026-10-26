@@ -32,6 +32,8 @@ class SoporteSoloConsulta
         'api/reportes/exportar',
         'api/pedidos/cotizacion',
         'api/notificaciones/*',
+        // M12: la vista previa del ticket no guarda nada.
+        'api/impresion/vista-previa',
     ];
 
     private const CONSULTAS_BLOQUEADAS = [

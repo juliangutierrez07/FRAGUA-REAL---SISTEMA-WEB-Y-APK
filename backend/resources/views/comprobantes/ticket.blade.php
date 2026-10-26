@@ -9,6 +9,11 @@
     $anulado = $comprobante->anulado_at !== null;
     // Reimpresión del personal (desde la segunda vez): ['vez' => n, 'fecha' => ...] o null.
     $reimpresion = $reimpresion ?? null;
+    // M12 (24/10/2026): formato de Impresoras (logo, letra, mensaje al pie y copias).
+    $f = $f ?? \App\Services\ImpresionService::FORMATO;
+    $g = $f['ticket_letra'] === 'grande';
+    $copias = max(1, (int) $f['copias_comprobante']);
+    $logo = $logo ?? null;
 @endphp
 <!doctype html>
 <html lang="es">
@@ -17,17 +22,21 @@
 <title>Comprobante {{ $c['numero'] }}</title>
 <style>
     @page { margin: 10px 9px; }
-    body { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.6px; color: #000; line-height: 1.32; }
+    body { font-family: 'DejaVu Sans Mono', monospace; font-size: {{ $g ? '10.2px' : '8.6px' }}; color: #000; line-height: 1.32; }
     .centro { text-align: center; }
     .derecha { text-align: right; }
     table { width: 100%; border-collapse: collapse; }
     td { vertical-align: top; padding: 0; }
     hr { border: 0; border-top: 1px dashed #000; margin: 5px 0; }
-    .grande { font-size: 11px; font-weight: bold; }
+    .grande { font-size: {{ $g ? '13px' : '11px' }}; font-weight: bold; }
 </style>
 </head>
 <body>
+@for ($copia = 1; $copia <= $copias; $copia++)
+<div @if ($copia < $copias) style="page-break-after: always;" @endif>
+@if ($copias > 1)<div class="centro">Copia {{ $copia }} de {{ $copias }}</div>@endif
 <div class="centro">
+    @if ($logo)<img src="{{ $logo }}" alt="" style="max-height: 48px; max-width: 120px; margin-bottom: 3px;"><br>@endif
     <div class="grande">{{ $n['nombre'] ?? 'Fragua Real Burger' }}</div>
     @if (! empty($n['nit']))<div>NIT {{ $n['nit'] }}</div>@endif
     <div>{{ $n['direccion'] ?? '' }}</div>
@@ -67,7 +76,9 @@
 </table>
 <hr>
 @if ($anulado)<div>Anulado: {{ $comprobante->anulado_motivo }}</div>@endif
-<div class="centro">¡Gracias por tu visita!</div>
+@if (filled($f['ticket_mensaje_pie']))<div class="centro">{{ $f['ticket_mensaje_pie'] }}</div>@endif
 <div class="centro">No es factura electrónica.</div>
+</div>
+@endfor
 </body>
 </html>

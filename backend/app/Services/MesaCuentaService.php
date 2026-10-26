@@ -18,6 +18,9 @@ use RuntimeException;
  * ver Mesa::ocupar()), sin los cancelados. Cada pago sigue perteneciendo a UN pedido (ADR-003):
  * cobrar la mesa reparte el monto entre sus pedidos con saldo, del más antiguo al más nuevo, y
  * cada pedido finaliza por su cuenta cuando cumple RN-PED-32.
+ *
+ * Mejora (26/10/2026): cuentas separadas. Los pedidos de la visita llevan un número de cuenta (1, 2…);
+ * el resumen las muestra por separado y el cobro puede ser de una sola cuenta.
  */
 class MesaCuentaService
 {
@@ -47,23 +50,59 @@ class MesaCuentaService
             'pagado' => $pagado,
             'saldo' => round(max(0, $total - $pagado), 2),
             'pedidos_activos' => $pedidos->whereIn('estado', ['pendiente', 'confirmado', 'preparando'])->count(),
+            'cuentas' => $this->porCuenta($pedidos),
         ];
+    }
+
+    /**
+     * Mejora (26/10/2026): la cuenta de la mesa separada por número de cuenta.
+     *
+     * @param  Collection<int, Pedido>  $pedidos  los de la visita (con sus pagos)
+     * @return array<int, array{numero: int, pedidos: array<int, int>, total: float, pagado: float, saldo: float, pedidos_activos: int}>
+     */
+    public function porCuenta(Collection $pedidos): array
+    {
+        return $pedidos->groupBy(fn (Pedido $p) => (int) ($p->cuenta ?? 1))
+            ->sortKeys()
+            ->map(function (Collection $grupo, int $numero) {
+                $total = round((float) $grupo->sum('total'), 2);
+                $pagado = round($grupo->sum(fn (Pedido $p) => $this->pagado($p)), 2);
+
+                return [
+                    'numero' => $numero,
+                    'pedidos' => $grupo->pluck('id')->values()->all(),
+                    'total' => $total,
+                    'pagado' => $pagado,
+                    'saldo' => round(max(0, $total - $pagado), 2),
+                    'pedidos_activos' => $grupo->whereIn('estado', Pedido::ESTADOS_ACTIVOS)->count(),
+                ];
+            })
+            ->values()->all();
     }
 
     /**
      * RF-M02-L-021, RF-M06-003: el Mesero cobra lo que debe la mesa (o una parte, para pagos
      * mixtos) con un solo método. Nunca más que el saldo (RF-M06-011).
      *
+     * Mejora (26/10/2026): con $cuenta, solo esa cuenta de la mesa; con $comprobante (la foto que
+     * tomó el Mesero), cada pago creado la lleva.
+     *
+     * @param  array{path: string, mime: string}|null  $comprobante
      * @return array el resumen de la cuenta después del cobro
      */
-    public function cobrar(Mesa $mesa, User $actor, string $metodo, float $monto): array
+    public function cobrar(Mesa $mesa, User $actor, string $metodo, float $monto, ?int $cuenta = null, ?array $comprobante = null): array
     {
-        return DB::transaction(function () use ($mesa, $actor, $metodo, $monto) {
+        return DB::transaction(function () use ($mesa, $actor, $metodo, $monto, $cuenta, $comprobante) {
             $mesa = Mesa::whereKey($mesa->id)->lockForUpdate()->firstOrFail();
-            $pedidos = $mesa->pedidosDeLaCuenta()->get();
+            $todos = $mesa->pedidosDeLaCuenta()->get();
+            $pedidos = $cuenta === null ? $todos : $todos->filter(fn (Pedido $p) => (int) ($p->cuenta ?? 1) === $cuenta)->values();
+            $deQue = $cuenta === null ? 'la mesa' : "la cuenta {$cuenta}";
 
-            if ($pedidos->isEmpty()) {
+            if ($todos->isEmpty()) {
                 throw new RuntimeException('Esta mesa no tiene una cuenta abierta.');
+            }
+            if ($pedidos->isEmpty()) {
+                throw new RuntimeException("La cuenta {$cuenta} no existe en esta mesa.");
             }
 
             $saldo = round($pedidos->sum(fn (Pedido $p) => $this->saldo($p)), 2);
@@ -72,10 +111,10 @@ class MesaCuentaService
                 throw new RuntimeException('El monto del pago debe ser mayor a 0.');
             }
             if ($saldo <= 0) {
-                throw new RuntimeException('La cuenta de esta mesa ya está pagada.');
+                throw new RuntimeException($cuenta === null ? 'La cuenta de esta mesa ya está pagada.' : "La cuenta {$cuenta} de esta mesa ya está pagada.");
             }
             if ($monto > $saldo) {
-                throw new RuntimeException('El monto supera lo que debe la mesa ($'.number_format($saldo, 0, ',', '.').') (RF-M06-011).');
+                throw new RuntimeException('El monto supera lo que debe '.$deQue.' ($'.number_format($saldo, 0, ',', '.').') (RF-M06-011).');
             }
 
             $restante = $monto;
@@ -86,14 +125,19 @@ class MesaCuentaService
                 }
                 // registrarCobro valida quién cobra y la caja abierta, y finaliza el pedido si ya
                 // cumple todo; si algo falla, la transacción deshace el cobro completo.
-                $this->pagoService->registrarCobro($pedido->fresh(), $actor, ['metodo' => $metodo, 'monto' => $parte]);
+                $this->pagoService->registrarCobro($pedido->fresh(), $actor, [
+                    'metodo' => $metodo,
+                    'monto' => $parte,
+                    'comprobante_path' => $comprobante['path'] ?? null,
+                    'comprobante_mime' => $comprobante['mime'] ?? null,
+                ]);
                 $restante = round($restante - $parte, 2);
                 if ($restante <= 0) {
                     break;
                 }
             }
 
-            return $this->resumen($mesa, $pedidos);
+            return $this->resumen($mesa, $todos);
         });
     }
 

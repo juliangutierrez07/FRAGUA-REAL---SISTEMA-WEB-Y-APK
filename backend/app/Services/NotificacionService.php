@@ -55,6 +55,8 @@ class NotificacionService
         'cierre_pendiente' => ['caja', self::ADMIN, ['compras_gastos']],
         'producto_agotado' => ['operacion', self::PERSONAL, ['catalogo', 'menu', 'pedidos']],
         'comanda_no_salio' => ['operacion', self::PERSONAL, ['pedidos']],
+        // M12 (24/10/2026): un equipo que imprime comandas se desconectó con la caja abierta.
+        'equipo_desconectado' => ['operacion', self::ADMIN, ['impresoras']],
         'sistema' => ['sistema', [...self::ADMIN, 'soporte'], ['configuracion']],
         // Seguridad (21/10/2026): una cuenta quedó bloqueada por intentos fallidos.
         'cuenta_bloqueada' => ['sistema', self::ADMIN, ['usuarios', 'auditoria']],
@@ -180,6 +182,15 @@ class NotificacionService
 
     // ---------------------------------------------------------------- Seguridad
 
+    /** M12: el equipo que imprime las comandas lleva varios minutos sin señal y la caja está abierta. */
+    public function equipoDesconectado(\App\Models\EquipoImpresion $equipo): void
+    {
+        $desde = $equipo->ultima_senal_at?->setTimezone(self::ZONA)->format('g:i a');
+        $this->notificar('equipo_desconectado', "El equipo «{$equipo->nombre}» está desconectado",
+            "No responde desde las {$desde}: las comandas no van a salir solas ahí. Revisa que esté prendido, con internet y con el sistema abierto.",
+            "equipo_desconectado:{$equipo->id}:{$equipo->ultima_senal_at?->timestamp}", ['administrador' => '/admin/impresoras']);
+    }
+
     public function cuentaBloqueada(User $usuario, ?string $ip): void
     {
         $minutos = (int) config('fragua_real.seguridad.bloqueo_minutos', 15);
@@ -203,6 +214,7 @@ class NotificacionService
             'caja_abierta' => $this->cajaAbierta(),
             'cierre_pendiente' => $this->cierrePendiente(),
             'sistema' => $this->sistema(),
+            'equipos_desconectados' => app(ImpresionService::class)->revisarDesconectados(),
         ];
     }
 

@@ -36,9 +36,16 @@ if (typeof window !== 'undefined') {
 
 const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
+// CORREGIDO (26/10/2026): el botón solo aparecía cuando el navegador mandaba su aviso, y eso depende del
+// navegador (Samsung Internet, Firefox o Chrome ya descartado no lo mandan). Ahora aparece siempre que la
+// app no esté instalada: con aviso instala directo; sin aviso muestra los pasos de ese navegador.
+// En computador sin aviso (p. ej. Firefox) no se muestra: ese navegador no instala apps.
+const esMovil = esIOS || /Android|Mobile/i.test(navigator.userAgent)
+
 export function useInstalarApp() {
   const puedeInstalar = computed(() => !instalada.value && !!aviso.value)
   const mostrarPasosIOS = computed(() => !instalada.value && !aviso.value && esIOS)
+  const mostrarPasos = computed(() => !instalada.value && !aviso.value && esMovil)
 
   async function instalar(): Promise<boolean> {
     if (!aviso.value) return false
@@ -49,7 +56,7 @@ export function useInstalarApp() {
     return outcome === 'accepted'
   }
 
-  return { puedeInstalar, mostrarPasosIOS, instalada, instalar }
+  return { puedeInstalar, mostrarPasosIOS, mostrarPasos, esIOS, instalada, instalar }
 }
 
 /** True si la página se abrió desde el ícono de la app instalada. */

@@ -263,6 +263,24 @@ Usuarios.
 - [ ] «Rechazar» pide el motivo (hay motivos rápidos); sin motivo no deja. El cliente lo ve en su pedido.
 - [ ] En Reservas, el depósito dice «comprobante por revisar» y se revisa igual («Confirmar depósito»).
 
+## 8b-quinquies. Impresión en este equipo (M12, 24/10/2026)
+
+- [ ] En Pedidos, «Impresión de comandas en este equipo»: con el código que da el Administrador en
+      Impresoras, «Vincular»; ahí sale el nombre del equipo y sus ajustes (ya no se cambian aquí).
+- [ ] «Imprimir prueba» y responder cómo salió.
+
+## 8b-sexies. Mejoras del 26/10/2026
+
+- [ ] Nuevo pedido en una mesa ocupada: sale «Continuar la cuenta 1» o «Nueva cuenta separada (cuenta 2)».
+      Con la cuenta 2, la barra dice «Mesa X · Cuenta 2» y la comanda también.
+- [ ] Ver cuenta de esa mesa: los pedidos salen por cuenta; «¿Qué cuenta paga?» cobra solo la elegida (o
+      «Toda la mesa»). La mesa se libera cuando todas quedan finalizadas.
+- [ ] Cobrar por transferencia sin foto: «Toma la foto del comprobante de la transferencia». «Tomar foto del
+      comprobante» abre la cámara trasera; con la foto, el cobro se registra. En tarjeta la foto es opcional.
+- [ ] Un domicilio contra entrega muestra con cuánto paga el cliente y el cambio que hay que llevar, y «Ver
+      la ubicación en el mapa» si la compartió.
+- [ ] En el teléfono, el botón de descarga de arriba instala la app (o muestra los pasos del navegador).
+
 ## 8c. Correcciones del 19/10/2026
 
 - [ ] Con una mesa dada de baja por el Administrador: no aparece en Mesas, ni en Nuevo pedido, ni en

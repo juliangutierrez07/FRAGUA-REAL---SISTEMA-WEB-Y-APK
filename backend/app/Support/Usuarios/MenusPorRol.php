@@ -29,6 +29,8 @@ final class MenusPorRol
             'reportes' => ['Reportes', false],
             'auditoria' => ['Auditoría', false],
             'configuracion' => ['Configuración', false],
+            // M12 (24/10/2026): equipos que imprimen, formato del ticket, prueba y estado.
+            'impresoras' => ['Impresoras', false],
         ],
         'mesero' => [
             'pedidos' => ['Pedidos', true],

@@ -140,6 +140,8 @@ const router = createRouter({
           meta: { menu: 'configuracion' },
           component: () => import('@/views/admin/ConfiguracionView.vue'),
         },
+        // M12 (24/10/2026): equipos que imprimen, formato del ticket, prueba y estado.
+        { path: 'impresoras', name: 'admin-impresoras', meta: { menu: 'impresoras' }, component: () => import('@/views/admin/ImpresorasView.vue') },
       ],
     },
 

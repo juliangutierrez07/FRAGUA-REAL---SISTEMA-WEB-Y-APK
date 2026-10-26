@@ -671,6 +671,48 @@ Resumen; la lista completa del invitado está en `QA-CLIENTE.md` (secciones 4 a 
 - [ ] Catálogo, Caja, Compras y gastos: los precios y valores se escriben con punto de miles; la cantidad
       acepta decimales (2,5); en Usuarios, el teléfono solo acepta 10 números y el nombre, solo letras.
 
+## 15e. Eliminar mesas, productos y usuarios (24/10/2026)
+
+- [ ] Mesas: crear «Mesa prueba» y eliminarla. La ventana dice «Se borrará para siempre»; pide motivo y
+      contraseña (sin ellos no deja; con una contraseña mala lo dice). Desaparece y Auditoría lo registra.
+- [ ] Eliminar una mesa con pedidos viejos: dice «Se archivará»; sale de la lista y aparece en
+      «Eliminadas» con la fecha y el motivo. «Restaurar» la devuelve dada de baja; «Reactivar» la habilita.
+      Los reportes de esos días siguen mostrando su nombre.
+- [ ] Una mesa ocupada o con una reserva próxima no se puede eliminar: la ventana dice por qué.
+- [ ] Catálogo › Productos: un producto vendido se archiva y el combo que lo traía queda inactivo; deja de
+      verse en el menú del cliente y del Mesero. Crear otro con el mismo nombre dice que hay uno eliminado.
+- [ ] Usuarios: eliminar un Mesero que ya trabajó lo archiva y ya no puede entrar; su actividad sigue en
+      Auditoría. Un Administrador no puede eliminar a otro Administrador ni a sí mismo; el SuperAdmin sí al
+      primero. Las cuentas de SuperAdmin no se eliminan desde la pantalla.
+
+## 15f. Impresoras (M12, 24/10/2026)
+
+- [ ] En el PC de la caja: Impresoras > «Registrar este equipo» con el nombre «Caja». Queda «En línea».
+- [ ] «Agregar equipo con código» con el nombre «Cocina»: sale un código de 6 números. En la tablet de la
+      cocina (sesión del Mesero), Pedidos > «Impresión de comandas en este equipo» > escribirlo: «Cocina»
+      pasa a «En línea». El mismo código no sirve otra vez.
+- [ ] «Imprimir prueba» en cada equipo: sale el ticket de 80 mm con logo, tildes y la regla completa;
+      responder «Salió bien» y verlo como «Última prueba».
+- [ ] Prender «Abre solas las comandas nuevas» para «Cocina»: en menos de un minuto la tablet lo muestra
+      con ✓ y abre sola la siguiente comanda.
+- [ ] Formato del ticket: letra grande, mensaje al pie y 2 copias; la vista previa cambia sola; al guardar,
+      el siguiente comprobante sale así (dos hojas).
+- [ ] Estado: una comanda que no salió aparece con «Imprimir» y «Descartar» (pide motivo); el historial
+      dice en qué equipo se imprimió cada cosa.
+- [ ] Con la caja abierta, apagar la tablet de la cocina más de 10 minutos: la campana avisa «El equipo
+      «Cocina» está desconectado» (una vez).
+
+## 15g. Mejoras del 26/10/2026
+
+- [ ] Con un pedido sin finalizar (pendiente, confirmado o en preparación, pagado o no), «Cerrar turno»
+      muestra la lista con lo que debe cada uno y el botón queda apagado. Al finalizarlo o cancelarlo, cierra.
+- [ ] Caja > detalle de un turno: un cobro por transferencia del Mesero tiene «Ver foto».
+- [ ] Catálogo > Categorías > Bebidas: «Se pueden quitar ingredientes» apagado. En el menú, una bebida no
+      pregunta qué ingrediente quitar; una hamburguesa sí.
+- [ ] Auditoría: al abrir un registro, el detalle empieza por «Hecho por» (nombre, rol y correo) y «Cuándo».
+- [ ] En el teléfono, el menú lateral con todas las opciones: la lista se desplaza y el perfil y «Cerrar
+      sesión» quedan a la vista; «Instalar app» aparece aunque el navegador no lo ofrezca (muestra los pasos).
+
 ## 16. Contraseña segura y bloqueo por intentos (21/10/2026)
 
 - [ ] Usuarios › Nuevo usuario: debajo de la contraseña salen los requisitos y se marcan al cumplirse; con
