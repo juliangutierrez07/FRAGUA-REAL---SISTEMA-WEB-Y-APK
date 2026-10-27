@@ -18,7 +18,7 @@ export interface CuentaMesa {
   pagado: number
   saldo: number
   pedidos_activos: number
-  // Mejora (26/10/2026): la cuenta separada por número de cuenta.
+  // Mejora (26/10/2026, RF-M02-L-034): la cuenta separada por número de cuenta.
   cuentas: CuentaDeMesa[]
 }
 
@@ -38,9 +38,8 @@ export interface CrearMesaPayload {
 }
 
 export const mesaService = {
-  // Eliminar (24/10/2026): con `eliminadas`, solo las archivadas (para restaurarlas).
-  index(params?: { eliminadas?: boolean }) {
-    return api.get<Mesa[]>('/mesas', { params: params?.eliminadas ? { eliminadas: 1 } : undefined })
+  index() {
+    return api.get<Mesa[]>('/mesas')
   },
   // RF-M02-L-025: resuelve la mesa escaneada por el Cliente (pedido por QR, sin cuenta) —
   // público, 404 si el QR no corresponde a ninguna mesa activa. Ver MesaQrView.vue.
@@ -76,7 +75,7 @@ export const mesaService = {
   },
   // Solo el Mesero (RF-M06-003). Reparte el monto entre los pedidos de la mesa con saldo, del
   // más antiguo al más nuevo; 422 si no hay caja abierta o el monto supera lo que se debe.
-  // Mejora (26/10/2026): `cuenta` cobra solo esa cuenta de la mesa; `comprobante` es la foto que tomó
+  // Mejora (26/10/2026, RF-M02-L-034, RF-M06-037): `cuenta` cobra solo esa cuenta de la mesa; `comprobante` es la foto que tomó
   // el Mesero (obligatoria en transferencia).
   cobrar(id: number, payload: { metodo: 'efectivo' | 'tarjeta' | 'transferencia'; monto: number; cuenta?: number | null; comprobante?: File | null }) {
     return api.post<CuentaMesa>(`/mesas/${id}/cobrar`, formularioCobro(payload))

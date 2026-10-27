@@ -55,7 +55,7 @@ export const usuarioService = {
   actualizarMenus(id: number, menus: string[]) {
     return api.put<MenusDeCuenta>(`/usuarios/${id}/menus`, { menus })
   },
-  index(params?: { rol?: Rol; busqueda?: string; eliminados?: 1 }) {
+  index(params?: { rol?: Rol; busqueda?: string }) {
     return api.get<UsuariosPaginados>('/usuarios', { params })
   },
   crear(payload: CrearUsuarioPayload) {

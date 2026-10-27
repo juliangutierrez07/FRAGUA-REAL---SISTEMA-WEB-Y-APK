@@ -113,8 +113,9 @@ class ImportacionProductosService
             throw new RuntimeException('El archivo tiene '.count($crudas).' productos; el máximo es '.self::MAX_FILAS.' por archivo.');
         }
 
-        $existentes = Producto::with(['variantes', 'categoria'])->get()->keyBy(fn (Producto $p) => $this->clave($p->nombre));
-        $categorias = Categoria::all()->keyBy(fn (Categoria $c) => $this->clave($c->nombre));
+        // 27/10/2026: lo eliminado no cuenta; su nombre está libre y se crea de nuevo.
+        $existentes = Producto::with(['variantes', 'categoria'])->whereNull('eliminado_at')->get()->keyBy(fn (Producto $p) => $this->clave($p->nombre));
+        $categorias = Categoria::whereNull('eliminado_at')->get()->keyBy(fn (Categoria $c) => $this->clave($c->nombre));
         $vistos = [];
         $categoriasNuevas = [];
         $filas = [];
@@ -250,7 +251,7 @@ class ImportacionProductosService
         }
 
         DB::transaction(function () use ($analisis, $actor) {
-            $categorias = Categoria::all()->keyBy(fn (Categoria $c) => $this->clave($c->nombre));
+            $categorias = Categoria::whereNull('eliminado_at')->get()->keyBy(fn (Categoria $c) => $this->clave($c->nombre));
             foreach ($analisis['categorias_nuevas'] as $nombre) {
                 $categoria = Categoria::create(['nombre' => $nombre, 'activo' => true]);
                 $this->catalogo->auditar('crear_categoria', $categoria, null, $actor, ['origen' => 'importacion']);

@@ -62,10 +62,11 @@ class CatalogoController extends Controller
 
         $query = Categoria::with(['productos' => fn ($q) => $esPublico
             ? $q->where('activo', true)->where('disponible', true)->orderBy('nombre')
-            : $q->orderBy('nombre')]);
+            : $q->whereNull('eliminado_at')->orderBy('nombre')]);
         if ($esPublico) {
             $query->where('activo', true);
         }
+        $query->whereNull('eliminado_at'); // Eliminar (RF-M04-057): lo eliminado no vuelve a salir.
 
         return response()->json($query->orderBy('nombre')->get());
     }
@@ -85,6 +86,7 @@ class CatalogoController extends Controller
     // todos los canales; no se borra nada.
     public function updateCategoria(StoreCategoriaRequest $request, Categoria $categoria)
     {
+        abort_if($categoria->eliminado_at !== null, 404, 'Esta categoría ya se eliminó.');
         $antes = $categoria->getAttributes();
         $categoria->update($request->validated());
         $this->catalogoService->auditar('editar_categoria', $categoria, $antes, $request->user());
@@ -110,8 +112,8 @@ class CatalogoController extends Controller
 
         $query = Producto::with([
             'variantes' => fn ($q) => $esPublico ? $q->where('activa', true)->where('disponible', true) : $q,
-            'extrasEspecificos' => fn ($q) => $esPublico ? $q->where('activo', true) : $q,
-            'extrasGenerales:id,nombre,precio,alcance,activo',
+            'extrasEspecificos' => fn ($q) => ($esPublico ? $q->where('activo', true) : $q)->whereNull('eliminado_at'),
+            'extrasGenerales' => fn ($q) => $q->whereNull('extras.eliminado_at'),
             'categoria',
         ]);
 
@@ -122,8 +124,7 @@ class CatalogoController extends Controller
                 ->where(fn ($q) => $q->whereDoesntHave('variantes')
                     ->orWhereHas('variantes', fn ($v) => $v->where('activa', true)->where('disponible', true)));
         }
-        // Eliminar (24/10/2026): los archivados solo salen con ?eliminados=1 (para restaurarlos).
-        $request->boolean('eliminados') && ! $esPublico ? $query->whereNotNull('eliminado_at') : $query->whereNull('eliminado_at');
+        $query->whereNull('eliminado_at'); // Eliminar (RF-M04-055): lo eliminado no vuelve a salir.
         if ($request->filled('q')) {
             $texto = '%'.mb_strtolower(trim((string) $request->input('q'))).'%';
             $query->whereRaw('LOWER(nombre) LIKE ?', [$texto]);
@@ -256,7 +257,7 @@ class CatalogoController extends Controller
     // el de precio, queda en la auditoría (RF-M04-022).
     public function updateProducto(StoreProductoRequest $request, Producto $producto)
     {
-        abort_if($producto->eliminado_at !== null, 422, 'El producto está eliminado: restáuralo primero desde «Eliminados».');
+        abort_if($producto->eliminado_at !== null, 404, 'Este producto ya se eliminó.');
         $data = $request->validated();
         $generales = $data['extras_generales'] ?? null;
         unset($data['extras_generales']);
@@ -366,9 +367,10 @@ class CatalogoController extends Controller
     // viajan dentro de su producto vía extrasEspecificos), los extras "generales" no tienen
     // producto_id — no hay forma de descubrirlos salvo pidiéndolos todos aquí.
     // Fase 2, tarea 3: cada extra general trae los productos a los que se asoció (vacío = no se ofrece con ninguno).
+    // Eliminar (27/10/2026, RF-M04-059): sin los eliminados.
     public function extras()
     {
-        return response()->json(Extra::with(['producto', 'productos:id,nombre'])->orderBy('nombre')->get());
+        return response()->json(Extra::with(['producto', 'productos:id,nombre'])->whereNull('eliminado_at')->orderBy('nombre')->get());
     }
 
     public function storeExtra(StoreExtraRequest $request)
@@ -381,6 +383,7 @@ class CatalogoController extends Controller
 
     public function updateExtra(StoreExtraRequest $request, Extra $extra)
     {
+        abort_if($extra->eliminado_at !== null, 404, 'Este extra ya se eliminó.');
         $antes = $extra->getAttributes();
         $extra->update($request->validated());
         $this->catalogoService->auditar('editar_extra', $extra, $antes, $request->user());
@@ -399,9 +402,10 @@ class CatalogoController extends Controller
     // Gestión (Administrador): a diferencia de combos(), esta trae TODOS los combos —
     // incluidos los inactivos o fuera de vigencia — porque si no, uno desactivado o
     // vencido desaparecería para siempre de la pantalla de edición.
+    // Eliminar (27/10/2026, RF-M04-058): sin los eliminados.
     public function combosAdmin()
     {
-        return response()->json(Combo::with('productos')->latest()->get());
+        return response()->json(Combo::with('productos')->whereNull('eliminado_at')->latest()->get());
     }
 
     public function storeCombo(StoreComboRequest $request)
@@ -422,6 +426,7 @@ class CatalogoController extends Controller
 
     public function updateCombo(StoreComboRequest $request, Combo $combo)
     {
+        abort_if($combo->eliminado_at !== null, 404, 'Este combo ya se eliminó.');
         $data = $request->validated();
         $productos = $data['productos'];
         unset($data['productos']);

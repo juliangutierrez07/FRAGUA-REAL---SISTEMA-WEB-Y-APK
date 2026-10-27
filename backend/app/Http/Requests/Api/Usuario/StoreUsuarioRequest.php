@@ -37,7 +37,7 @@ class StoreUsuarioRequest extends FormRequest
         return [
             'role' => ['required', 'in:mesero,administrador'],
             'nombre' => ['required', 'string', 'max:80', 'regex:'.\App\Support\Validacion\Formatos::PERSONA],
-            'email' => ['bail', 'required', 'email', \App\Support\Validacion\Eliminados::libre('users', 'email', 'Ese correo es de una cuenta eliminada: restáurala desde Usuarios › Eliminados.'), 'unique:users,email'],
+            'email' => ['bail', 'required', 'email', \Illuminate\Validation\Rule::unique('users', 'email')->whereNull('eliminado_at')],
             // Fase 3, tarea 3 (RF-M01-007/011): nombre de usuario opcional para iniciar sesión.
             'username' => NombreUsuario::reglas(),
             'telefono' => ['nullable', 'string', 'regex:'.\App\Support\Validacion\Formatos::CELULAR],

@@ -14,10 +14,11 @@ class StoreProductoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'categoria_id' => ['required', 'exists:categorias,id'],
+            // 27/10/2026 (RF-M04-057): no en una categoría eliminada.
+            'categoria_id' => ['required', \Illuminate\Validation\Rule::exists('categorias', 'id')->whereNull('eliminado_at')],
             // RF-M04-028, RN-M04-14 (Fase 2, tarea 3): nombre único en todo el catálogo, con mensaje
             // claro (antes solo lo frenaba la base de datos con un error 500).
-            'nombre' => ['bail', 'required', 'string', 'max:255', \App\Support\Validacion\Eliminados::libre('productos', 'nombre', 'Ya hay un producto eliminado con ese nombre: restáuralo desde Catálogo › Eliminados o usa otro nombre.', $this->route('producto')), \Illuminate\Validation\Rule::unique('productos', 'nombre')->ignore($this->route('producto'))],
+            'nombre' => ['required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('productos', 'nombre')->whereNull('eliminado_at')->ignore($this->route('producto'))],
             'descripcion' => ['nullable', 'string', 'max:1000'],
             // RF-M04-023, RN-M04-10: todo precio mayor a cero.
             'precio_base' => ['required', 'numeric', 'gt:0', 'max:'.\App\Support\Validacion\Formatos::MAX_PESOS],
@@ -35,6 +36,7 @@ class StoreProductoRequest extends FormRequest
     {
         return [
             'nombre.unique' => 'Ya existe un producto con ese nombre.',
+            'categoria_id.exists' => 'Esa categoría no existe: elige otra.',
             'precio_base.gt' => 'El precio debe ser mayor a cero.',
         ];
     }

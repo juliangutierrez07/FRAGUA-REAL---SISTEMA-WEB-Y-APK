@@ -8,7 +8,7 @@
 // Fase 1, tarea 3: los pedidos locales se cobran por mesa (RF-M02-L-019/020, HU-M02-006). Cada
 // mesa con saldo es una tarjeta; "Cobrar mesa" abre su cuenta completa y reparte el pago entre
 // sus pedidos. Los domicilios y las recogidas se siguen cobrando pedido por pedido.
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Banknote, CircleDollarSign, CreditCard, Landmark, Smartphone, Wallet } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import CampoPesos from '@/components/common/CampoPesos.vue'
@@ -18,6 +18,7 @@ import BotonComprobante from '@/components/pedidos/BotonComprobante.vue'
 import CuentaMesaModal from '@/components/pedidos/CuentaMesaModal.vue'
 import RevisarComprobanteModal from '@/components/pagos/RevisarComprobanteModal.vue'
 import FotoComprobante from '@/components/pagos/FotoComprobante.vue'
+import EfectivoRecibido from '@/components/pagos/EfectivoRecibido.vue'
 import { pedidoService } from '@/services/pedido.service'
 import { cajaService, type EstadoCaja } from '@/services/caja.service'
 import { pagoService } from '@/services/pago.service'
@@ -147,8 +148,12 @@ const metodo = ref<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
 const monto = ref(0)
 const errorCobro = ref('')
 const cobrando = ref(false)
-// Mejora (26/10/2026): foto del comprobante (obligatoria en transferencia, opcional en tarjeta).
+// Mejora (26/10/2026, RF-M06-037): foto del comprobante (obligatoria en transferencia, opcional en tarjeta).
 const fotoCobro = ref<File | null>(null)
+// Mejora (26/10/2026, RF-M06-036): en efectivo, con cuánto paga el cliente, para mostrar el cambio.
+const recibido = ref<number | null>(null)
+const cambioCobro = computed(() => (metodo.value === 'efectivo' && recibido.value ? recibido.value - (monto.value || 0) : null))
+watch([metodo, monto, recibido, fotoCobro], () => (errorCobro.value = ''))
 
 const METODOS: { v: 'efectivo' | 'tarjeta' | 'transferencia'; t: string; icono: typeof Banknote }[] = [
   { v: 'efectivo', t: 'Efectivo', icono: Banknote },
@@ -162,6 +167,7 @@ function abrirCobro(pedido: Pedido) {
   monto.value = saldoPendiente(pedido)
   errorCobro.value = ''
   fotoCobro.value = null
+  recibido.value = null
 }
 
 function cerrarCobro() {
@@ -178,6 +184,11 @@ async function confirmarCobro() {
     errorCobro.value = 'Toma la foto del comprobante de la transferencia.'
     return
   }
+  if (cambioCobro.value !== null && cambioCobro.value < 0) {
+    errorCobro.value = `Lo que entrega el cliente no alcanza: faltan ${formatoPrecio(-cambioCobro.value)}.`
+    return
+  }
+  const cambio = cambioCobro.value
   cobrando.value = true
   errorCobro.value = ''
   try {
@@ -194,6 +205,7 @@ async function confirmarCobro() {
     if (data.estado === 'finalizado') aviso.value = `Cobro registrado. ${titularPedido(data)} quedó finalizado.`
     else if (saldoPendiente(data) === 0 && falta) aviso.value = `Pago completo. ${falta} Hazlo en Pedidos.`
     else aviso.value = 'Cobro registrado.'
+    if (cambio) aviso.value += ` Entrega ${formatoPrecio(cambio)} de cambio.`
     void cargarCaja()
   } catch (e) {
     // Si no hay turno de caja abierto, el backend responde con ese motivo exacto
@@ -504,7 +516,8 @@ onMounted(cargar)
         <p class="mt-1.5 text-xs text-gray-400">
           Puedes cobrar menos del saldo si es un pago mixto (ej. parte en efectivo, parte en tarjeta).
         </p>
-        <FotoComprobante v-if="metodo !== 'efectivo'" v-model="fotoCobro" :obligatoria="metodo === 'transferencia'" />
+        <EfectivoRecibido v-if="metodo === 'efectivo'" v-model="recibido" :total="monto || 0" />
+        <FotoComprobante v-else v-model="fotoCobro" :obligatoria="metodo === 'transferencia'" />
 
         <p v-if="errorCobro" class="mt-3 alert-error">{{ errorCobro }}</p>
 

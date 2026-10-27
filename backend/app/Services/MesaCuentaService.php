@@ -19,7 +19,7 @@ use RuntimeException;
  * cobrar la mesa reparte el monto entre sus pedidos con saldo, del más antiguo al más nuevo, y
  * cada pedido finaliza por su cuenta cuando cumple RN-PED-32.
  *
- * Mejora (26/10/2026): cuentas separadas. Los pedidos de la visita llevan un número de cuenta (1, 2…);
+ * Mejora (26/10/2026, RF-M02-L-033 a 035): cuentas separadas. Los pedidos de la visita llevan un número de cuenta (1, 2…);
  * el resumen las muestra por separado y el cobro puede ser de una sola cuenta.
  */
 class MesaCuentaService
@@ -55,7 +55,7 @@ class MesaCuentaService
     }
 
     /**
-     * Mejora (26/10/2026): la cuenta de la mesa separada por número de cuenta.
+     * Mejora (26/10/2026, RF-M02-L-034): la cuenta de la mesa separada por número de cuenta.
      *
      * @param  Collection<int, Pedido>  $pedidos  los de la visita (con sus pagos)
      * @return array<int, array{numero: int, pedidos: array<int, int>, total: float, pagado: float, saldo: float, pedidos_activos: int}>
@@ -84,7 +84,7 @@ class MesaCuentaService
      * RF-M02-L-021, RF-M06-003: el Mesero cobra lo que debe la mesa (o una parte, para pagos
      * mixtos) con un solo método. Nunca más que el saldo (RF-M06-011).
      *
-     * Mejora (26/10/2026): con $cuenta, solo esa cuenta de la mesa; con $comprobante (la foto que
+     * Mejora (26/10/2026, RF-M02-L-034, RF-M06-037): con $cuenta, solo esa cuenta de la mesa; con $comprobante (la foto que
      * tomó el Mesero), cada pago creado la lleva.
      *
      * @param  array{path: string, mime: string}|null  $comprobante

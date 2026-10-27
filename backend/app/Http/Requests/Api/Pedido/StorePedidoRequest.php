@@ -98,7 +98,7 @@ class StorePedidoRequest extends FormRequest
 
             // RF-M02-L-002, RN-PED-02: solo mesas activas reciben pedidos.
             'mesa_id' => ['required_if:tipo,local', 'nullable', Rule::exists('mesas', 'id')->where('activa', true)],
-            // Mejora (26/10/2026): cuentas separadas; el número lo valida PedidoService.
+            // Mejora (26/10/2026, RF-M02-L-033): cuentas separadas; el número lo valida PedidoService.
             'cuenta' => ['nullable', 'integer', 'min:1', 'max:50'],
 
             'cliente_id' => $reglaCliente,
@@ -113,7 +113,7 @@ class StorePedidoRequest extends FormRequest
             'direccion_entrega' => ['required_if:tipo,domicilio', 'nullable', 'string', 'max:160'],
             'barrio' => ['required_if:tipo,domicilio', 'nullable', 'string', 'max:80'],
             'referencia' => ['required_if:tipo,domicilio', 'nullable', 'string', 'max:160'],
-            // Mejora (26/10/2026): la ubicación actual que comparte el Cliente (botón «Usar mi ubicación»).
+            // Mejora (26/10/2026, RF-M07-033): la ubicación actual que comparte el Cliente (botón «Usar mi ubicación»).
             'ubicacion_lat' => ['nullable', 'numeric', 'between:-90,90', 'required_with:ubicacion_lng'],
             'ubicacion_lng' => ['nullable', 'numeric', 'between:-180,180', 'required_with:ubicacion_lat'],
             // RF-M07-010: observaciones de entrega del pedido completo.
@@ -121,7 +121,7 @@ class StorePedidoRequest extends FormRequest
             // RF-M07-013/015, RF-M07-R-007/008: cómo va a pagar y, si es en línea, por dónde.
             'metodo_pago_preferido' => ['nullable', 'in:contra_entrega,en_linea'],
             'pasarela_preferida' => ['required_if:metodo_pago_preferido,en_linea', 'nullable', 'in:nequi,bancolombia,breb'],
-            // Mejora (26/10/2026): con qué billete paga contra entrega, para que el domiciliario lleve el
+            // Mejora (26/10/2026, RF-M07-034): con qué billete paga contra entrega, para que el domiciliario lleve el
             // cambio. Vacío: paga con el valor exacto. PedidoService revisa que alcance para el total.
             'paga_con' => ['nullable', 'numeric', 'min:1000', 'max:'.\App\Support\Validacion\Formatos::MAX_PESOS],
             // valor_domicilio NO se recibe del Cliente: lo fija el servidor con el valor

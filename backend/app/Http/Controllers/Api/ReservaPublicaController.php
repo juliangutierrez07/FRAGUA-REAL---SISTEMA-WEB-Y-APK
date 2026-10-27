@@ -63,13 +63,10 @@ class ReservaPublicaController extends Controller
         return response()->json($this->presentar($reserva->fresh('mesa')) + ['checkout' => $checkout]);
     }
 
+    // La regla vive en ReservaService (también la usa «Mis pedidos y reservas»).
     private function puedePagar(Reserva $reserva): bool
     {
-        // En modo manual, un depósito ya registrado espera la aprobación del personal: no se repite.
-        $esperandoAprobacion = $reserva->deposito_estado === 'pendiente' && ! app(\App\Services\PasarelaPagoService::class)->activa();
-
-        return $reserva->estado === 'pendiente_pago' && $reserva->creado_por === 'cliente_web'
-            && now()->lt($reserva->fecha_hora) && ! $esperandoAprobacion;
+        return $this->reservas->puedePagarDeposito($reserva);
     }
 
     private function buscar(string $token): Reserva

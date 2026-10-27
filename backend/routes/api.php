@@ -248,6 +248,8 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     // ReservaController::misReservas().
     Route::middleware('role:cliente')->group(function () {
         Route::get('/mis-reservas', [ReservaController::class, 'misReservas']);
+        // Mejora (26/10/2026, RF-M05-044): pagar el depósito pendiente desde «Mis pedidos y reservas».
+        Route::post('/mis-reservas/{reserva}/deposito', [ReservaController::class, 'pagarMiDeposito'])->middleware('throttle:30,1');
     });
 
     // ---- Exclusivo Administrador ----
@@ -338,17 +340,23 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         Route::get('/impresion/estado', [ImpresionController::class, 'estado'])->middleware('menu:impresoras');
         Route::post('/comandas/{comanda}/descartar', [ComandaController::class, 'descartar'])->middleware('menu:impresoras,pedidos');
 
-        // Eliminar (24/10/2026): lo que nunca se usó se borra; lo que tiene historial se archiva y se
-        // restaura desde «Eliminados». Con contraseña y motivo (EliminacionService).
+        // Eliminar (24/10/2026; definitivo desde el 27/10/2026): lo que nunca se usó se borra; lo que tiene
+        // historial sale de todo y su fila se guarda. Con contraseña; motivo solo en usuarios (EliminacionService).
         Route::get('/mesas/{mesa}/eliminacion', [EliminacionController::class, 'vistaMesa'])->middleware('menu:mesas');
         Route::post('/mesas/{mesa}/eliminar', [EliminacionController::class, 'eliminarMesa'])->middleware('menu:mesas');
-        Route::post('/mesas/{mesa}/restaurar', [EliminacionController::class, 'restaurarMesa'])->middleware('menu:mesas');
         Route::get('/productos/{producto}/eliminacion', [EliminacionController::class, 'vistaProducto'])->middleware('menu:catalogo');
         Route::post('/productos/{producto}/eliminar', [EliminacionController::class, 'eliminarProducto'])->middleware('menu:catalogo');
-        Route::post('/productos/{producto}/restaurar', [EliminacionController::class, 'restaurarProducto'])->middleware('menu:catalogo');
         Route::get('/usuarios/{usuario}/eliminacion', [EliminacionController::class, 'vistaUsuario'])->middleware('menu:usuarios');
         Route::post('/usuarios/{usuario}/eliminar', [EliminacionController::class, 'eliminarUsuario'])->middleware('menu:usuarios');
-        Route::post('/usuarios/{usuario}/restaurar', [EliminacionController::class, 'restaurarUsuario'])->middleware('menu:usuarios');
+        // 27/10/2026 (RF-M04-057 a 060): categorías, combos, extras y promociones del catálogo.
+        Route::get('/categorias/{categoria}/eliminacion', [EliminacionController::class, 'vistaCategoria'])->middleware('menu:catalogo');
+        Route::post('/categorias/{categoria}/eliminar', [EliminacionController::class, 'eliminarCategoria'])->middleware('menu:catalogo');
+        Route::get('/combos/{combo}/eliminacion', [EliminacionController::class, 'vistaCombo'])->middleware('menu:catalogo');
+        Route::post('/combos/{combo}/eliminar', [EliminacionController::class, 'eliminarCombo'])->middleware('menu:catalogo');
+        Route::get('/extras/{extra}/eliminacion', [EliminacionController::class, 'vistaExtra'])->middleware('menu:catalogo');
+        Route::post('/extras/{extra}/eliminar', [EliminacionController::class, 'eliminarExtra'])->middleware('menu:catalogo');
+        Route::get('/promociones/{promocion}/eliminacion', [EliminacionController::class, 'vistaPromocion'])->middleware('menu:catalogo');
+        Route::post('/promociones/{promocion}/eliminar', [EliminacionController::class, 'eliminarPromocion'])->middleware('menu:catalogo');
 
         // Fase 3, tarea 1 (RF-M01-025, HU-M01-020, RNF-TRANS-023): consulta de la auditoría y
         // de los eventos de seguridad. Solo lectura.

@@ -54,7 +54,7 @@ class PedidoService
             // RF-M06-005: con este token el invitado paga en línea y consulta su pedido.
             $pedido->token_publico = Str::random(48);
             $pedido->mesa_id = $data['mesa_id'] ?? null;
-            // Mejora (26/10/2026): cuentas separadas en la mesa.
+            // Mejora (26/10/2026, RF-M02-L-033): cuentas separadas en la mesa.
             $pedido->cuenta = $data['tipo'] === 'local' ? $this->cuentaDelPedido($data) : null;
             $pedido->cliente_id = $data['cliente_id'] ?? null;
             $pedido->cliente_invitado_nombre = $data['cliente_invitado_nombre'] ?? null;
@@ -72,14 +72,14 @@ class PedidoService
             $pedido->direccion_entrega = $esDomicilio ? trim($data['direccion_entrega']) : null;
             $pedido->barrio = $esDomicilio ? trim($data['barrio']) : null;
             $pedido->referencia = $esDomicilio ? trim($data['referencia']) : null;
-            // Mejora (26/10/2026): la ubicación que compartió el Cliente, para abrirla en el mapa.
+            // Mejora (26/10/2026, RF-M07-033): la ubicación que compartió el Cliente, para abrirla en el mapa.
             $conUbicacion = $esDomicilio && isset($data['ubicacion_lat'], $data['ubicacion_lng']);
             $pedido->ubicacion_lat = $conUbicacion ? round((float) $data['ubicacion_lat'], 7) : null;
             $pedido->ubicacion_lng = $conUbicacion ? round((float) $data['ubicacion_lng'], 7) : null;
             $pedido->observaciones_entrega = $esRemoto ? (trim($data['observaciones_entrega'] ?? '') ?: null) : null;
             $pedido->metodo_pago_preferido = $esRemoto ? ($data['metodo_pago_preferido'] ?? 'contra_entrega') : null;
             $pedido->pasarela_preferida = $pedido->metodo_pago_preferido === 'en_linea' ? ($data['pasarela_preferida'] ?? null) : null;
-            // Mejora (26/10/2026): el billete con el que paga el domicilio contra entrega.
+            // Mejora (26/10/2026, RF-M07-034, RN-M07-12): el billete con el que paga el domicilio contra entrega.
             $pedido->paga_con = $esDomicilio && $pedido->metodo_pago_preferido === 'contra_entrega' && isset($data['paga_con'])
                 ? round((float) $data['paga_con'], 2)
                 : null;
@@ -136,7 +136,7 @@ class PedidoService
     }
 
     /**
-     * Mejora (26/10/2026): a qué cuenta de la mesa va un pedido local. Con la mesa libre es la 1. Con la
+     * Mejora (26/10/2026, RF-M02-L-033, RN-PED-34): a qué cuenta de la mesa va un pedido local. Con la mesa libre es la 1. Con la
      * mesa ocupada, una cuenta que ya existe en la visita o la siguiente (cuenta nueva, separada). Sin
      * número (el QR del Cliente, o el Mesero en una mesa con una sola cuenta) va a la 1.
      */

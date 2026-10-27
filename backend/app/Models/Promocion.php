@@ -24,6 +24,7 @@ class Promocion extends Model
 
     protected $casts = [
         'activo' => 'boolean',
+        'eliminado_at' => 'datetime',
         'es_oferta' => 'boolean',
         'valor' => 'decimal:2',
         'vigencia_inicio' => 'date',

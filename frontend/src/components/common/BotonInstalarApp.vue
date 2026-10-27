@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Mejora (16/10/2026): «Instalar app» (PWA). Con el aviso del navegador (Android, computador) abre la
 // instalación; en iPhone/iPad muestra los pasos de Safari. No aparece si la app ya está instalada.
-// 26/10/2026: sin el aviso del navegador (Samsung Internet, Firefox…) muestra los pasos de su menú.
+// 26/10/2026 (RNF-TRANS-034): sin el aviso del navegador (Samsung Internet, Firefox…) muestra los pasos de su menú.
 // `compacto`: solo el ícono, para la barra de arriba del Mesero en el teléfono.
 import { ref } from 'vue'
 import { Download, EllipsisVertical, PlusSquare, Share, X } from 'lucide-vue-next'

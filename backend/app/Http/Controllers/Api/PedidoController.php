@@ -16,6 +16,8 @@ use App\Models\PedidoDetalle;
 use App\Services\AvisoPedidoService;
 use App\Services\PedidoService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use RuntimeException;
 
 class PedidoController extends Controller
 {
@@ -84,6 +86,21 @@ class PedidoController extends Controller
         }
 
         $pedido = $this->pedidoService->crear($data);
+
+        // Mejora (27/10/2026, RF-M02-L-036, RN-PED-35): el pedido que toma el personal (Mesero o
+        // Administrador) se confirma al crearlo, así la comanda sale de una vez a la impresora de la
+        // cocina. Los del QR y la web siguen esperando que el personal los confirme. Uno que se paga en
+        // línea tampoco: se confirma cuando el pago esté aprobado (RN-M06-05).
+        $usuario = $request->user('sanctum');
+        if ($data['origen'] === 'mesero' && $usuario && Gate::forUser($usuario)->allows('confirmar', $pedido)
+            && $pedido->metodo_pago_preferido !== 'en_linea') {
+            try {
+                // Con su comanda, para que el equipo que la imprime al confirmar la abra de una vez.
+                $pedido = $this->pedidoService->confirmar($pedido, $usuario)->load('comandas');
+            } catch (RuntimeException) {
+                // Si algo lo impide, queda pendiente y se confirma a mano como siempre.
+            }
+        }
 
         // RF-M06-005: única vez que se entrega el token del pedido (ver Pedido::$hidden).
         return response()->json($pedido->makeVisible('token_publico'), 201);

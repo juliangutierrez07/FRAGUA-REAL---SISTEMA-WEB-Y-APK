@@ -18,9 +18,10 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * Mejoras de operación (26/10/2026): la caja cierra solo con todo finalizado, cuentas separadas en la
- * mesa, foto del comprobante al cobrar por transferencia, billete y ubicación del domicilio, y las
- * categorías que no preguntan qué ingrediente quitar.
+ * Mejoras de operación (26/10/2026): la caja cierra solo con todo finalizado (M06: RF-M06-038, RN-M06-20),
+ * cuentas separadas en la mesa (M02: RF-M02-L-033 a 035, RN-PED-34), foto del comprobante al cobrar por
+ * transferencia (M06: RF-M06-037, RN-M06-21), billete y ubicación del domicilio (M07: RF-M07-033 y 034,
+ * RN-M07-11 y 12) y las categorías que no preguntan qué ingrediente quitar (M04: RF-M04-056, RN-M04-33).
  */
 class MejorasOperacionTest extends TestCase
 {
@@ -63,7 +64,7 @@ class MejorasOperacionTest extends TestCase
 
     // ---------- Cerrar caja ----------
 
-    public function test_la_caja_no_cierra_con_pedidos_sin_finalizar(): void
+    public function test_RF_M06_038_la_caja_no_cierra_con_pedidos_sin_finalizar(): void
     {
         $pedido = $this->pedidoLocal();
 
@@ -85,7 +86,7 @@ class MejorasOperacionTest extends TestCase
         $this->assertSame('cerrada', $this->turno->fresh()->estado);
     }
 
-    public function test_un_pedido_pagado_pero_sin_finalizar_tambien_impide_cerrar(): void
+    public function test_RN_M06_20_un_pedido_pagado_pero_sin_finalizar_tambien_impide_cerrar(): void
     {
         $pedido = $this->pedidoLocal();
         app(PedidoService::class)->confirmar($pedido, $this->mesero);
@@ -99,7 +100,7 @@ class MejorasOperacionTest extends TestCase
 
     // ---------- Cuentas separadas ----------
 
-    public function test_cuentas_separadas_en_una_mesa_ocupada(): void
+    public function test_RF_M02_L_033_RN_PED_34_cuentas_separadas_en_una_mesa_ocupada(): void
     {
         $uno = $this->pedidoLocal(1);
         $this->assertSame(1, $uno->cuenta);
@@ -127,7 +128,7 @@ class MejorasOperacionTest extends TestCase
         $this->getJson('/api/mesas')->assertOk()->assertJsonPath('0.cuentas.1.numero', 2);
     }
 
-    public function test_cobrar_una_sola_cuenta_no_toca_la_otra(): void
+    public function test_RF_M02_L_034_035_cobrar_una_cuenta_no_toca_la_otra_y_la_mesa_se_libera_al_final(): void
     {
         $uno = $this->pedidoLocal(1);
         $dos = $this->pedidoLocal(2, 2);
@@ -146,9 +147,16 @@ class MejorasOperacionTest extends TestCase
         $this->assertSame('finalizado', $dos->fresh()->estado);
         $this->assertSame('preparando', $uno->fresh()->estado);
         $this->assertSame('ocupada', $this->mesa->fresh()->estado, 'La cuenta 1 sigue abierta.');
+
+        // RF-M02-L-035: al pagar la última cuenta, la mesa se libera.
+        $this->postJson("/api/mesas/{$this->mesa->id}/cobrar", ['metodo' => 'efectivo', 'monto' => 20000, 'cuenta' => 1])
+            ->assertOk()
+            ->assertJsonPath('saldo', 0);
+        $this->assertSame('finalizado', $uno->fresh()->estado);
+        $this->assertSame('libre', $this->mesa->fresh()->estado);
     }
 
-    public function test_la_comanda_dice_a_que_cuenta_va(): void
+    public function test_RF_M02_L_034_la_comanda_dice_a_que_cuenta_va(): void
     {
         $this->pedidoLocal(1);
         $dos = $this->pedidoLocal(1, 2);
@@ -161,7 +169,7 @@ class MejorasOperacionTest extends TestCase
 
     // ---------- Foto del comprobante ----------
 
-    public function test_cobro_por_transferencia_exige_la_foto_y_la_guarda(): void
+    public function test_RF_M06_037_cobro_por_transferencia_exige_la_foto_y_la_guarda(): void
     {
         Storage::fake('local');
         $pedido = $this->pedidoLocal();
@@ -183,7 +191,7 @@ class MejorasOperacionTest extends TestCase
         $this->get("/api/pagos/{$pago->id}/comprobante")->assertOk();
     }
 
-    public function test_cobro_con_tarjeta_no_exige_foto_y_la_mesa_la_reparte(): void
+    public function test_RF_M06_037_cobro_con_tarjeta_no_exige_foto_y_la_mesa_la_reparte(): void
     {
         Storage::fake('local');
         $uno = $this->pedidoLocal(1);
@@ -218,7 +226,7 @@ class MejorasOperacionTest extends TestCase
         ]);
     }
 
-    public function test_domicilio_guarda_el_billete_y_la_ubicacion(): void
+    public function test_RF_M07_033_034_domicilio_guarda_el_billete_y_la_ubicacion(): void
     {
         $respuesta = $this->domicilio(['paga_con' => 50000, 'ubicacion_lat' => 4.6097102, 'ubicacion_lng' => -74.0817501])->assertCreated();
         $pedido = Pedido::findOrFail($respuesta->json('id'));
@@ -228,7 +236,7 @@ class MejorasOperacionTest extends TestCase
         $this->assertEqualsWithDelta(-74.0817501, $pedido->ubicacion_lng, 0.0000001);
     }
 
-    public function test_el_billete_debe_alcanzar_para_el_total(): void
+    public function test_RN_M07_12_el_billete_debe_alcanzar_para_el_total(): void
     {
         $this->domicilio(['paga_con' => 20000])
             ->assertStatus(422)
@@ -236,7 +244,7 @@ class MejorasOperacionTest extends TestCase
         $this->assertSame(0, Pedido::count(), 'No queda un pedido a medias.');
     }
 
-    public function test_en_linea_no_guarda_billete_y_la_ubicacion_va_completa(): void
+    public function test_RN_M07_11_en_linea_no_guarda_billete_y_la_ubicacion_va_completa(): void
     {
         $this->domicilio(['metodo_pago_preferido' => 'en_linea', 'pasarela_preferida' => 'nequi', 'paga_con' => 100000]);
         $this->assertNull(Pedido::latest('id')->value('paga_con'));
@@ -246,7 +254,7 @@ class MejorasOperacionTest extends TestCase
 
     // ---------- Categorías sin «quitar ingredientes» ----------
 
-    public function test_la_categoria_dice_si_se_pueden_quitar_ingredientes(): void
+    public function test_RF_M04_056_la_categoria_dice_si_se_pueden_quitar_ingredientes(): void
     {
         Sanctum::actingAs($this->admin);
         $id = $this->postJson('/api/categorias', ['nombre' => 'Bebidas frías', 'permite_quitar_ingredientes' => false])

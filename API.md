@@ -1,6 +1,6 @@
 # API — Fragua Real Burger
 
-Referencia de los 195 endpoints de `backend/routes/api.php`, agrupados por módulo. Donde dice «Administrador» entra también el SuperAdmin (M09) y, solo para consultar, la cuenta de Soporte (M10): a ella el servidor le rechaza con 403 «La cuenta de Soporte solo puede consultar.» toda escritura (POST, PUT, PATCH o DELETE), salvo las de su propia cuenta (`/auth/*`, `/perfil`), `POST /reportes/exportar`, `POST /pedidos/cotizacion` y marcar sus notificaciones como leídas, y también `GET /comandas/{comanda}/ticket`, que marca la comanda como impresa. Las rutas del personal llevan además el permiso de menú de la cuenta (M09): si el SuperAdmin le quitó ese menú, responden 403 «Esta opción no está habilitada para tu cuenta…». Todas las rutas van bajo `/api` y responden JSON, salvo los PDF, tickets, fotos y archivos exportados.
+Referencia de los 201 endpoints de `backend/routes/api.php`, agrupados por módulo. Donde dice «Administrador» entra también el SuperAdmin (M09) y, solo para consultar, la cuenta de Soporte (M10): a ella el servidor le rechaza con 403 «La cuenta de Soporte solo puede consultar.» toda escritura (POST, PUT, PATCH o DELETE), salvo las de su propia cuenta (`/auth/*`, `/perfil`), `POST /reportes/exportar`, `POST /pedidos/cotizacion` y marcar sus notificaciones como leídas, y también `GET /comandas/{comanda}/ticket`, que marca la comanda como impresa. Las rutas del personal llevan además el permiso de menú de la cuenta (M09): si el SuperAdmin le quitó ese menú, responden 403 «Esta opción no está habilitada para tu cuenta…». Todas las rutas van bajo `/api` y responden JSON, salvo los PDF, tickets, fotos y archivos exportados.
 
 Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). Si cambia una ruta, actualiza esta tabla.
 
@@ -16,12 +16,12 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 ## Índice
 
 - [Cuenta y sesión (M01)](#cuenta-y-sesión-m01) (12)
-- [Usuarios y auditoría (M01)](#usuarios-y-auditoría-m01) (15)
-- [Catálogo (M04)](#catálogo-m04) (36)
+- [Usuarios y auditoría (M01)](#usuarios-y-auditoría-m01) (14)
+- [Catálogo (M04)](#catálogo-m04) (43)
 - [Pedidos (M02 y M07)](#pedidos-m02-y-m07) (21)
 - [Comandas de cocina (M02)](#comandas-de-cocina-m02) (5)
-- [Mesas (M05)](#mesas-m05) (15)
-- [Reservas (M05)](#reservas-m05) (17)
+- [Mesas (M05)](#mesas-m05) (14)
+- [Reservas (M05)](#reservas-m05) (18)
 - [Caja y pagos (M06)](#caja-y-pagos-m06) (23)
 - [Compras, gastos y cierre diario (M03)](#compras-gastos-y-cierre-diario-m03) (12)
 - [Reportes (M08)](#reportes-m08) (9)
@@ -52,14 +52,13 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 |---|---|---|---|---|
 | `GET` | `/auditorias` | Administrador | Historial de auditoría con filtros (fechas, usuario, grupo, acción, registro, IP, texto). Solo lectura. |  |
 | `GET` | `/auditorias/opciones` | Administrador | Listas para los filtros de Auditoría y resumen de seguridad (intentos fallidos). |  |
-| `GET` | `/usuarios` | Administrador | Usuarios con filtros por rol y texto (nombre, correo o usuario); sin las eliminadas (con `eliminados=1`, solo ellas). Cada cuenta trae `gestionable`: si quien mira puede modificarla (M09). La cuenta de Soporte solo la ven el SuperAdmin y ella misma (M10). |  |
+| `GET` | `/usuarios` | Administrador | Usuarios con filtros por rol y texto (nombre, correo o usuario); sin las eliminadas. Cada cuenta trae `gestionable`: si quien mira puede modificarla (M09). La cuenta de Soporte solo la ven el SuperAdmin y ella misma (M10). |  |
 | `POST` | `/usuarios` | Administrador | Crea una cuenta de Mesero; la de Administrador, solo el SuperAdmin (403 para el Administrador). El rol `superadmin` no se crea aquí. La contraseña inicial debe ser segura. |  |
 | `PUT` | `/usuarios/{usuario}` | Administrador | Edita datos, rol y el permiso de compras y gastos (cambiar el rol cierra sus sesiones). Una cuenta de Administrador solo la edita el SuperAdmin y la del SuperAdmin no se edita aquí (403). |  |
 | `POST` | `/usuarios/{usuario}/activar` | Administrador | Activa una cuenta. |  |
 | `POST` | `/usuarios/{usuario}/desactivar` | Administrador | Desactiva una cuenta y cierra sus sesiones. |  |
-| `GET` | `/usuarios/{usuario}/eliminacion` | Administrador | Muestra si se borraría (nunca se usó) o se archivaría (tiene historial) y por qué; `bloqueo` dice qué lo impide ahora. |  |
-| `POST` | `/usuarios/{usuario}/eliminar` | Administrador | Elimina una cuenta con `password` (la de quien lo hace) y `motivo`: sin acciones ni pedidos se borra; con historial se archiva (no vuelve a entrar). No la propia; las de Administrador solo el SuperAdmin. Queda en Auditoría. |  |
-| `POST` | `/usuarios/{usuario}/restaurar` | Administrador | Devuelve a la lista una cuenta archivada, desactivada. |  |
+| `GET` | `/usuarios/{usuario}/eliminacion` | Administrador | Muestra qué pasa al eliminar: se borra (nunca se usó) o sale de todo y su historial se guarda; `bloqueo` dice qué lo impide ahora y `pide_motivo` si hace falta motivo (solo cuentas). |  |
+| `POST` | `/usuarios/{usuario}/eliminar` | Administrador | Elimina una cuenta con `password` (la de quien lo hace) y `motivo` (obligatorio): sin acciones ni pedidos se borra; con historial sale de todo para siempre y no vuelve a entrar (su historial se guarda). No la propia; las de Administrador solo el SuperAdmin. Queda en Auditoría. |  |
 | `POST` | `/usuarios/{usuario}/revocar-sesiones` | Administrador | Cierra todas las sesiones de una cuenta. |  |
 | `GET` | `/usuarios/{usuario}/sesiones` | Administrador | Sesiones abiertas de una cuenta. |  |
 | `GET` | `/usuarios/{usuario}/menus` | SuperAdmin | Menús de una cuenta de Administrador o Mesero: el catálogo del rol (con los fijos) y los habilitados (M09). |  |
@@ -70,14 +69,14 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 
 | Método | Ruta | Quién | Para qué | Límite |
 |---|---|---|---|---|
-| `GET` | `/categorias` | Pública | Categorías activas del menú. |  |
+| `GET` | `/categorias` | Pública | Categorías activas del menú; el personal las recibe todas, menos las eliminadas. |  |
 | `POST` | `/categorias` | Administrador | Crea una categoría. 26/10/2026: `permite_quitar_ingredientes` (falso en Bebidas: el menú no pregunta qué ingrediente quitar). |  |
 | `PUT` | `/categorias/{categoria}` | Administrador | Edita o desactiva una categoría (desactivarla oculta sus productos y combos). |  |
 | `GET` | `/combos` | Pública | Combos disponibles ahora (vigencia, franja y días). |  |
 | `POST` | `/combos` | Administrador | Crea un combo (al menos dos productos). |  |
-| `GET` | `/combos-admin` | Administrador | Todos los combos, también inactivos, con el ahorro frente a sus productos. |  |
+| `GET` | `/combos-admin` | Administrador | Todos los combos, también inactivos, con el ahorro frente a sus productos; sin los eliminados. |  |
 | `PUT` | `/combos/{combo}` | Administrador | Edita o desactiva un combo. |  |
-| `GET` | `/extras` | Administrador | Extras (generales y específicos). |  |
+| `GET` | `/extras` | Administrador | Extras (generales y específicos), sin los eliminados. |  |
 | `POST` | `/extras` | Administrador | Crea un extra. |  |
 | `PUT` | `/extras/{extra}` | Administrador | Edita un extra o los productos que lo ofrecen. |  |
 | `GET` | `/productos` | Pública | Productos con presentaciones, extras y foto. Sin sesión o como Cliente, solo lo que se puede pedir; con sesión del personal, todo el catálogo menos lo eliminado. Filtros `q`, `categoria_id` y `eliminados=1` (solo los eliminados, para el personal). |  |
@@ -85,16 +84,23 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 | `GET` | `/productos/importacion/plantilla` | Administrador | Descarga la plantilla de Excel para importar productos (hoja «Productos» e «Instrucciones»). |  |
 | `POST` | `/productos/importacion/vista-previa` | Administrador | Lee el archivo (`archivo`: .xlsx, .xls o .csv, hasta 2 MB y 500 filas; `actualizar`: 1 o 0) y devuelve qué haría cada fila (crear, actualizar, sin cambios o error). No guarda nada. |  |
 | `POST` | `/productos/importacion` | Administrador | Importa el mismo archivo: crea y actualiza todo en una transacción, o nada si alguna fila tiene error (422). |  |
-| `PUT` | `/productos/{producto}` | Administrador | Edita un producto (darlo de baja desactiva sus combos). Uno eliminado no se edita sin restaurarlo. |  |
-| `GET` | `/productos/{producto}/eliminacion` | Administrador | Muestra si se borraría (nunca se usó) o se archivaría (tiene historial) y por qué; `bloqueo` dice qué lo impide ahora. |  |
-| `POST` | `/productos/{producto}/eliminar` | Administrador | Elimina un producto con `password` y `motivo`: si nunca se vendió ni está en un combo se borra (con sus fotos); si no, se archiva y sus combos se desactivan. Queda en Auditoría. |  |
-| `POST` | `/productos/{producto}/restaurar` | Administrador | Devuelve al catálogo un producto archivado, inactivo. |  |
+| `PUT` | `/productos/{producto}` | Administrador | Edita un producto (darlo de baja desactiva sus combos). Uno eliminado responde 404. |  |
+| `GET` | `/productos/{producto}/eliminacion` | Administrador | Muestra qué pasa al eliminar: se borra (nunca se usó) o sale de todo y su historial se guarda; `bloqueo` dice qué lo impide ahora y `pide_motivo` si hace falta motivo (solo cuentas). |  |
+| `POST` | `/productos/{producto}/eliminar` | Administrador | Elimina un producto con `password`: si nunca se vendió ni está en un combo se borra (con sus fotos); si no, sale de todo para siempre (su historial se guarda) y sus combos se desactivan. Queda en Auditoría. |  |
+| `GET` | `/categorias/{categoria}/eliminacion` | Administrador | Muestra qué pasa al eliminar: se borra (nunca se usó) o sale de todo y su historial se guarda; `bloqueo` dice qué lo impide ahora y `pide_motivo` si hace falta motivo (solo cuentas). |  |
+| `POST` | `/categorias/{categoria}/eliminar` | Administrador | Elimina una categoría con `password`: sin productos se borra; si solo tiene productos eliminados, sale de todo para siempre (su historial se guarda). No si tiene productos vigentes o una promoción vigente la usa. Queda en Auditoría. |  |
+| `GET` | `/combos/{combo}/eliminacion` | Administrador | Muestra qué pasa al eliminar: se borra (nunca se usó) o sale de todo y su historial se guarda; `bloqueo` dice qué lo impide ahora y `pide_motivo` si hace falta motivo (solo cuentas). |  |
+| `POST` | `/combos/{combo}/eliminar` | Administrador | Elimina un combo con `password`: si nunca se vendió se borra; si no, sale de todo para siempre (su historial se guarda) y deja de venderse. Queda en Auditoría. |  |
+| `GET` | `/extras/{extra}/eliminacion` | Administrador | Muestra qué pasa al eliminar: se borra (nunca se usó) o sale de todo y su historial se guarda; `bloqueo` dice qué lo impide ahora y `pide_motivo` si hace falta motivo (solo cuentas). |  |
+| `POST` | `/extras/{extra}/eliminar` | Administrador | Elimina un extra con `password`: si nunca se vendió se borra; si no, sale de todo para siempre (su historial se guarda) y deja de ofrecerse. Queda en Auditoría. |  |
+| `GET` | `/promociones/{promocion}/eliminacion` | Administrador | Muestra qué pasa al eliminar: se borra (nunca se usó) o sale de todo y su historial se guarda; `bloqueo` dice qué lo impide ahora y `pide_motivo` si hace falta motivo (solo cuentas). |  |
+| `POST` | `/promociones/{promocion}/eliminar` | Administrador | Elimina una promoción con `password`: si nunca se aplicó a un pedido se borra; si no, sale de todo para siempre (su historial se guarda) y deja de aplicarse. Queda en Auditoría. |  |
 | `POST` | `/productos/{producto}/disponibilidad` | Administrador, Mesero | Marca un producto agotado o disponible. |  |
 | `GET` | `/productos/{producto}/foto` | Pública | Foto del producto (WebP, caché larga). Pública para el Menú. | 600/min |
 | `POST` | `/productos/{producto}/foto` | Administrador | Sube o cambia la foto del producto (JPG, PNG o WebP; se reduce a 900 px). |  |
 | `DELETE` | `/productos/{producto}/foto` | Administrador | Quita la foto del producto. |  |
 | `GET` | `/productos/{producto}/promociones` | Pública | Promociones vigentes de un producto. |  |
-| `GET` | `/promociones` | Administrador | Promociones. |  |
+| `GET` | `/promociones` | Administrador | Promociones, sin las eliminadas. |  |
 | `POST` | `/promociones` | Administrador | Crea una promoción (producto, categoría o total; automática o manual). |  |
 | `GET` | `/promociones/manuales` | Administrador, Mesero | Promociones de tipo manual (para el descuento en Pedidos). |  |
 | `PUT` | `/promociones/{promocion}` | Administrador | Edita o desactiva una promoción. |  |
@@ -111,7 +117,7 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 
 | Método | Ruta | Quién | Para qué | Límite |
 |---|---|---|---|---|
-| `POST` | `/pedidos` | Pública | Crea un pedido: Cliente o invitado (domicilio o recogida), QR de mesa, o el personal (local o por teléfono). Devuelve el enlace de seguimiento al invitado. 26/10/2026: `cuenta` (local: una cuenta de la mesa o la siguiente), `ubicacion_lat`/`ubicacion_lng` y `paga_con` (domicilio contra entrega; 422 si no alcanza para el total). | 30/min |
+| `POST` | `/pedidos` | Pública | Crea un pedido: Cliente o invitado (domicilio o recogida), QR de mesa, o el personal (local o por teléfono). Devuelve el enlace de seguimiento al invitado. 26/10/2026: `cuenta` (local: una cuenta de la mesa o la siguiente), `ubicacion_lat`/`ubicacion_lng` y `paga_con` (domicilio contra entrega; 422 si no alcanza para el total). 27/10/2026: el que crea el personal (`origen` = `mesero`) sale ya `confirmado`, con su comanda en `comandas` (salvo pago en línea); el del QR y el de la web quedan `pendiente`. | 30/min |
 | `GET` | `/pedidos` | Administrador, Mesero, Cliente | Pedidos con filtros (tipo, estado, mesa, activos). El Cliente ve solo los suyos. |  |
 | `POST` | `/pedidos/cotizacion` | Pública | Calcula el total con promociones antes de crear el pedido. | 60/min |
 | `GET` | `/pedidos/seguimiento/{token}` | Pública | Pedido del invitado por su enlace (sin datos de contacto ni del personal). | 30/min |
@@ -156,9 +162,8 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 | `POST` | `/mesas/{mesa}/cobrar` | Administrador, Mesero | Cobra la cuenta de la mesa (uno o varios pagos). Solo el Mesero. 26/10/2026: `cuenta` cobra solo esa cuenta; `comprobante` (foto, multipart) obligatorio en transferencia. |  |
 | `GET` | `/mesas/{mesa}/cuenta` | Administrador, Mesero | Cuenta de la mesa: pedidos de la visita, abono del depósito y saldo. |  |
 | `POST` | `/mesas/{mesa}/desactivar` | Administrador | Desactiva una mesa (con historial no se borra). |  |
-| `GET` | `/mesas/{mesa}/eliminacion` | Administrador | Muestra si se borraría (nunca se usó) o se archivaría (tiene historial) y por qué; `bloqueo` dice qué lo impide ahora. |  |
-| `POST` | `/mesas/{mesa}/eliminar` | Administrador | Elimina una mesa con `password` y `motivo`: sin pedidos ni reservas se borra; con historial se archiva. No con clientes, pedidos activos o reservas próximas. Queda en Auditoría. |  |
-| `POST` | `/mesas/{mesa}/restaurar` | Administrador | Devuelve a la lista una mesa archivada, dada de baja. |  |
+| `GET` | `/mesas/{mesa}/eliminacion` | Administrador | Muestra qué pasa al eliminar: se borra (nunca se usó) o sale de todo y su historial se guarda; `bloqueo` dice qué lo impide ahora y `pide_motivo` si hace falta motivo (solo cuentas). |  |
+| `POST` | `/mesas/{mesa}/eliminar` | Administrador | Elimina una mesa con `password`: sin pedidos ni reservas se borra; con historial sale de todo para siempre (su historial se guarda). No con clientes, pedidos activos o reservas próximas. Queda en Auditoría. |  |
 | `POST` | `/mesas/{mesa}/liberar` | Administrador, Mesero | Libera la mesa si no tiene pedidos activos. |  |
 | `POST` | `/mesas/{mesa}/liberar-forzada` | Administrador, Mesero | Libera la mesa aunque tenga pedidos activos, con motivo. Queda en Auditoría. |  |
 | `POST` | `/mesas/{mesa}/regenerar-qr` | Administrador | Genera un QR nuevo (el anterior deja de servir). |  |
@@ -168,7 +173,8 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 | Método | Ruta | Quién | Para qué | Límite |
 |---|---|---|---|---|
 | `GET` | `/mesas/disponibles` | Pública | Mesas libres a una fecha y hora (sin datos de nadie). | 60/min |
-| `GET` | `/mis-reservas` | Cliente | Reservas del Cliente (por su correo). |  |
+| `GET` | `/mis-reservas` | Cliente | Reservas del Cliente (por su correo), con `puede_pagar`. |  |
+| `POST` | `/mis-reservas/{reserva}/deposito` | Cliente | Paga el depósito pendiente de su reserva (`pasarela`, `comprobante`, `referencia`), como con el enlace del correo. 404 si no es suya. | 30/min |
 | `POST` | `/reservas` | Pública | Crea una reserva (web o del personal) con `descripcion` opcional (hasta 500 caracteres); solo de 4:00 p. m. a 11:00 p. m. y con al menos 3 horas de anticipación (422 si no). Devuelve el enlace secreto. | 30/min |
 | `GET` | `/reservas` | Administrador, Mesero | Reservas con filtros, sus avisos y su depósito. |  |
 | `GET` | `/reservas/depositos-retenidos` | Administrador | Depósitos retenidos por no-show. |  |
@@ -182,7 +188,7 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 | `POST` | `/reservas/{reserva}/deposito/en-linea` | Pública | Inicia el pago en línea del depósito (pide el enlace secreto de la reserva; sin Wompi, con `comprobante` y `referencia`). | 30/min |
 | `POST` | `/reservas/{reserva}/deposito/en-linea/confirmar` | Administrador, Mesero | Aprueba a mano el depósito en línea (respaldo). |  |
 | `POST` | `/reservas/{reserva}/deposito/en-linea/rechazar` | Administrador, Mesero | Rechaza a mano el depósito en línea, con `motivo` opcional (hasta 255) que el Cliente ve en el enlace de su reserva. |  |
-| `POST` | `/reservas/{reserva}/deposito/manual` | Administrador, Mesero | Registra el depósito en efectivo, tarjeta o transferencia (con la caja abierta). |  |
+| `POST` | `/reservas/{reserva}/deposito/manual` | Administrador, Mesero | Registra el depósito en efectivo, tarjeta o transferencia (con la caja abierta). En efectivo, `recibido` (no menor que el depósito); en transferencia, la foto `comprobante` (obligatoria; en tarjeta, opcional). |  |
 | `POST` | `/reservas/{reserva}/no-show` | Administrador, Mesero | Marca no-show cuando ya pasó la tolerancia; el depósito se retiene. |  |
 
 ## Caja y pagos (M06)

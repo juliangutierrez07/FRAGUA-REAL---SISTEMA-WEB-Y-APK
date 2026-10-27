@@ -32,6 +32,10 @@ const NOMBRES: Record<string, string> = {
   formato: 'Formato',
   periodo: 'Periodo',
   reporte: 'Reporte',
+  // Mejora (26/10/2026, RF-M05-045): depósito manual de una reserva.
+  recibido: 'Entregó el cliente',
+  cambio: 'Cambio entregado',
+  con_foto: 'Con foto del comprobante',
 }
 
 // Motivos técnicos que guarda el backend → texto para el Administrador.

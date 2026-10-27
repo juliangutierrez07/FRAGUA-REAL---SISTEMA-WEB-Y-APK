@@ -20,7 +20,7 @@ export interface CrearPedidoPayload {
   tipo: TipoPedido
   origen: 'cliente_web' | 'mesero' | 'qr'
   mesa_id?: number
-  // Mejora (26/10/2026): a qué cuenta de la mesa va (sin dato, la 1).
+  // Mejora (26/10/2026, RF-M02-L-033): a qué cuenta de la mesa va (sin dato, la 1).
   cuenta?: number
   cliente_invitado_nombre?: string
   cliente_invitado_telefono?: string
@@ -32,7 +32,7 @@ export interface CrearPedidoPayload {
   direccion_entrega?: string
   barrio?: string
   referencia?: string
-  // Mejora (26/10/2026): ubicación actual del Cliente y con qué billete paga contra entrega.
+  // Mejora (26/10/2026, RF-M07-033 y 034): ubicación actual del Cliente y con qué billete paga contra entrega.
   ubicacion_lat?: number
   ubicacion_lng?: number
   paga_con?: number
@@ -67,7 +67,7 @@ export function formularioPagoEnLinea(payload: PagoEnLineaPayload): FormData {
 export interface CobrarPayload {
   metodo: 'efectivo' | 'tarjeta' | 'transferencia'
   monto: number
-  // Mejora (26/10/2026): la foto del comprobante (obligatoria en transferencia).
+  // Mejora (26/10/2026, RF-M06-037): la foto del comprobante (obligatoria en transferencia).
   comprobante?: File | null
 }
 

@@ -88,11 +88,17 @@ class DiaCompletoTest extends TestCase
         }
     }
 
-    /** El Mesero confirma, imprime la comanda y pasa a preparación. */
+    /**
+     * El Mesero confirma (si aún está pendiente), imprime la comanda y pasa a preparación. Desde el
+     * 27/10/2026 (RF-M02-L-036) el pedido que toma el Mesero ya nace confirmado; el del QR no.
+     */
     private function aCocina(int $pedidoId): void
     {
         $this->como($this->mesero);
-        $this->postJson("/api/pedidos/{$pedidoId}/confirmar")->assertOk()->assertJsonPath('estado', 'confirmado');
+        if (\App\Models\Pedido::findOrFail($pedidoId)->estado === 'pendiente') {
+            $this->postJson("/api/pedidos/{$pedidoId}/confirmar")->assertOk()->assertJsonPath('estado', 'confirmado');
+        }
+        $this->assertSame('confirmado', \App\Models\Pedido::findOrFail($pedidoId)->estado);
         $comanda = Comanda::where('pedido_id', $pedidoId)->where('tipo', 'inicial')->sole();
         $this->get("/api/comandas/{$comanda->id}/ticket")->assertOk();
         $this->postJson("/api/pedidos/{$pedidoId}/preparando")->assertOk()->assertJsonPath('estado', 'preparando');

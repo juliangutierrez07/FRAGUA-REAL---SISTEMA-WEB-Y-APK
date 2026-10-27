@@ -38,7 +38,7 @@ class SoporteService
         }
 
         return DB::transaction(function () use ($correo, $nombre, $password) {
-            $usuario = User::where('email', $correo)->first();
+            $usuario = User::where('email', $correo)->whereNull('eliminado_at')->first();
             if ($usuario && ! $usuario->esSoporte()) {
                 throw new RuntimeException("Ese correo ya es de una cuenta de {$usuario->role}. Usa otro correo para Soporte: una cuenta del negocio no se convierte en Soporte.");
             }

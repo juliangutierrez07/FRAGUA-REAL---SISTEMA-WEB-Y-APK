@@ -23,7 +23,7 @@ armado el backend hoy y guarda el historial de los 60 cambios técnicos que lo l
 
 Cada petición pasa por las mismas capas:
 
-1. **Ruta** (`routes/api.php`): 195 endpoints bajo `/api`, agrupados por nivel de acceso con los
+1. **Ruta** (`routes/api.php`): 201 endpoints bajo `/api`, agrupados por nivel de acceso con los
    middleware `auth:sanctum`, `activo` y `role:...`, y límites de peticiones en las rutas públicas.
 2. **Form Request** (`app/Http/Requests/Api`, 38 clases): valida los datos y devuelve los mensajes
    en español (`lang/es/validation.php`).
@@ -160,7 +160,7 @@ partir de la copia guardada en la base, así una reimpresión dice exactamente l
 
 ## Pruebas automáticas
 
-`backend/tests/Feature` tiene 61 archivos y 431 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
+`backend/tests/Feature` tiene 64 archivos y 443 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
 En total son 344.
 
 ```bash
@@ -1851,6 +1851,8 @@ inconsistencias con lo que existía o era correcto en Laravel:
       «Eliminados» con «Restaurar» en Mesas, Catálogo › Productos y Usuarios.
     - `EliminarRegistrosTest` (7 pruebas). Documentación oficial: M05 v1.3, M04 v1.2, M01, notas en M00 y
       M09, Catálogo de Pantallas, Estructura técnica, Cronograma, diagrama entidad-relación y Flujos por rol.
+    - CAMBIÓ el 27/10/2026 (punto 78): ya no hay «Eliminadas» / «Eliminados» ni restaurar, el motivo solo
+      se pide al eliminar una cuenta y el nombre o el correo de lo eliminado queda libre.
 
 75. **M12 — Impresoras (24/10/2026, RF-M12-001 a 014).** Migración `2026_11_01_000001_crear_equipos_impresion`.
     - El servidor no ve la impresora: imprime el navegador de un equipo del local (D5). Tabla
@@ -1887,6 +1889,11 @@ inconsistencias con lo que existía o era correcto en Laravel:
 
 76. **Mejoras de operación (26/10/2026).** Migración `2026_11_02_000001_mejoras_operacion_26_10`
     (`pedidos.cuenta`, `ubicacion_lat`, `ubicacion_lng`, `paga_con`; `categorias.permite_quitar_ingredientes`).
+    Requisitos formales (27/10/2026): M00 RNF-TRANS-034 a 036; M01 RF-M01-034 y HU-M01-025; M02
+    RF-M02-L-033 a 035, RN-PED-34 y HU-M02-024; M04 RF-M04-056, RN-M04-33 y HU-M04-020; M05 RF-M05-044 a
+    046, RN-M05-25 y 26 y HU-M05-020 y 021; M06 RF-M06-036 a 038, RN-M06-20 y 21 y HU-M06-017 a 019; M07
+    RF-M07-033 a 036, RN-M07-11 y 12 y HU-M07-015 a 017. Los comentarios del código y los nombres de las
+    pruebas los citan.
     - Cerrar caja: `CajaService::pedidosSinFinalizar()` (pendientes, confirmados o en preparación, de
       cualquier día) bloquea `cerrar()` con la lista; `GET /caja/turno-actual` la trae como
       `pedidos_sin_finalizar` y la ventana «Cerrar turno» la muestra y no deja confirmar.
@@ -1919,4 +1926,74 @@ inconsistencias con lo que existía o era correcto en Laravel:
       aviso del navegador muestra los pasos), también arriba para el Mesero.
     - `MejorasOperacionTest` (11 pruebas); `CajaCuadreTest`, `AuditoriaBaseTest` y
       `AbonoDepositoReservaTest` ajustadas a la regla de cerrar caja.
+    - Reservas y cobros en efectivo (26/10/2026, sin migración):
+      - El Cliente paga el depósito pendiente desde «Mis pedidos y reservas»: `GET /mis-reservas` trae
+        `puede_pagar` y `POST /mis-reservas/{reserva}/deposito` (solo sus reservas, por correo; las demás
+        dan 404) hace lo mismo que el enlace del correo. La regla `puedePagarDeposito()` pasó de
+        `ReservaPublicaController` a `ReservaService`. Mientras se revisa el comprobante dice «Pago en
+        revisión»; si se rechazó, muestra el motivo y deja pagar otra vez.
+      - Depósito manual: en efectivo se envía `recibido` (no puede ser menor que el depósito) y la
+        auditoría guarda lo recibido y el cambio; en transferencia la foto `comprobante` es obligatoria
+        (en tarjeta, opcional) y queda en `deposito_comprobante_path`. Reservas muestra «Ver comprobante».
+      - `EfectivoRecibido.vue`: al cobrar en efectivo (Cobrar, cuenta de la mesa y depósito) se toca
+        «Exacto», un billete sugerido o se escribe el valor, y muestra a cobrar, recibe y cambio. Si no
+        alcanza, no deja registrar. En el cobro de pedidos y mesas es una ayuda: no se guarda.
+      - `DepositoReservaMejorasTest` (3 pruebas); `ReservaPersonalTest` envía la foto en transferencia.
+      - La prueba de cuentas separadas también comprueba que la mesa se libera al pagar la última cuenta
+        (RF-M02-L-035).
+
+77. **Eliminar categorías, combos, extras y promociones (27/10/2026, M04, RF-M04-057 a 060, RN-M04-34,
+    HU-M04-021).** Migración `2026_11_03_000001_eliminar_categorias_combos_extras_promociones`
+    (`eliminado_at`, `eliminado_por` y `eliminado_motivo` en las cuatro tablas).
+    - Antes solo se podían eliminar mesas, productos y usuarios; estas cuatro solo se desactivaban.
+      `EliminacionService` sigue la misma regla: lo que nunca se usó se borra; lo que tiene historial se
+      archiva (inactivo, fuera de las listas) y se restaura desde «Eliminados», inactivo.
+    - Historial: un combo o un extra que aparece en `pedido_detalles` o `pedido_detalle_extra`; una
+      promoción que figura en `pedidos.promociones_aplicadas` (JSON, sin llave foránea); una categoría
+      que solo tiene productos eliminados. Al borrar, las tablas puente (`combo_producto`,
+      `producto_extra`, `promocion_producto`, `promocion_categoria`) se limpian solas.
+    - Bloqueo: una categoría con productos vigentes («muévelos a otra categoría o elimínalos antes») o
+      que usa una promoción vigente no se elimina.
+    - 12 rutas nuevas (`/{categorias|combos|extras|promociones}/{id}/eliminacion|eliminar|restaurar`, menú
+      Catálogo). `GET /categorias`, `/extras`, `/combos-admin` y `/promociones` aceptan `?eliminados=1`
+      (solo el personal). Editar algo archivado responde 422; una categoría archivada sigue ocupando su
+      nombre (`Eliminados::libre`), no se puede elegir para un producto y la importación desde Excel la
+      rechaza con su motivo. Los extras archivados salen de la ficha de cada producto.
+    - Frontend: «Eliminar» y el filtro «Eliminados» en Categorías, Combos, Extras generales y Promociones
+      del Catálogo (`SelectorEliminados.vue`, `ListaEliminados.vue`, la misma `EliminarModal.vue`).
+    - `EliminarCatalogoTest` (6 pruebas). Documentación oficial: M04 v1.4, Catálogo de Pantallas,
+      Estructura técnica, Cronograma y diagrama entidad-relación.
+    - CAMBIÓ el mismo día (punto 78): sin «Eliminados» ni restaurar y sin motivo.
+
+78. **Eliminar es definitivo (27/10/2026, decisión del negocio; RN-M04-32, RN-M05-24, RN-USR-25).**
+    Migración `2026_11_04_000001_liberar_nombres_de_lo_eliminado`.
+    - Se quitan el filtro «Eliminados» / «Eliminadas» y «Restaurar» de Catálogo (Categorías, Productos,
+      Combos, Extras generales y Promociones), Mesas y Usuarios, y las 7 rutas `POST …/restaurar`. Las
+      listas ya no aceptan `?eliminados=1` / `?eliminadas=1`. Editar o reactivar algo eliminado responde 404.
+    - Lo que nunca se usó se borra de la base. Lo que tiene historial no se puede borrar sin dañar los
+      pedidos, los reportes, los comprobantes y la auditoría: su fila se queda, inactiva y fuera de todas
+      las listas, para siempre (auditoría `archivar_*`, con el texto «… eliminado (se guarda su historial)»).
+    - Contraseña siempre; el motivo solo al eliminar una cuenta (`EliminacionService::pideMotivo()`, la
+      vista previa trae `pide_motivo`). `EliminarModal.vue` muestra el campo solo en ese caso.
+    - El nombre o el correo de lo eliminado queda libre: los índices únicos de `productos.nombre`,
+      `categorias.nombre`, `mesas.nombre`, `users.email` y `users.username` pasan a ser parciales
+      (`WHERE eliminado_at IS NULL`) y las reglas `unique` ignoran lo eliminado. Se quitó
+      `Support\Validacion\Eliminados`. El inicio de sesión, la recuperación de contraseña y los comandos
+      de SuperAdmin y Soporte buscan solo cuentas vigentes; la importación desde Excel ignora lo eliminado.
+    - Frontend: se quitaron `SelectorEliminados.vue` y `ListaEliminados.vue` y los campos `eliminado_*` de
+      los tipos. Auditoría: textos de las acciones de eliminar de categorías, combos, extras y promociones.
+    - `EliminarRegistrosTest` y `EliminarCatalogoTest` reescritas (13 pruebas): sin restaurar, nombre y
+      correo reutilizables, una cuenta nueva con el correo de una eliminada entra normalmente.
+
+79. **Comanda automática (27/10/2026, M02, RF-M02-L-036, RN-PED-35, HU-M02-025).** Sin migración.
+    - `PedidoController::store`: si el pedido lo crea el personal (`origen` = `mesero`, Mesero o
+      Administrador con permiso de confirmar), se confirma enseguida con `PedidoService::confirmar()` (queda
+      `confirmado_por` y `confirmado_at`) y se genera la comanda inicial, que el equipo de la cocina con
+      «Abre solas las comandas nuevas» imprime en máximo unos 15 s. La respuesta trae `comandas`.
+    - No se confirma solo: lo que llega por el QR o la web, ni un pedido con pago en línea (se confirma
+      cuando el pago esté aprobado, RN-M06-05). Si `confirmar()` lo impide, el pedido queda pendiente.
+    - Frontend: Nuevo pedido abre la comanda en ese mismo equipo si tiene «Abre la comanda al confirmar» y
+      avisa a la franja de comandas; Pedidos muestra «Pedido #N creado: la comanda ya va para la cocina».
+    - `ComandaAutomaticaTest` (3 pruebas); `DiaCompletoTest`, `ImpresorasTest`, `PedidoTelefonicoTest`,
+      `ReabrirPedidoAnulacionTest` y `SoporteTest` ajustadas (el pedido del Mesero ya nace confirmado).
 

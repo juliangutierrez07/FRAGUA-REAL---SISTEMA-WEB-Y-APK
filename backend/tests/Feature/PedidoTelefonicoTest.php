@@ -53,7 +53,7 @@ class PedidoTelefonicoTest extends TestCase
 
         $pedido = Pedido::findOrFail($id);
         $this->assertSame('mesero', $pedido->origen);
-        $this->assertSame('pendiente', $pedido->estado);
+        $this->assertSame('confirmado', $pedido->estado); // RF-M02-L-036: lo que toma el Mesero sale a la cocina de una vez
         $this->assertSame('3001234567', $pedido->telefono_contacto); // se guarda solo con números
         $this->assertSame('El Prado', $pedido->barrio);
         $this->assertSame('Casa esquinera azul', $pedido->referencia);

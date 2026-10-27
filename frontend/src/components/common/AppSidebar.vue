@@ -232,7 +232,7 @@ const iniciales = computed(() =>
       </button>
     </div>
 
-    <!-- CORREGIDO (26/10/2026): sin min-h-0 la lista no se encogía en pantallas bajas y empujaba el
+    <!-- CORREGIDO (26/10/2026, RNF-TRANS-035): sin min-h-0 la lista no se encogía en pantallas bajas y empujaba el
          perfil y «Cerrar sesión» fuera de la pantalla; ahora la lista se desplaza y el pie queda fijo. -->
     <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-2 md:px-2 lg:px-3">
       <router-link

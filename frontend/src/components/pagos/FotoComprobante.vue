@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Mejora (26/10/2026): al cobrar por transferencia o tarjeta, el Mesero toma la foto del comprobante con
+// Mejora (26/10/2026, RF-M06-037, RF-M05-046): al cobrar por transferencia o tarjeta, el Mesero toma la foto del comprobante con
 // la cámara del teléfono (capture="environment" abre la cámara trasera; en un computador abre el
 // selector de archivos). En transferencia es obligatoria; en tarjeta, opcional (el datáfono deja recibo).
 import { onBeforeUnmount, ref, watch } from 'vue'
@@ -46,7 +46,7 @@ async function elegida(evento: Event) {
       <img :src="vista" alt="Foto del comprobante" class="size-16 shrink-0 rounded-lg object-cover ring-1 ring-black/5" />
       <div class="min-w-0 flex-1 text-xs text-emerald-800">
         <p class="font-semibold">Foto lista</p>
-        <p class="text-emerald-700/80">Se guarda con el cobro.</p>
+        <p class="text-emerald-700/80">Se guarda con el pago.</p>
       </div>
       <button type="button" class="flex size-10 items-center justify-center rounded-lg text-gray-500 hover:bg-white" aria-label="Tomar otra foto" @click="entrada?.click()">
         <RefreshCw :size="17" />

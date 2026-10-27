@@ -671,18 +671,18 @@ Resumen; la lista completa del invitado está en `QA-CLIENTE.md` (secciones 4 a 
 - [ ] Catálogo, Caja, Compras y gastos: los precios y valores se escriben con punto de miles; la cantidad
       acepta decimales (2,5); en Usuarios, el teléfono solo acepta 10 números y el nombre, solo letras.
 
-## 15e. Eliminar mesas, productos y usuarios (24/10/2026)
+## 15e. Eliminar mesas, productos y usuarios (24/10/2026; definitivo desde el 27/10/2026)
 
-- [ ] Mesas: crear «Mesa prueba» y eliminarla. La ventana dice «Se borrará para siempre»; pide motivo y
-      contraseña (sin ellos no deja; con una contraseña mala lo dice). Desaparece y Auditoría lo registra.
-- [ ] Eliminar una mesa con pedidos viejos: dice «Se archivará»; sale de la lista y aparece en
-      «Eliminadas» con la fecha y el motivo. «Restaurar» la devuelve dada de baja; «Reactivar» la habilita.
-      Los reportes de esos días siguen mostrando su nombre.
+- [ ] Mesas, Catálogo y Usuarios no tienen filtro «Eliminadas» / «Eliminados» ni «Restaurar».
+- [ ] Mesas: crear «Mesa prueba» y eliminarla. La ventana dice «Nunca se usó: se borra por completo» y
+      pide solo la contraseña (sin ella no deja; con una mala lo dice). Desaparece y Auditoría lo registra.
+- [ ] Eliminar una mesa con pedidos viejos: la ventana dice que desaparece de las listas pero los reportes
+      la siguen mostrando. Sale de la lista para siempre; se puede crear otra mesa con el mismo nombre.
 - [ ] Una mesa ocupada o con una reserva próxima no se puede eliminar: la ventana dice por qué.
-- [ ] Catálogo › Productos: un producto vendido se archiva y el combo que lo traía queda inactivo; deja de
-      verse en el menú del cliente y del Mesero. Crear otro con el mismo nombre dice que hay uno eliminado.
-- [ ] Usuarios: eliminar un Mesero que ya trabajó lo archiva y ya no puede entrar; su actividad sigue en
-      Auditoría. Un Administrador no puede eliminar a otro Administrador ni a sí mismo; el SuperAdmin sí al
+- [ ] Catálogo › Productos: eliminar un producto vendido lo quita del catálogo y del menú, y el combo que lo
+      traía queda inactivo. Crear otro con el mismo nombre funciona.
+- [ ] Usuarios: eliminar una cuenta pide motivo además de la contraseña. Un Mesero que ya trabajó ya no
+      puede entrar y su actividad sigue en Auditoría; se puede crear una cuenta nueva con su correo. Un Administrador no puede eliminar a otro Administrador ni a sí mismo; el SuperAdmin sí al
       primero. Las cuentas de SuperAdmin no se eliminan desde la pantalla.
 
 ## 15f. Impresoras (M12, 24/10/2026)
@@ -712,6 +712,20 @@ Resumen; la lista completa del invitado está en `QA-CLIENTE.md` (secciones 4 a 
 - [ ] Auditoría: al abrir un registro, el detalle empieza por «Hecho por» (nombre, rol y correo) y «Cuándo».
 - [ ] En el teléfono, el menú lateral con todas las opciones: la lista se desplaza y el perfil y «Cerrar
       sesión» quedan a la vista; «Instalar app» aparece aunque el navegador no lo ofrezca (muestra los pasos).
+- [ ] Reservas > «Registrar depósito manual» en efectivo con $50.000 para $20.000: dice «Entrega $30.000 de
+      cambio»; en Auditoría el registro muestra «Entregó el cliente» y «Cambio entregado». Por transferencia
+      pide la foto y la reserva queda con «Ver comprobante».
+
+## 15h. Eliminar del catálogo (27/10/2026)
+
+- [ ] Catálogo > Categorías, Combos, Extras generales y Promociones: cada fila tiene «Eliminar» (sin
+      filtro «Eliminados»). La ventana pide solo la contraseña.
+- [ ] «Eliminar» en una categoría con productos dice que hay que moverlos o eliminarlos antes. En una
+      categoría nueva y vacía dice «Nunca se usó: se borra por completo» y desaparece.
+- [ ] «Eliminar» en un combo o un extra que ya se vendió: desaparece de la lista y ya no se puede pedir; los
+      pedidos de antes lo siguen mostrando.
+- [ ] Una promoción que nunca se aplicó se borra; una que ya se aplicó desaparece y deja de descontar.
+- [ ] Auditoría registra cada eliminación («… eliminado» o «… eliminado (se guarda su historial)»).
 
 ## 16. Contraseña segura y bloqueo por intentos (21/10/2026)
 

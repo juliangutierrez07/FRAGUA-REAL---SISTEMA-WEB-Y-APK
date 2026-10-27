@@ -87,7 +87,7 @@ async function cargar() {
 onMounted(cargar)
 
 const enCombos = computed(() => categoriaActivaId.value === CATEGORIA_COMBOS)
-// Mejora (26/10/2026): a una bebida no se le pregunta qué ingrediente quitar (interruptor de la categoría).
+// Mejora (26/10/2026, RF-M04-056): a una bebida no se le pregunta qué ingrediente quitar (interruptor de la categoría).
 const permiteQuitarIngredientes = computed(() => {
   const producto = productoSeleccionado.value
   if (!producto) return true

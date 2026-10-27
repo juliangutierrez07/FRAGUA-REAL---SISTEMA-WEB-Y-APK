@@ -20,10 +20,10 @@ class RegistrarCobroRequest extends FormRequest
         return [
             'metodo' => ['required', 'in:efectivo,tarjeta,transferencia'],
             'monto' => ['required', 'numeric', 'min:0.01', 'max:'.\App\Support\Validacion\Formatos::MAX_PESOS],
-            // Mejora (26/10/2026): foto del comprobante tomada con la cámara; obligatoria en transferencia.
+            // Mejora (26/10/2026, RF-M06-037): foto del comprobante tomada con la cámara; obligatoria en transferencia.
             'comprobante' => [\Illuminate\Validation\Rule::requiredIf(fn () => $this->input('metodo') === 'transferencia'), 'nullable', 'file',
                 'mimes:jpg,jpeg,png,webp', 'mimetypes:image/jpeg,image/png,image/webp', 'max:5120'],
-            // Mejora (26/10/2026): cobrar solo una cuenta de la mesa (POST /mesas/{mesa}/cobrar).
+            // Mejora (26/10/2026, RF-M02-L-034): cobrar solo una cuenta de la mesa (POST /mesas/{mesa}/cobrar).
             'cuenta' => ['nullable', 'integer', 'min:1', 'max:50'],
         ];
     }

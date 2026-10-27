@@ -227,9 +227,25 @@ class ReservaService
         return $reserva;
     }
 
+    /**
+     * Fase 6, tarea 1: el Cliente puede pagar (o volver a intentar) el depósito de su reserva web
+     * mientras esté pendiente de pago y no haya llegado la hora. En modo manual, un depósito ya
+     * registrado espera la aprobación del personal: no se repite.
+     * Mejora (26/10/2026, RF-M05-044, RN-M05-25): también lo usa «Mis pedidos y reservas» (antes solo el enlace del correo).
+     */
+    public function puedePagarDeposito(Reserva $reserva): bool
+    {
+        $esperandoAprobacion = $reserva->deposito_estado === 'pendiente' && ! app(PasarelaPagoService::class)->activa();
+
+        return $reserva->estado === 'pendiente_pago' && $reserva->creado_por === 'cliente_web'
+            && now()->lt($reserva->fecha_hora) && ! $esperandoAprobacion;
+    }
+
     // RN-M05-16: depósito manual registrado por el Mesero o el Administrador, con
     // cualquier método de cobro de M06.
-    public function registrarDepositoManual(Reserva $reserva, string $metodo, User $registradoPor): Reserva
+    // Mejora (26/10/2026, RF-M05-045 y 046, RN-M05-26): en efectivo se puede indicar con cuánto pagó el cliente (queda en la
+    // auditoría con el cambio entregado); en transferencia o tarjeta, la foto del comprobante.
+    public function registrarDepositoManual(Reserva $reserva, string $metodo, User $registradoPor, ?float $recibido = null, ?\Illuminate\Http\UploadedFile $comprobante = null): Reserva
     {
         if ($reserva->estado !== 'pendiente_pago') {
             throw new RuntimeException('Solo una reserva pendiente de pago puede confirmarse.');
@@ -237,6 +253,12 @@ class ReservaService
         // RN-M05-16: el depósito manual es presencial (efectivo, tarjeta o transferencia).
         if (! in_array($metodo, ['efectivo', 'tarjeta', 'transferencia'], true)) {
             throw new RuntimeException('El depósito manual se registra en efectivo, tarjeta o transferencia (RN-M05-16).');
+        }
+        $valor = (float) $reserva->deposito_valor;
+        if ($metodo !== 'efectivo') {
+            $recibido = null;
+        } elseif ($recibido !== null && round($recibido, 2) < round($valor, 2)) {
+            throw new RuntimeException('Lo que entregó el cliente ($'.number_format($recibido, 0, ',', '.').') no alcanza para el depósito ($'.number_format($valor, 0, ',', '.').').');
         }
         $this->validarSinChoque($reserva);
 
@@ -258,6 +280,15 @@ class ReservaService
         $reserva->deposito_pagado_at = now();
         $reserva->deposito_registrado_por = $registradoPor->id;
         $reserva->estado = 'confirmada';
+        // Un registro manual no lleva la captura de un intento en línea anterior.
+        $reserva->deposito_comprobante_path = null;
+        $reserva->deposito_comprobante_mime = null;
+        $reserva->deposito_referencia = null;
+        if ($comprobante && $metodo !== 'efectivo') {
+            $archivo = app(PagoDirectoService::class)->guardarComprobante($comprobante, "reserva-{$reserva->id}");
+            $reserva->deposito_comprobante_path = $archivo['path'];
+            $reserva->deposito_comprobante_mime = $archivo['mime'];
+        }
         $reserva->save();
 
         $this->marcarMesaReservada($reserva);
@@ -266,9 +297,11 @@ class ReservaService
             $cajaService->recalcularEfectivoEsperado($turno);
         }
 
-        app(AuditoriaService::class)->registrar('registrar_deposito_reserva', 'Reserva', $reserva->id, [
-            'monto' => (float) $reserva->deposito_valor, 'metodo' => $metodo, 'caja_turno_id' => $turno->id,
-        ], $registradoPor);
+        app(AuditoriaService::class)->registrar('registrar_deposito_reserva', 'Reserva', $reserva->id, array_filter([
+            'monto' => $valor, 'metodo' => $metodo, 'caja_turno_id' => $turno->id,
+            'recibido' => $recibido, 'cambio' => $recibido !== null ? round($recibido - $valor, 2) : null,
+            'con_foto' => $reserva->deposito_comprobante_path !== null ?: null,
+        ], fn ($v) => $v !== null), $registradoPor);
         app(NotificacionService::class)->reservaConfirmada($reserva, $registradoPor); // M11
 
         return $reserva;

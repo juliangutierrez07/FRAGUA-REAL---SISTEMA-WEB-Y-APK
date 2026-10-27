@@ -36,7 +36,7 @@ final class NombreUsuario
 
     public static function reglas(?int $ignorarId = null): array
     {
-        return ['nullable', 'string', 'regex:'.self::PATRON, Rule::unique('users', 'username')->ignore($ignorarId)];
+        return ['nullable', 'string', 'regex:'.self::PATRON, Rule::unique('users', 'username')->whereNull('eliminado_at')->ignore($ignorarId)];
     }
 
     public static function mensajes(): array

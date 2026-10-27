@@ -13,12 +13,14 @@
 // (RF-M05-034); el depósito manual exige la caja abierta y devolver uno en efectivo también.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CalendarClock, Plus, Wallet, X } from 'lucide-vue-next'
+import { CalendarClock, Camera, Plus, Wallet, X } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import PestanasSalon from '@/components/common/PestanasSalon.vue'
 import RevisarComprobanteModal from '@/components/pagos/RevisarComprobanteModal.vue'
+import EfectivoRecibido from '@/components/pagos/EfectivoRecibido.vue'
+import FotoComprobante from '@/components/pagos/FotoComprobante.vue'
 import { reservaService } from '@/services/reserva.service'
 import { mesaService } from '@/services/mesa.service'
 import { erroresDeValidacion, mensajeDeError } from '@/services/errors'
@@ -218,10 +220,17 @@ async function rechazarDeposito(motivo: string) {
 }
 
 // ---- Depósito manual (RN-M05-16) ----
+// Mejora (26/10/2026, RF-M05-045 y 046): en efectivo se indica con cuánto pagó el cliente (y se ve el cambio); en
+// transferencia se toma la foto del comprobante (obligatoria; en tarjeta, opcional).
 const reservaDeposito = ref<Reserva | null>(null)
 const metodoDeposito = ref<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
 const errorDeposito = ref('')
 const registrandoDeposito = ref(false)
+const recibidoDeposito = ref<number | null>(null)
+const fotoDeposito = ref<File | null>(null)
+const avisoDeposito = ref('')
+// Al corregir el método, el valor o la foto, el error anterior ya no aplica.
+watch([metodoDeposito, recibidoDeposito, fotoDeposito], () => (errorDeposito.value = ''))
 
 const METODOS: { v: typeof metodoDeposito.value; t: string }[] = [
   { v: 'efectivo', t: 'Efectivo' },
@@ -233,21 +242,62 @@ function abrirDeposito(reserva: Reserva) {
   reservaDeposito.value = reserva
   metodoDeposito.value = 'efectivo'
   errorDeposito.value = ''
+  recibidoDeposito.value = null
+  fotoDeposito.value = null
 }
 
 async function confirmarDepositoManual() {
   if (!reservaDeposito.value) return
+  const valor = Number(reservaDeposito.value.deposito_valor)
+  const recibido = recibidoDeposito.value
+  if (metodoDeposito.value === 'efectivo') {
+    if (!recibido) {
+      errorDeposito.value = 'Indica con cuánto pagó el cliente (o toca «Exacto»).'
+      return
+    }
+    if (recibido < valor) {
+      errorDeposito.value = `Lo que entregó el cliente no alcanza: faltan ${formatoPesos.format(valor - recibido)}.`
+      return
+    }
+  }
+  if (metodoDeposito.value === 'transferencia' && !fotoDeposito.value) {
+    errorDeposito.value = 'Toma la foto del comprobante de la transferencia.'
+    return
+  }
   registrandoDeposito.value = true
   errorDeposito.value = ''
+  avisoDeposito.value = ''
   try {
-    const { data } = await reservaService.registrarDepositoManual(reservaDeposito.value.id, metodoDeposito.value)
+    const { data } = await reservaService.registrarDepositoManual(reservaDeposito.value.id, {
+      metodo: metodoDeposito.value,
+      recibido,
+      comprobante: fotoDeposito.value,
+    })
     reemplazar(data)
+    const cambio = metodoDeposito.value === 'efectivo' && recibido ? recibido - valor : 0
+    avisoDeposito.value = `Depósito de ${data.cliente_nombre} registrado: la reserva quedó confirmada.${cambio > 0 ? ` Entrega ${formatoPesos.format(cambio)} de cambio.` : ''}`
     reservaDeposito.value = null
   } catch (e) {
-    errorDeposito.value = mensajeDeError(e, 'No pudimos registrar el depósito.')
+    errorDeposito.value = Object.values(erroresDeValidacion(e))[0] ?? mensajeDeError(e, 'No pudimos registrar el depósito.')
   } finally {
     registrandoDeposito.value = false
   }
+}
+
+// Mejora (26/10/2026, RF-M05-046): la foto o captura del comprobante de un depósito ya pagado.
+const fotoVista = ref<{ titulo: string; url: string; pdf: boolean } | null>(null)
+async function verFotoDeposito(reserva: Reserva) {
+  error.value = ''
+  try {
+    const { data } = await reservaService.comprobanteDeposito(reserva.id)
+    fotoVista.value = { titulo: `Comprobante · reserva #${reserva.id}`, url: URL.createObjectURL(data), pdf: data.type === 'application/pdf' }
+  } catch (e) {
+    error.value = mensajeDeError(e, 'No pudimos abrir el comprobante.')
+  }
+}
+function cerrarFotoDeposito() {
+  if (fotoVista.value) URL.revokeObjectURL(fotoVista.value.url)
+  fotoVista.value = null
 }
 
 // ---- Nueva reserva por teléfono (RF-M05-013, RN-M05-12) ----
@@ -515,6 +565,7 @@ onBeforeUnmount(() => clearInterval(reloj))
     </div>
 
     <p v-if="error" class="mt-4 alert-error">{{ error }}</p>
+    <p v-if="avisoDeposito" class="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{{ avisoDeposito }}</p>
 
     <div v-if="cargando" class="loading-state">Cargando reservas…</div>
 
@@ -599,6 +650,14 @@ onBeforeUnmount(() => clearInterval(reloj))
               Depósito: {{ formatoPesos.format(reserva.deposito_valor) }}
               <template v-if="reserva.deposito_pagado">
                 — pagado ({{ reserva.deposito_metodo }})
+                <button
+                  v-if="reserva.deposito_tiene_comprobante"
+                  type="button"
+                  class="inline-flex min-h-8 items-center gap-1 font-semibold text-brand-700 underline-offset-2 hover:underline"
+                  @click="verFotoDeposito(reserva)"
+                >
+                  <Camera :size="13" /> Ver comprobante
+                </button>
                 <span v-if="reserva.estado === 'no_show'" class="font-medium text-red-700">· retenido por no-show</span>
                 <!-- Fase 2, tarea 2 (RF-M05-034): cuánto se abonó a la cuenta de la visita y cuánto queda. -->
                 <span v-else-if="reserva.deposito_aplicado_abono" class="font-medium text-green-700">
@@ -709,7 +768,7 @@ onBeforeUnmount(() => clearInterval(reloj))
         </p>
         <div>
           <p class="field-label">Método de pago</p>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-3 gap-2">
             <button
               v-for="opcion in METODOS"
               :key="opcion.v"
@@ -723,6 +782,15 @@ onBeforeUnmount(() => clearInterval(reloj))
           </div>
         </div>
 
+        <EfectivoRecibido
+          v-if="metodoDeposito === 'efectivo'"
+          v-model="recibidoDeposito"
+          class="!mt-0"
+          obligatorio
+          :total="Number(reservaDeposito?.deposito_valor ?? 0)"
+        />
+        <FotoComprobante v-else v-model="fotoDeposito" class="!mt-0" :obligatoria="metodoDeposito === 'transferencia'" />
+
         <p v-if="errorDeposito" class="alert-error">{{ errorDeposito }}</p>
 
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -732,6 +800,13 @@ onBeforeUnmount(() => clearInterval(reloj))
           </BaseButton>
         </div>
       </form>
+    </BaseModal>
+
+    <BaseModal :model-value="!!fotoVista" :title="fotoVista?.titulo ?? ''" @update:model-value="cerrarFotoDeposito">
+      <template v-if="fotoVista">
+        <iframe v-if="fotoVista.pdf" :src="fotoVista.url" title="Comprobante en PDF" class="h-[70vh] w-full rounded-xl" />
+        <img v-else :src="fotoVista.url" alt="Foto del comprobante" class="mx-auto max-h-[70vh] rounded-xl object-contain" />
+      </template>
     </BaseModal>
 
     <!-- Nueva reserva por teléfono (RF-M05-013) -->

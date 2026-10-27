@@ -125,7 +125,7 @@ class CajaController extends Controller
         // efectivo esperado, depósitos y anulados), para la tarjeta «Turno de hoy».
         $this->cajaService->recalcularEfectivoEsperado($turno);
 
-        // Mejora (26/10/2026): lo que impide cerrar la caja (pedidos sin finalizar).
+        // Mejora (26/10/2026, RF-M06-038): lo que impide cerrar la caja (pedidos sin finalizar).
         return response()->json(array_merge($turno->toArray(), [
             'resumen' => $this->cajaService->resumen($turno),
             'pedidos_sin_finalizar' => $this->cajaService->pedidosSinFinalizar(),

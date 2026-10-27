@@ -3,8 +3,12 @@
 namespace App\Services;
 
 use App\Models\Auditoria;
+use App\Models\Categoria;
+use App\Models\Combo;
+use App\Models\Extra;
 use App\Models\Mesa;
 use App\Models\Producto;
+use App\Models\Promocion;
 use App\Models\User;
 use App\Support\Usuarios\GestionCuentas;
 use Illuminate\Database\Eloquent\Model;
@@ -17,13 +21,20 @@ use Illuminate\Validation\ValidationException;
 /**
  * Eliminar mesas, productos y usuarios (24/10/2026, RF-M05-043, RF-M04-055, RF-M01-033).
  *
- *  - Lo que nunca se usó se borra de verdad (una mesa sin pedidos ni reservas, un producto que nunca se
+ * CAMBIO (27/10/2026, decisión del negocio): eliminar es definitivo; ya no hay «Eliminados» ni restaurar.
+ *  - Lo que nunca se usó se borra de la base (una mesa sin pedidos ni reservas, un producto que nunca se
  *    vendió ni está en un combo, una cuenta sin acciones en la auditoría ni pedidos).
- *  - Lo que tiene historial se archiva: queda desactivado, fuera de todas las listas y de la operación,
- *    pero los pedidos, los reportes, los comprobantes y la auditoría lo siguen nombrando. Se restaura
- *    desde el filtro «Eliminados» de su pantalla y vuelve desactivado, para revisarlo antes de usarlo.
- *  - Lo hacen el Administrador y el SuperAdmin con su contraseña y un motivo; todo queda en la auditoría.
- *    Las cuentas de Administrador solo las elimina el SuperAdmin, y nadie se elimina a sí mismo.
+ *  - Lo que tiene historial desaparece de todas las listas y de la operación, pero su fila se guarda
+ *    para que los pedidos, los reportes, los comprobantes y la auditoría lo sigan nombrando. Su nombre
+ *    (o correo) queda libre para crear otro igual (migración 2026_11_04_000001).
+ *  - Lo hacen el Administrador y el SuperAdmin con su contraseña; el motivo solo se pide al eliminar una
+ *    cuenta. Todo queda en la auditoría. Las cuentas de Administrador solo las elimina el SuperAdmin, y
+ *    nadie se elimina a sí mismo.
+ *
+ * 27/10/2026 (RF-M04-057 a 060, RN-M04-34): también categorías, combos, extras y promociones. Un combo o
+ * un extra que se vendió, una promoción que se aplicó a un pedido o una categoría que solo tiene productos
+ * eliminados se archivan; si no, se borran. Una categoría con productos vigentes, o que una promoción
+ * vigente usa, no se elimina hasta moverlos o quitarla de ahí.
  */
 class EliminacionService
 {
@@ -31,7 +42,7 @@ class EliminacionService
 
     // ------------------------------------------------------------------ vista previa
 
-    /** Qué pasaría al eliminar: {se_borra, detalle, bloqueo}. `bloqueo` = por qué no se puede ahora. */
+    /** Qué pasaría al eliminar: {se_borra, detalle, bloqueo, pide_motivo}. `bloqueo` = por qué no se puede ahora. */
     public function vistaPrevia(Model $registro, User $actor): array
     {
         $bloqueo = $this->bloqueo($registro, $actor);
@@ -39,9 +50,16 @@ class EliminacionService
 
         return [
             'se_borra' => $historial === null,
-            'detalle' => $historial ?? 'Nunca se usó: se borrará para siempre.',
+            'detalle' => $historial ?? 'Nunca se usó: se borra por completo.',
             'bloqueo' => $bloqueo,
+            'pide_motivo' => self::pideMotivo($registro),
         ];
+    }
+
+    /** Solo eliminar una cuenta pide motivo (27/10/2026). */
+    public static function pideMotivo(Model $registro): bool
+    {
+        return $registro instanceof User;
     }
 
     // ------------------------------------------------------------------ eliminar
@@ -53,40 +71,27 @@ class EliminacionService
             throw ValidationException::withMessages(['password' => 'La contraseña no es correcta.']);
         }
         $motivo = trim((string) $motivo);
-        if (mb_strlen($motivo) < 3) {
-            throw ValidationException::withMessages(['motivo' => 'Escribe por qué lo eliminas (al menos 3 letras).']);
+        if (self::pideMotivo($registro) && mb_strlen($motivo) < 3) {
+            throw ValidationException::withMessages(['motivo' => 'Escribe por qué eliminas la cuenta (al menos 3 letras).']);
         }
+        $motivo = $motivo !== '' ? mb_substr($motivo, 0, 255) : null;
         $bloqueo = $this->bloqueo($registro, $actor);
         abort_if($bloqueo !== null, 422, (string) $bloqueo);
 
         [$tipo, $nombre] = $this->describir($registro);
-        $datos = ['nombre' => $nombre, 'motivo' => mb_substr($motivo, 0, 255)];
+        $datos = array_filter(['nombre' => $nombre, 'motivo' => $motivo], fn ($v) => $v !== null);
 
         if ($this->historial($registro) === null && $this->borrar($registro)) {
             $this->auditoria->registrar("eliminar_{$tipo}", class_basename($registro), $registro->getKey(), $datos, $actor);
 
-            return ['resultado' => 'borrado', 'mensaje' => "«{$nombre}» se borró para siempre."];
+            return ['resultado' => 'borrado', 'mensaje' => "«{$nombre}» se eliminó."];
         }
 
-        $this->archivar($registro, $actor, $datos['motivo']);
+        // Con historial: fuera de todo, pero la fila se guarda para lo que ya pasó.
+        $this->archivar($registro, $actor, $motivo);
         $this->auditoria->registrar("archivar_{$tipo}", class_basename($registro), $registro->getKey(), $datos, $actor);
 
-        return ['resultado' => 'archivado', 'mensaje' => "«{$nombre}» quedó archivado: ya no aparece en las listas. Puedes restaurarlo desde «Eliminados»."];
-    }
-
-    public function restaurar(Model $registro, User $actor): Model
-    {
-        abort_if($registro->eliminado_at === null, 422, 'Esto no está eliminado.');
-        if ($registro instanceof User) {
-            $motivo = GestionCuentas::motivoNoGestiona($actor, $registro);
-            abort_if($motivo !== null, 403, (string) $motivo);
-        }
-        [$tipo, $nombre] = $this->describir($registro);
-
-        $registro->forceFill(['eliminado_at' => null, 'eliminado_por' => null, 'eliminado_motivo' => null])->save();
-        $this->auditoria->registrar("restaurar_{$tipo}", class_basename($registro), $registro->getKey(), ['nombre' => $nombre], $actor);
-
-        return $registro->fresh();
+        return ['resultado' => 'archivado', 'mensaje' => "«{$nombre}» se eliminó. Los pedidos y reportes de antes lo siguen mostrando."];
     }
 
     // ------------------------------------------------------------------ reglas
@@ -117,6 +122,18 @@ class EliminacionService
             }
         }
 
+        if ($registro instanceof Categoria) {
+            $vigentes = $registro->productos()->whereNull('eliminado_at')->count();
+            if ($vigentes > 0) {
+                return 'La categoría tiene '.$this->contar($vigentes, 'producto', 'productos').': muévelos a otra categoría o elimínalos antes.';
+            }
+            $promocion = Promocion::whereNull('eliminado_at')
+                ->whereHas('categorias', fn ($q) => $q->where('categorias.id', $registro->id))->value('nombre');
+            if ($promocion !== null) {
+                return "La promoción «{$promocion}» aplica a esta categoría: quítala de la promoción o elimina la promoción antes.";
+            }
+        }
+
         return null;
     }
 
@@ -129,7 +146,7 @@ class EliminacionService
 
             return $pedidos + $reservas === 0 ? null
                 : 'Tiene '.$this->contar($pedidos, 'pedido', 'pedidos').($reservas ? ' y '.$this->contar($reservas, 'reserva', 'reservas') : '')
-                    .': se archivará para no dañar los reportes ni la caja de esos días.';
+                    .': desaparece de todas las listas, pero los reportes y la caja de esos días la siguen mostrando.';
         }
 
         if ($registro instanceof Producto) {
@@ -138,7 +155,7 @@ class EliminacionService
 
             return $ventas + $combos === 0 ? null
                 : ($ventas ? 'Se vendió en '.$this->contar($ventas, 'línea de pedido', 'líneas de pedido') : 'Está en '.$this->contar($combos, 'combo', 'combos'))
-                    .': se archivará y los reportes y comprobantes lo seguirán mostrando.';
+                    .': desaparece de todas las listas, pero los pedidos, reportes y comprobantes de antes lo siguen mostrando.';
         }
 
         if ($registro instanceof User) {
@@ -147,7 +164,38 @@ class EliminacionService
 
             return $acciones + $pedidos === 0 ? null
                 : 'Tiene '.($acciones ? $this->contar($acciones, 'acción', 'acciones').' en la auditoría' : $this->contar($pedidos, 'pedido', 'pedidos'))
-                    .': se archivará y la auditoría seguirá diciendo quién hizo qué.';
+                    .': no vuelve a entrar y desaparece de las listas, pero la auditoría sigue diciendo quién hizo qué.';
+        }
+
+        if ($registro instanceof Categoria) {
+            $archivados = $registro->productos()->count(); // a esta altura, todos están eliminados
+
+            return $archivados === 0 ? null
+                : 'Tiene '.$this->contar($archivados, 'producto eliminado', 'productos eliminados').' que los reportes siguen nombrando: la categoría desaparece de todas las listas.';
+        }
+
+        if ($registro instanceof Combo) {
+            $ventas = DB::table('pedido_detalles')->where('combo_id', $registro->id)->count();
+
+            return $ventas === 0 ? null
+                : 'Se vendió en '.$this->contar($ventas, 'línea de pedido', 'líneas de pedido').': desaparece de todas las listas, pero los pedidos, reportes y comprobantes de antes lo siguen mostrando.';
+        }
+
+        if ($registro instanceof Extra) {
+            $ventas = DB::table('pedido_detalle_extra')->where('extra_id', $registro->id)->count();
+
+            return $ventas === 0 ? null
+                : 'Se vendió en '.$this->contar($ventas, 'línea de pedido', 'líneas de pedido').': desaparece de todas las listas, pero los pedidos, reportes y comprobantes de antes lo siguen mostrando.';
+        }
+
+        if ($registro instanceof Promocion) {
+            // Los pedidos guardan la promoción aplicada como JSON (nombre y monto), sin llave foránea.
+            $pedidos = DB::table('pedidos')
+                ->whereRaw('CAST(promociones_aplicadas AS TEXT) LIKE ?', ['%"promocion_id":'.$registro->id.',%'])
+                ->count();
+
+            return $pedidos === 0 ? null
+                : 'Se aplicó en '.$this->contar($pedidos, 'pedido', 'pedidos').': deja de aplicarse y desaparece de las listas, pero los pedidos de antes la siguen mostrando.';
         }
 
         return null;
@@ -179,7 +227,7 @@ class EliminacionService
         return true;
     }
 
-    private function archivar(Model $registro, User $actor, string $motivo): void
+    private function archivar(Model $registro, User $actor, ?string $motivo): void
     {
         DB::transaction(function () use ($registro, $actor, $motivo) {
             $marca = ['eliminado_at' => now(), 'eliminado_por' => $actor->id, 'eliminado_motivo' => $motivo];
@@ -196,6 +244,9 @@ class EliminacionService
             } elseif ($registro instanceof User) {
                 $registro->forceFill($marca + ['activo' => false])->save();
                 $registro->tokens()->delete();
+            } else {
+                // Categoría, combo, extra o promoción: inactivo, ya no se ofrece ni se aplica.
+                $registro->forceFill($marca + ['activo' => false])->save();
             }
         });
     }
@@ -207,6 +258,10 @@ class EliminacionService
             $registro instanceof Mesa => ['mesa', $registro->nombre],
             $registro instanceof Producto => ['producto', $registro->nombre],
             $registro instanceof User => ['usuario', $registro->nombre],
+            $registro instanceof Categoria => ['categoria', $registro->nombre],
+            $registro instanceof Combo => ['combo', $registro->nombre],
+            $registro instanceof Extra => ['extra', $registro->nombre],
+            $registro instanceof Promocion => ['promocion', $registro->nombre],
         };
     }
 

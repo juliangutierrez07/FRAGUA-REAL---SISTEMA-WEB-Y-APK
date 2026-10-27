@@ -28,9 +28,6 @@ export interface Usuario {
   gestionable?: boolean
   // M09 (20/10/2026): los menús que ve esta cuenta (los decide el SuperAdmin; por defecto, todos los de su rol).
   menus?: string[]
-  // Eliminar (24/10/2026): si está archivado (fuera de las listas), cuándo, quién y por qué.
-  eliminado_at?: string | null
-  eliminado_motivo?: string | null
 }
 
 // Espeja app/Models/Mesa.php. OJO: el backend usa "nombre" y "qr_code" (no
@@ -48,16 +45,13 @@ export interface Mesa {
   cuenta_total?: number
   cuenta_saldo?: number
   cuenta_pedidos?: number
-  // Mejora (26/10/2026): cuentas separadas de la visita (solo mesas ocupadas, para el personal).
+  // Mejora (26/10/2026, RF-M02-L-033): cuentas separadas de la visita (solo mesas ocupadas, para el personal).
   cuentas?: CuentaDeMesa[]
-  // Eliminar (24/10/2026): si está archivado (fuera de las listas), cuándo, quién y por qué.
-  eliminado_at?: string | null
-  eliminado_motivo?: string | null
 }
 
 // Espeja app/Models/Variante.php — presentación/tamaño con su propio precio
 // fijo (no un delta sobre precio_base).
-// Mejora (26/10/2026): una cuenta de la mesa (MesaCuentaService::porCuenta).
+// Mejora (26/10/2026, RF-M02-L-034): una cuenta de la mesa (MesaCuentaService::porCuenta).
 export interface CuentaDeMesa {
   numero: number
   pedidos: number[]
@@ -114,9 +108,6 @@ export interface Producto {
   extras_generales?: Pick<Extra, 'id' | 'nombre'>[]
   // Respuesta de editar un producto: combos que se desactivaron al darlo de baja (RN-M04-12).
   combos_desactivados?: string[]
-  // Eliminar (24/10/2026): si está archivado (fuera de las listas), cuándo, quién y por qué.
-  eliminado_at?: string | null
-  eliminado_motivo?: string | null
   // Fase 2, tarea 1 (RF-M04-035): promociones automáticas de producto o categoría vigentes ahora.
   promociones_vigentes?: PromocionVigente[]
   // Mejora (16/10/2026): solo para el personal, la oferta activa del producto (atajo del Catálogo).
@@ -169,7 +160,7 @@ export interface Categoria {
   id: number
   nombre: string
   activo: boolean
-  // Mejora (26/10/2026): el menú pregunta «¿Quieres quitar algún ingrediente?» (las bebidas no).
+  // Mejora (26/10/2026, RF-M04-056): el menú pregunta «¿Quieres quitar algún ingrediente?» (las bebidas no).
   permite_quitar_ingredientes?: boolean
   productos?: Producto[]
 }
@@ -361,7 +352,7 @@ export interface CajaTurno {
   cerrado_por: number | null
   cerrado_at: string | null
   estado: EstadoCajaTurno
-  // Mejora (26/10/2026): solo en GET /caja/turno-actual — lo que impide cerrar la caja.
+  // Mejora (26/10/2026, RF-M06-038): solo en GET /caja/turno-actual — lo que impide cerrar la caja.
   pedidos_sin_finalizar?: PedidoSinFinalizar[]
   abierto_por_usuario?: Usuario
   cerrado_por_usuario?: Usuario | null
@@ -382,7 +373,7 @@ export interface CajaTurno {
   reembolsos_deposito_efectivo?: number
 }
 
-// Mejora (26/10/2026): un pedido pendiente, confirmado o en preparación (CajaService::pedidosSinFinalizar).
+// Mejora (26/10/2026, RF-M06-038): un pedido pendiente, confirmado o en preparación (CajaService::pedidosSinFinalizar).
 export interface PedidoSinFinalizar {
   id: number
   tipo: TipoPedido
@@ -412,7 +403,7 @@ export interface Pedido {
   origen: 'mesero' | 'qr' | 'cliente_web'
   estado: EstadoPedido
   mesa_id: number | null
-  // Mejora (26/10/2026): cuenta de la mesa a la que va (1, 2…); solo pedidos locales.
+  // Mejora (26/10/2026, RF-M02-L-033): cuenta de la mesa a la que va (1, 2…); solo pedidos locales.
   cuenta?: number | null
   cliente_id: number | null
   cliente_invitado_nombre: string | null
@@ -424,7 +415,7 @@ export interface Pedido {
   direccion_entrega: string | null
   barrio: string | null
   referencia: string | null
-  // Mejora (26/10/2026): la ubicación que compartió el Cliente y con qué billete paga contra entrega.
+  // Mejora (26/10/2026, RF-M07-033 y 034): la ubicación que compartió el Cliente y con qué billete paga contra entrega.
   ubicacion_lat?: number | null
   ubicacion_lng?: number | null
   paga_con?: number | null
@@ -543,6 +534,8 @@ export interface Reserva {
   transaccion_deposito?: TransaccionPasarela | null
   // Solo en la respuesta de crearla desde la web: el enlace secreto con el que se paga el depósito.
   token_publico?: string
+  // Mejora (26/10/2026, RF-M05-044): solo en «Mis reservas» del Cliente: si puede pagar el depósito desde ahí.
+  puede_pagar?: boolean
   mesa?: Mesa
 }
 

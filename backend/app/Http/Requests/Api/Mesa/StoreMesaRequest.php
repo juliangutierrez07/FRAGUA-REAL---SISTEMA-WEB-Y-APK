@@ -14,7 +14,7 @@ class StoreMesaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre' => ['bail', 'required', 'string', 'max:255', \App\Support\Validacion\Eliminados::libre('mesas', 'nombre', 'Ya hay una mesa eliminada con ese nombre: restáurala desde Mesas › Eliminadas o usa otro nombre.'), 'unique:mesas,nombre'], // RN-M05-10
+            'nombre' => ['required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('mesas', 'nombre')->whereNull('eliminado_at')], // RN-M05-10
             'activa' => ['boolean'],
         ];
     }

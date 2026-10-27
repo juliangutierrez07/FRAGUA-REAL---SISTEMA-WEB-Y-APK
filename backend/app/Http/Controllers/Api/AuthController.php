@@ -67,8 +67,8 @@ class AuthController extends Controller
         }
 
         $user = $esCorreo
-            ? User::where('email', $identificador)->first()
-            : User::where('username', mb_strtolower($identificador))->first();
+            ? User::where('email', $identificador)->whereNull('eliminado_at')->first()
+            : User::where('username', mb_strtolower($identificador))->whereNull('eliminado_at')->first();
 
         if (! $user || ! Hash::check($request->password, $user->password) || ! $user->activo) {
             // RF-M01-017 (Fase 3, tarea 1): el intento fallido queda registrado con el correo
@@ -207,7 +207,7 @@ class AuthController extends Controller
     // (evita enumeración de cuentas) — siempre responde igual.
     public function solicitarRecuperacion(SolicitarRecuperacionRequest $request)
     {
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $request->email)->whereNull('eliminado_at')->first();
 
         if ($user) {
             $token = Str::random(64);
@@ -243,7 +243,7 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['token' => ['El token de recuperación expiró; solicita uno nuevo.']]);
         }
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = User::where('email', $request->email)->whereNull('eliminado_at')->firstOrFail();
         $user->password = Hash::make($request->password);
         $user->save();
 
@@ -268,7 +268,7 @@ class AuthController extends Controller
 
     private function restablecimientoFallido(?string $correo, string $motivo): void
     {
-        $usuario = User::where('email', $correo)->first();
+        $usuario = User::where('email', $correo)->whereNull('eliminado_at')->first();
         app(AuditoriaService::class)->registrar('restablecer_contrasena_fallido', 'User', $usuario?->id, [
             'correo' => mb_substr((string) $correo, 0, 120),
             'motivo' => $motivo,

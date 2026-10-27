@@ -15,9 +15,10 @@ class StoreCategoriaRequest extends FormRequest
     {
         return [
             // RF-M04-001: nombre único, con mensaje claro (Fase 2, tarea 3).
-            'nombre' => ['required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('categorias', 'nombre')->ignore($this->route('categoria'))],
+            // 27/10/2026: el nombre de una categoría eliminada queda libre.
+            'nombre' => ['required', 'string', 'max:255', \Illuminate\Validation\Rule::unique('categorias', 'nombre')->whereNull('eliminado_at')->ignore($this->route('categoria'))],
             'activo' => ['boolean'],
-            // 26/10/2026: las bebidas no preguntan qué ingrediente quitar.
+            // 26/10/2026 (RF-M04-056): las bebidas no preguntan qué ingrediente quitar.
             'permite_quitar_ingredientes' => ['boolean'],
         ];
     }

@@ -4,7 +4,7 @@
 //  · solo ver  → Inicio (sección Contacto) y Configuración del Administrador.
 // Leaflet se carga aparte (import dinámico) para no engordar la primera carga del Inicio.
 // Las teselas son imágenes (la CSP de nginx permite img-src https:); no se consulta ningún servicio externo.
-// 26/10/2026: también en el Checkout, para que el Cliente confirme o mueva el punto de su domicilio
+// 26/10/2026 (RF-M07-033): también en el Checkout, para que el Cliente confirme o mueva el punto de su domicilio
 // (`centroInicial`: dónde abrir el mapa sin punto, p. ej. el local).
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Map as MapaLeaflet, Marker } from 'leaflet'

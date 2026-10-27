@@ -207,7 +207,7 @@ class AbonoDepositoReservaTest extends TestCase
         $abono = $this->abonosDe($pedido)->sole();
 
         // Aunque la caja del día cierre, anular un abono no es un ajuste extraordinario. (Se marca cerrada
-        // directamente: desde el 26/10/2026 cerrar() exige el pedido finalizado, y aquí sigue abierto.)
+        // directamente: desde el 26/10/2026 (RF-M06-038) cerrar() exige el pedido finalizado, y aquí sigue abierto.)
         $this->turno->forceFill(['estado' => 'cerrada', 'efectivo_contado' => 120000, 'diferencia' => 0, 'cerrado_por' => $this->admin->id, 'cerrado_at' => now()])->save();
         Sanctum::actingAs($this->admin);
         $this->postJson("/api/pagos/{$abono->id}/anular", ['motivo' => 'El cliente pidió que no se usara'])->assertOk();

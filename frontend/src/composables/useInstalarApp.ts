@@ -36,7 +36,7 @@ if (typeof window !== 'undefined') {
 
 const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
-// CORREGIDO (26/10/2026): el botón solo aparecía cuando el navegador mandaba su aviso, y eso depende del
+// CORREGIDO (26/10/2026, RNF-TRANS-034): el botón solo aparecía cuando el navegador mandaba su aviso, y eso depende del
 // navegador (Samsung Internet, Firefox o Chrome ya descartado no lo mandan). Ahora aparece siempre que la
 // app no esté instalada: con aviso instala directo; sin aviso muestra los pasos de ese navegador.
 // En computador sin aviso (p. ej. Firefox) no se muestra: ese navegador no instala apps.

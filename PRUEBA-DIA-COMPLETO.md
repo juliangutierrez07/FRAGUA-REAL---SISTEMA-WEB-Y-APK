@@ -58,7 +58,8 @@ reserva $20.000. Por tipo: alimentos $108.000 · bebidas $15.000 · domicilio $2
 ### 3. Pedido local en la Mesa 1 (Mesero)
 - [ ] Nuevo pedido > Mesa 1 > 2 Hamburguesas Clásicas (Personal) y 1 Gaseosa. Total **$41.000**. La
       Mesa 1 pasa a Ocupada.
-- [ ] Pedidos > "Confirmar pedido": se abre la comanda de cocina (sin precios). Imprimirla.
+- [ ] Al crearlo queda Confirmado (desde el 27/10/2026): la comanda de cocina (sin precios) sale sola en la
+      impresora de la cocina, o se imprime desde la franja «Comandas por imprimir».
 - [ ] "Marcar preparando" y, en Cobrar, cobrar **$41.000 en efectivo**: el pedido queda Finalizado y
       sale "Imprimir comprobante FR-000001" (ticket de 80 mm).
 
@@ -89,7 +90,7 @@ reserva $20.000. Por tipo: alimentos $108.000 · bebidas $15.000 · domicilio $2
 
 ### 7. Llega la reserva (Mesero)
 - [ ] Reservas > la de la Mesa 2 > "Confirmar llegada": la reserva queda completada y la Mesa 2 ocupada.
-- [ ] Nuevo pedido > Mesa 2 > 2 Clásicas (Personal) = $36.000. Confirmar (comanda) y "Marcar preparando".
+- [ ] Nuevo pedido > Mesa 2 > 2 Clásicas (Personal) = $36.000. Sale confirmado con su comanda; "Marcar preparando".
 - [ ] Mesas > Mesa 2 > "Ver cuenta": dice $36.000 con un abono de depósito de $20.000, y **$16.000 por
       cobrar**. Cobrar $16.000 en efectivo: el pedido se finaliza (comprobante FR-000005) y la mesa
       queda libre.
@@ -99,7 +100,7 @@ reserva $20.000. Por tipo: alimentos $108.000 · bebidas $15.000 · domicilio $2
 - [ ] Nuevo **gasto** "Transporte", "Domiciliario", **$5.000 en efectivo**.
 
 ### 9. Un pedido que se cancela (Mesero y Administrador)
-- [ ] Nuevo pedido > Mesa 1 > 1 Gaseosa. Confirmar (comanda impresa) y "Marcar preparando".
+- [ ] Nuevo pedido > Mesa 1 > 1 Gaseosa. Sale confirmado (comanda impresa); "Marcar preparando".
 - [ ] Cancelar con el motivo "El cliente se fue": como ya está en preparación, pide la contraseña de un
       Administrador. Con ella, queda cancelado y la franja amarilla muestra la comanda de cancelación
       por imprimir. Imprimirla: dice "PEDIDO CANCELADO".

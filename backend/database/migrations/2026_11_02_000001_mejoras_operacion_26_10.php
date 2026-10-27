@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-// Mejoras de operación (26/10/2026):
+// Mejoras de operación (26/10/2026; RF-M02-L-033, RF-M04-056, RF-M07-033 y 034):
 //  - pedidos.cuenta: cuentas separadas en una misma mesa. Los pedidos locales de la visita se agrupan
 //    por número de cuenta (1, 2, 3…); cada cuenta se cobra aparte (M02, M06).
 //  - pedidos.ubicacion_lat/lng: la ubicación actual que comparte el Cliente al pedir a domicilio (M07).

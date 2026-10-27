@@ -4,10 +4,12 @@
 // combos y promociones. RN-M04-19 a 23: fechas especiales (Navidad, Amor y Amistad, etc.)
 // NO tienen tratamiento propio — son una Promocion más con vigencia_inicio/vigencia_fin,
 // igual que un combo con su propia vigencia. Ver CatalogoController y PromocionController.
-// Eliminar (24/10/2026): un producto que nunca se vendió ni está en un combo se borra; si no, se
-// archiva y se restaura desde «Eliminados» (con contraseña y motivo, EliminarModal).
+// Eliminar (24/10/2026): un producto que nunca se vendió ni está en un combo se borra; si no, sale de
+// todo y su fila se guarda para los pedidos de antes (con contraseña, EliminarModal).
+// 27/10/2026 (RF-M04-057 a 060): lo mismo en categorías, combos, extras generales y promociones, y eliminar
+// pasa a ser definitivo: ya no hay «Eliminados» ni restaurar, y no se pide motivo.
 import { computed, onMounted, ref, watch } from 'vue'
-import { Boxes, Download, FileSpreadsheet, Image as ImageIcon, Layers, Pencil, Percent, Plus, RotateCcw, Tags, Trash2, Upload } from 'lucide-vue-next'
+import { Boxes, Download, FileSpreadsheet, Image as ImageIcon, Layers, Pencil, Percent, Plus, Tags, Trash2, Upload } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import CampoPesos from '@/components/common/CampoPesos.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -16,7 +18,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import { catalogoService, type VistaPreviaImportacion } from '@/services/catalogo.service'
 import { guardarArchivo, mensajeDeBlob } from '@/utils/documentos'
 import { promocionService } from '@/services/promocion.service'
-import { eliminacionService, type ResultadoEliminacion } from '@/services/eliminacion.service'
+import type { Eliminable, ResultadoEliminacion } from '@/services/eliminacion.service'
 import { erroresDeValidacion, mensajeDeError } from '@/services/errors'
 import type { Categoria, Producto, Combo, Extra, Promocion } from '@/types/models'
 
@@ -124,6 +126,30 @@ const DIAS_SEMANA = [
 const categoriaPorId = computed(() => new Map(categorias.value.map((c) => [c.id, c])))
 const extrasGenerales = computed(() => extrasTodos.value.filter((e) => e.alcance === 'general'))
 
+// ---- Eliminar categorías, combos, extras y promociones (27/10/2026, RF-M04-057 a 060) ----
+// Una sola ventana para las cuatro listas; eliminar es definitivo.
+type SeccionEliminable = Exclude<Seccion, 'productos'>
+const DE_SECCION: Record<SeccionEliminable, { tipo: Eliminable; articulo: string }> = {
+  categorias: { tipo: 'categorias', articulo: 'la categoría' },
+  combos: { tipo: 'combos', articulo: 'el combo' },
+  extras: { tipo: 'extras', articulo: 'el extra' },
+  promociones: { tipo: 'promociones', articulo: 'la promoción' },
+}
+const avisoEliminado = ref('')
+const aEliminar = ref<{ seccion: SeccionEliminable; registro: { id: number; nombre: string } } | null>(null)
+watch(seccion, () => (avisoEliminado.value = ''))
+
+function eliminarDe(s: SeccionEliminable, registro: { id: number; nombre: string }) {
+  avisoEliminado.value = ''
+  aEliminar.value = { seccion: s, registro }
+}
+
+async function alEliminarDelCatalogo(resultado: ResultadoEliminacion) {
+  aEliminar.value = null
+  avisoEliminado.value = resultado.mensaje
+  await cargar()
+}
+
 // ---- Categorías ----
 
 const modalCategoriaAbierto = ref(false)
@@ -182,50 +208,14 @@ async function confirmarCategoria() {
 const filtroCategoria = ref<'todas' | number>('todas')
 const busquedaProducto = ref('')
 
-// ---- Eliminar y restaurar productos (24/10/2026) ----
-const verEliminados = ref(false)
-const productosEliminados = ref<Producto[]>([])
-const cargandoEliminados = ref(false)
+// ---- Eliminar productos (24/10/2026; definitivo desde el 27/10/2026) ----
 const productoAEliminar = ref<Producto | null>(null)
 const avisoProductos = ref('')
-const restaurandoId = ref<number | null>(null)
-
-async function cargarEliminados() {
-  cargandoEliminados.value = true
-  try {
-    const { data } = await catalogoService.productos({ eliminados: 1 })
-    productosEliminados.value = data
-  } catch (e) {
-    error.value = mensajeDeError(e, 'No pudimos cargar los productos eliminados.')
-  } finally {
-    cargandoEliminados.value = false
-  }
-}
-
-function verProductosEliminados(si: boolean) {
-  verEliminados.value = si
-  avisoProductos.value = ''
-  if (si) cargarEliminados()
-}
 
 async function alEliminarProducto(resultado: ResultadoEliminacion) {
   productoAEliminar.value = null
   avisoProductos.value = resultado.mensaje
   await cargar() // los combos que lo traían también cambian
-}
-
-async function restaurarProducto(producto: Producto) {
-  restaurandoId.value = producto.id
-  error.value = ''
-  try {
-    await eliminacionService.restaurar<Producto>('productos', producto.id)
-    avisoProductos.value = `«${producto.nombre}» volvió al catálogo, inactivo: actívalo al editarlo cuando lo vayas a vender.`
-    await Promise.all([cargarEliminados(), cargar()])
-  } catch (e) {
-    error.value = mensajeDeError(e, 'No pudimos restaurar el producto.')
-  } finally {
-    restaurandoId.value = null
-  }
 }
 
 const productosFiltrados = computed(() => {
@@ -1220,6 +1210,7 @@ onMounted(cargar)
 
     <!-- ---- Categorías ---- -->
     <template v-else-if="seccion === 'categorias'">
+      <p v-if="avisoEliminado" class="mt-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{{ avisoEliminado }}</p>
       <div v-if="!categorias.length" class="mt-10 empty-state">
         <Tags :size="32" class="mx-auto text-gray-300" />
         <p class="mt-3 text-sm text-gray-500">Todavía no hay categorías.</p>
@@ -1244,67 +1235,30 @@ onMounted(cargar)
               {{ categoria.productos?.length ?? 0 }} producto(s)
             </p>
           </div>
-          <BaseButton v-escritura variant="ghost" size="sm" class="shrink-0" @click="abrirEditarCategoria(categoria)">
-            <Pencil :size="14" />
-            Editar
-          </BaseButton>
+          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
+            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarCategoria(categoria)">
+              <Pencil :size="14" />
+              Editar
+            </BaseButton>
+            <BaseButton
+              v-escritura
+              variant="ghost"
+              size="sm"
+              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
+              @click="eliminarDe('categorias', categoria)"
+            >
+              <Trash2 :size="14" />
+              Eliminar
+            </BaseButton>
+          </div>
         </li>
       </ul>
     </template>
 
     <!-- ---- Productos ---- -->
     <template v-else-if="seccion === 'productos'">
-      <div class="mt-6 inline-flex rounded-xl border border-gray-200 bg-white p-1 text-sm">
-        <button
-          type="button"
-          class="rounded-lg px-3.5 py-1.5 font-medium transition"
-          :class="!verEliminados ? 'bg-ink text-white' : 'text-gray-600 hover:text-ink'"
-          @click="verProductosEliminados(false)"
-        >
-          Productos
-        </button>
-        <button
-          type="button"
-          class="rounded-lg px-3.5 py-1.5 font-medium transition"
-          :class="verEliminados ? 'bg-ink text-white' : 'text-gray-600 hover:text-ink'"
-          @click="verProductosEliminados(true)"
-        >
-          Eliminados
-        </button>
-      </div>
-      <p v-if="avisoProductos" class="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ avisoProductos }}</p>
-
-      <!-- Eliminados: solo se pueden restaurar. -->
-      <template v-if="verEliminados">
-        <div v-if="cargandoEliminados" class="loading-state">Cargando…</div>
-        <div v-else-if="!productosEliminados.length" class="mt-10 empty-state">
-          <Boxes :size="32" class="mx-auto text-gray-300" />
-          <p class="mt-3 text-sm text-gray-500">No hay productos eliminados.</p>
-        </div>
-        <ul v-else class="mt-4 space-y-3">
-          <li
-            v-for="producto in productosEliminados"
-            :key="producto.id"
-            class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div class="min-w-0">
-              <p class="text-[15px] font-semibold text-ink">{{ producto.nombre }}</p>
-              <p class="mt-1 text-xs text-gray-500">
-                {{ formatoMoneda(producto.precio_base) }} · eliminado el
-                {{ producto.eliminado_at ? new Date(producto.eliminado_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '' }}
-                <template v-if="producto.eliminado_motivo"> · «{{ producto.eliminado_motivo }}»</template>
-              </p>
-            </div>
-            <BaseButton v-escritura variant="secondary" size="sm" :disabled="restaurandoId === producto.id" @click="restaurarProducto(producto)">
-              <RotateCcw :size="14" />
-              Restaurar
-            </BaseButton>
-          </li>
-        </ul>
-      </template>
-
-      <template v-else>
-      <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p v-if="avisoProductos" class="mt-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{{ avisoProductos }}</p>
+      <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="segmented">
           <button
             type="button"
@@ -1418,12 +1372,12 @@ onMounted(cargar)
           </div>
         </li>
       </ul>
-      </template>
       <EliminarModal tipo="productos" articulo="el producto" :registro="productoAEliminar" @cerrar="productoAEliminar = null" @eliminado="alEliminarProducto" />
     </template>
 
     <!-- ---- Combos ---- -->
     <template v-else-if="seccion === 'combos'">
+      <p v-if="avisoEliminado" class="mt-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{{ avisoEliminado }}</p>
       <div v-if="!combos.length" class="mt-10 empty-state">
         <Layers :size="32" class="mx-auto text-gray-300" />
         <p class="mt-3 text-sm text-gray-500">Todavía no hay combos.</p>
@@ -1456,16 +1410,29 @@ onMounted(cargar)
               {{ comparacionCombo(combo.precio, sumaComponentesCombo(combo))?.texto }}
             </p>
           </div>
-          <BaseButton v-escritura variant="ghost" size="sm" class="shrink-0" @click="abrirEditarCombo(combo)">
-            <Pencil :size="14" />
-            Editar
-          </BaseButton>
+          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
+            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarCombo(combo)">
+              <Pencil :size="14" />
+              Editar
+            </BaseButton>
+            <BaseButton
+              v-escritura
+              variant="ghost"
+              size="sm"
+              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
+              @click="eliminarDe('combos', combo)"
+            >
+              <Trash2 :size="14" />
+              Eliminar
+            </BaseButton>
+          </div>
         </li>
       </ul>
     </template>
 
     <!-- ---- Extras generales ---- -->
     <template v-else-if="seccion === 'extras'">
+      <p v-if="avisoEliminado" class="mt-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{{ avisoEliminado }}</p>
       <div v-if="!extrasGenerales.length" class="mt-10 empty-state">
         <Layers :size="32" class="mx-auto text-gray-300" />
         <p class="mt-3 text-sm text-gray-500">Todavía no hay extras generales. Créalos aquí y elige en cada producto (al editarlo) cuáles ofrece. Un extra que no se marca en ningún producto no se ofrece.</p>
@@ -1491,16 +1458,29 @@ onMounted(cargar)
               {{ extra.productos?.length ? `se ofrece con ${extra.productos.map((p) => p.nombre).join(', ')}` : 'no se ofrece con ningún producto: márcalo en los productos que lo llevan' }}
             </p>
           </div>
-          <BaseButton v-escritura variant="ghost" size="sm" class="shrink-0" @click="abrirEditarExtraGeneral(extra)">
-            <Pencil :size="14" />
-            Editar
-          </BaseButton>
+          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
+            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarExtraGeneral(extra)">
+              <Pencil :size="14" />
+              Editar
+            </BaseButton>
+            <BaseButton
+              v-escritura
+              variant="ghost"
+              size="sm"
+              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
+              @click="eliminarDe('extras', extra)"
+            >
+              <Trash2 :size="14" />
+              Eliminar
+            </BaseButton>
+          </div>
         </li>
       </ul>
     </template>
 
     <!-- ---- Promociones ---- -->
     <template v-else>
+      <p v-if="avisoEliminado" class="mt-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{{ avisoEliminado }}</p>
       <div v-if="!promociones.length" class="mt-10 empty-state">
         <Percent :size="32" class="mx-auto text-gray-300" />
         <p class="mt-3 text-sm text-gray-500">
@@ -1537,13 +1517,33 @@ onMounted(cargar)
               · {{ vigenciaTexto(promocion.vigencia_inicio, promocion.vigencia_fin) }}
             </p>
           </div>
-          <BaseButton v-escritura variant="ghost" size="sm" class="shrink-0" @click="abrirEditarPromocion(promocion)">
-            <Pencil :size="14" />
-            Editar
-          </BaseButton>
+          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
+            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarPromocion(promocion)">
+              <Pencil :size="14" />
+              Editar
+            </BaseButton>
+            <BaseButton
+              v-escritura
+              variant="ghost"
+              size="sm"
+              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
+              @click="eliminarDe('promociones', promocion)"
+            >
+              <Trash2 :size="14" />
+              Eliminar
+            </BaseButton>
+          </div>
         </li>
       </ul>
     </template>
+
+    <EliminarModal
+      :tipo="aEliminar ? DE_SECCION[aEliminar.seccion].tipo : 'categorias'"
+      :articulo="aEliminar ? DE_SECCION[aEliminar.seccion].articulo : ''"
+      :registro="aEliminar?.registro ?? null"
+      @cerrar="aEliminar = null"
+      @eliminado="alEliminarDelCatalogo"
+    />
 
     <!-- Crear/editar categoría -->
     <BaseModal v-model="modalCategoriaAbierto" :title="categoriaEditando ? 'Editar categoría' : 'Nueva categoría'">
@@ -1559,7 +1559,7 @@ onMounted(cargar)
           <span class="text-sm text-gray-700">Categoría activa</span>
         </label>
 
-        <!-- Mejora (26/10/2026) -->
+        <!-- Mejora (26/10/2026, RF-M04-056) -->
         <label class="flex items-start gap-2">
           <input v-model="formCategoria.permite_quitar_ingredientes" type="checkbox" class="mt-0.5 size-[18px] accent-brand-600" />
           <span class="text-sm text-gray-700">

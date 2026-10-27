@@ -67,8 +67,7 @@ class SoporteTest extends TestCase
         $id = $this->postJson('/api/pedidos', [
             'tipo' => 'local', 'origen' => 'mesero', 'mesa_id' => $this->mesa->id,
             'lineas' => [['producto_id' => $this->hamburguesa->id, 'cantidad' => 1]],
-        ])->json('id');
-        $this->postJson("/api/pedidos/{$id}/confirmar")->assertOk();
+        ])->json('id'); // nace confirmado (RF-M02-L-036)
         $this->postJson("/api/pedidos/{$id}/cobrar", ['metodo' => 'efectivo', 'monto' => 20000])->assertOk();
 
         return Pedido::findOrFail($id);

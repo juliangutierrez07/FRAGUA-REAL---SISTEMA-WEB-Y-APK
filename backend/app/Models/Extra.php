@@ -12,6 +12,7 @@ class Extra extends Model
 
     protected $casts = [
         'activo' => 'boolean',
+        'eliminado_at' => 'datetime',
         'precio' => 'decimal:2',
     ];
 

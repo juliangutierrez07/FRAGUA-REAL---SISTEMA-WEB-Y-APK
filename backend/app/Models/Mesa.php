@@ -54,7 +54,7 @@ class Mesa extends Model
     }
 
     /**
-     * Mejora (26/10/2026): cuentas separadas. Los números de cuenta de la visita en curso (1, 2, 3…),
+     * Mejora (26/10/2026, RF-M02-L-033): cuentas separadas. Los números de cuenta de la visita en curso (1, 2, 3…),
      * de menor a mayor. Un pedido sin número (anterior a esta mejora) es de la cuenta 1.
      *
      * @return array<int, int>

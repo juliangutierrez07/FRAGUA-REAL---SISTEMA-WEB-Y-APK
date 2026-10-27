@@ -329,6 +329,9 @@ Antes: el SuperAdmin puso al menos una cuenta en Configuración > «Cuentas para
       de las reservas) se ven resaltadas.
 - [ ] Seguimiento: al confirmar o preparar el pedido en el panel, la página cambia en unos 10 segundos (o
       apenas se vuelve a la pestaña). «Mis pedidos» también.
+- [ ] Mis pedidos y reservas > Reservas: una reserva sin pagar tiene «Pagar el depósito de $…»; al enviar la
+      captura queda «Pago en revisión». Si el personal la rechaza, se ve el motivo y se puede pagar otra vez.
+      Sin cuentas de pago configuradas, dice que se escriba por WhatsApp.
 
 ## 14. Correcciones del 19/10/2026 (reservas)
 

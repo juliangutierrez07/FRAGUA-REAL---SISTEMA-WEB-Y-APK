@@ -269,7 +269,7 @@ class PagoService
             $pago->monto = $monto;
             $pago->estado = $data['estado'];
             $pago->registrado_por = $data['registrado_por'];
-            // Mejora (26/10/2026): la foto del comprobante que tomó el Mesero al cobrar.
+            // Mejora (26/10/2026, RF-M06-037): la foto del comprobante que tomó el Mesero al cobrar.
             $pago->comprobante_path = $data['comprobante_path'] ?? null;
             $pago->comprobante_mime = $data['comprobante_mime'] ?? null;
             $pago->anulado = false;

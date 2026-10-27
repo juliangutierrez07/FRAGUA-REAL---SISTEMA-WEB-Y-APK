@@ -50,7 +50,7 @@ class CajaCuadreTest extends TestCase
         return now('America/Bogota')->toDateString();
     }
 
-    // $preparado: el pedido pasa por la cocina antes del cobro y queda finalizado (26/10/2026: la caja
+    // $preparado: el pedido pasa por la cocina antes del cobro y queda finalizado (26/10/2026, RF-M06-038: la caja
     // solo cierra con todos los pedidos finalizados).
     private function cobrarEnEfectivo(float $monto, bool $preparado = false): Pago
     {

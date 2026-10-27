@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Mejora (26/10/2026): las notas que el Cliente tiene que leer («Pides como invitado…», «Guárdalo…»,
+// Mejora (26/10/2026, RNF-TRANS-036): las notas que el Cliente tiene que leer («Pides como invitado…», «Guárdalo…»,
 // «Revisamos la transferencia…», el horario de las reservas) eran letra pequeña gris y pasaban
 // desapercibidas. Este aviso las resalta con color, borde e ícono, sin gritar.
 import { computed } from 'vue'

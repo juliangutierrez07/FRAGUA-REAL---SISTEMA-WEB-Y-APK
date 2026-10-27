@@ -10,7 +10,7 @@ class Categoria extends Model
 {
     protected $fillable = ['nombre', 'activo', 'permite_quitar_ingredientes'];
 
-    protected $casts = ['activo' => 'boolean', 'permite_quitar_ingredientes' => 'boolean'];
+    protected $casts = ['activo' => 'boolean', 'permite_quitar_ingredientes' => 'boolean', 'eliminado_at' => 'datetime'];
 
     public function productos(): HasMany
     {

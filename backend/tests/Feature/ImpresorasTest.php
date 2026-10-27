@@ -133,8 +133,9 @@ class ImpresorasTest extends TestCase
         $producto = Producto::create(['categoria_id' => $categoria->id, 'nombre' => 'Clásica', 'precio_base' => 20000, 'tipo_venta' => 'alimento']);
         $mesa = Mesa::create(['nombre' => 'Mesa 1', 'qr_code' => 'qr-1', 'estado' => 'libre']);
         Sanctum::actingAs($this->mesero);
-        $pedido = $this->postJson('/api/pedidos', ['tipo' => 'local', 'origen' => 'mesero', 'mesa_id' => $mesa->id, 'lineas' => [['producto_id' => $producto->id, 'cantidad' => 1]]])->json('id');
-        $this->postJson("/api/pedidos/{$pedido}/confirmar")->assertOk();
+        // RF-M02-L-036: el pedido del Mesero se confirma al crearlo y su comanda queda lista.
+        $pedido = $this->postJson('/api/pedidos', ['tipo' => 'local', 'origen' => 'mesero', 'mesa_id' => $mesa->id, 'lineas' => [['producto_id' => $producto->id, 'cantidad' => 1]]])
+            ->assertJsonPath('estado', 'confirmado')->json('id');
         $comanda = Comanda::where('pedido_id', $pedido)->sole();
 
         Sanctum::actingAs($this->admin);

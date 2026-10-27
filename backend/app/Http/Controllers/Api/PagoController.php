@@ -30,7 +30,7 @@ class PagoController extends Controller
     {
         $this->authorize('cobrar', $pedido); // PedidoPolicy::cobrar() — RF-M06-003/004, RNF-M06-004
 
-        // Mejora (26/10/2026): la foto del comprobante (obligatoria en transferencia) queda con el pago.
+        // Mejora (26/10/2026, RF-M06-037): la foto del comprobante (obligatoria en transferencia) queda con el pago.
         $data = $request->safe()->only(['metodo', 'monto']);
         if ($request->hasFile('comprobante')) {
             $archivo = app(\App\Services\PagoDirectoService::class)->guardarComprobante($request->file('comprobante'), "cobro-pedido-{$pedido->id}");

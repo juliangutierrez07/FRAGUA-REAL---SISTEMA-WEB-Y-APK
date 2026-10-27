@@ -340,7 +340,7 @@ onMounted(() => {
           </button>
 
           <div v-if="expandido === registro.id" class="mt-3 border-t border-gray-100 pt-3 text-sm">
-            <!-- Mejora (26/10/2026): quién lo hizo, también dentro del detalle. -->
+            <!-- Mejora (26/10/2026, RF-M01-034): quién lo hizo, también dentro del detalle. -->
             <dl class="mb-2 grid gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(8rem,auto)_1fr]">
               <dt class="text-xs font-semibold text-gray-500">Hecho por</dt>
               <dd class="break-words font-medium text-ink">

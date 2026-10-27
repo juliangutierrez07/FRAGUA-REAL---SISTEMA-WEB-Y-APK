@@ -67,7 +67,10 @@ Al preparar la lista se revisó el código de cada pantalla. Se corrigieron dos 
 - [ ] Mientras está abierta la ventana de editar, descuento, historial o cancelar, la lista no se mueve; al cerrarla se pone al día.
 - [ ] "Actualizar" recarga la lista a mano.
 - [ ] Con un corte de internet, la actualización automática no muestra errores; vuelve sola al regresar la conexión.
-- [ ] **Confirmar pedido** (pendiente → confirmado): se abre la comanda de cocina (sección 4).
+- [ ] **Crear pedido** desde Nuevo pedido (27/10/2026): el pedido queda Confirmado de una vez, la lista dice
+      «Pedido #N creado: la comanda ya va para la cocina» y la comanda sale en la impresora de la cocina
+      (o se abre en este equipo si tiene «Abre la comanda al confirmar»).
+- [ ] **Confirmar pedido** (pendiente → confirmado), para los que llegan por el QR o la web: se abre la comanda de cocina (sección 4).
   - Un domicilio o una recogida con pago en línea sin aprobar no se deja confirmar, con el mensaje en español y sin códigos como "(RN-M06-05)".
 - [ ] **Marcar preparando**: cada línea muestra una casilla para marcarla como preparada.
   - Una línea preparada ya no se puede cambiar ni quitar al editar.
@@ -280,6 +283,12 @@ Usuarios.
 - [ ] Un domicilio contra entrega muestra con cuánto paga el cliente y el cambio que hay que llevar, y «Ver
       la ubicación en el mapa» si la compartió.
 - [ ] En el teléfono, el botón de descarga de arriba instala la app (o muestra los pasos del navegador).
+- [ ] Cobrar en efectivo (un pedido o la cuenta de la mesa): «¿Con cuánto paga el cliente?» con «Exacto» y
+      billetes sugeridos; al tocar uno (o escribir el valor) se ve a cobrar, recibe y el cambio. Con menos
+      del monto dice cuánto falta y no deja registrar. Al registrar, el aviso dice el cambio a entregar.
+- [ ] Reservas > «Registrar depósito manual»: en efectivo hay que indicar con cuánto pagó (sin eso no
+      registra) y se ve el cambio; en transferencia hay que tomar la foto; en tarjeta es opcional. Después,
+      la reserva tiene «Ver comprobante».
 
 ## 8c. Correcciones del 19/10/2026
 

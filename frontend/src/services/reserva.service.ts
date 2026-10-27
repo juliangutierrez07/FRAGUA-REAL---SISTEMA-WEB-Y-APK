@@ -21,6 +21,12 @@ export interface DepositoEnLineaPayload extends PagoEnLineaPayload {
   token: string
 }
 
+export interface DepositoManualPayload {
+  metodo: 'efectivo' | 'tarjeta' | 'transferencia'
+  recibido?: number | null
+  comprobante?: File | null
+}
+
 export interface PaginadoReservas {
   data: Reserva[]
   total: number
@@ -72,8 +78,18 @@ export const reservaService = {
     return api.post<Reserva>(`/reservas/${id}/deposito/en-linea/rechazar`, { motivo: motivo?.trim() || undefined })
   },
   // RN-M05-16: presencial (efectivo, tarjeta o transferencia).
-  registrarDepositoManual(id: number, metodo: 'efectivo' | 'tarjeta' | 'transferencia') {
-    return api.post<Reserva>(`/reservas/${id}/deposito/manual`, { metodo })
+  // Mejora (26/10/2026, RF-M05-045 y 046): en efectivo, con cuánto pagó el cliente; en transferencia (obligatoria) o
+  // tarjeta (opcional), la foto del comprobante. Va como formulario por la foto.
+  registrarDepositoManual(id: number, payload: DepositoManualPayload) {
+    const datos = new FormData()
+    datos.append('metodo', payload.metodo)
+    if (payload.metodo === 'efectivo' && payload.recibido) datos.append('recibido', String(payload.recibido))
+    if (payload.metodo !== 'efectivo' && payload.comprobante) datos.append('comprobante', payload.comprobante)
+    return api.post<Reserva>(`/reservas/${id}/deposito/manual`, datos)
+  },
+  // Mejora (26/10/2026, RF-M05-044): el Cliente con sesión paga el depósito pendiente desde «Mis pedidos y reservas».
+  pagarMiDeposito(id: number, payload: PagoEnLineaPayload) {
+    return api.post<Reserva & { checkout: CheckoutPasarela | null }>(`/mis-reservas/${id}/deposito`, formularioPagoEnLinea(payload))
   },
   marcarNoShow(id: number) {
     return api.post<Reserva>(`/reservas/${id}/no-show`)

@@ -27,7 +27,7 @@ const formaDePago = computed(() => {
 const correo = computed(() => props.pedido.cliente_invitado_correo ?? props.pedido.cliente?.email ?? null)
 const enlaceTelefono = computed(() => (telefono.value ? `tel:${telefono.value.replace(/[^\d+]/g, '')}` : ''))
 
-// Mejora (26/10/2026): la ubicación que compartió el Cliente y el cambio que debe llevar el domiciliario.
+// Mejora (26/10/2026, RF-M07-035): la ubicación que compartió el Cliente y el cambio que debe llevar el domiciliario.
 const mapa = computed(() =>
   props.pedido.ubicacion_lat != null && props.pedido.ubicacion_lng != null
     ? enlaceMapa(Number(props.pedido.ubicacion_lat), Number(props.pedido.ubicacion_lng))

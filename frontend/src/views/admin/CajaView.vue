@@ -130,7 +130,7 @@ const cerrando = ref(false)
 
 async function abrirModalCerrar() {
   if (!turnoActual.value) return
-  // Mejora (26/10/2026): se trae el turno al día para ver qué pedidos faltan por finalizar.
+  // Mejora (26/10/2026, RF-M06-038): se trae el turno al día para ver qué pedidos faltan por finalizar.
   await actualizarResumen()
   if (!turnoActual.value) return
   efectivoContado.value = Number(turnoActual.value.efectivo_esperado)
@@ -139,7 +139,7 @@ async function abrirModalCerrar() {
   modalCerrarOpen.value = true
 }
 
-// Mejora (26/10/2026): la caja solo cierra con todos los pedidos finalizados o cancelados.
+// Mejora (26/10/2026, RF-M06-038, RN-M06-20): la caja solo cierra con todos los pedidos finalizados o cancelados.
 const pedidosSinFinalizar = computed(() => turnoActual.value?.pedidos_sin_finalizar ?? [])
 const ESTADO_TEXTO: Record<string, string> = { pendiente: 'Pendiente', confirmado: 'Confirmado', preparando: 'En preparación' }
 
@@ -190,7 +190,7 @@ async function cargarHistorial(page = 1) {
 
 const contadorTexto = computed(() => (total.value === 1 ? '1 turno' : `${total.value} turnos`))
 
-// Mejora (26/10/2026): la foto del comprobante que tomó el Mesero al cobrar.
+// Mejora (26/10/2026, RF-M06-037): la foto del comprobante que tomó el Mesero al cobrar.
 const fotoPago = ref<{ pago: Pago; url: string } | null>(null)
 const errorFoto = ref('')
 async function verFoto(pago: Pago) {

@@ -14,6 +14,7 @@ class Combo extends Model
 
     protected $casts = [
         'activo' => 'boolean',
+        'eliminado_at' => 'datetime',
         'precio' => 'decimal:2',
         'vigencia_inicio' => 'date',
         'vigencia_fin' => 'date',

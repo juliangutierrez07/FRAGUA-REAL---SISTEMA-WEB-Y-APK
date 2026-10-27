@@ -1,6 +1,6 @@
 # Base de datos — Fragua Real Burger
 
-PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 41 tablas propias del sistema más la de control de migraciones, creadas por 68 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
+PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 41 tablas (35 del sistema y 6 de Laravel para la cola, la caché y las sesiones) más la de control de migraciones, creadas por 70 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
 
 ## Contenido
 
@@ -30,7 +30,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `users` | 15 | Cuentas de los roles (`role`: superadmin, administrador, soporte, mesero, cliente; superadmin desde el 19/10/2026, M09, y soporte desde el 20/10/2026, M10), `menus_permitidos` (json, los menús que el SuperAdmin le habilitó; vacío = todos los de su rol), con `username` opcional y único y el permiso `puede_registrar_gastos` del Mesero autorizado. Eliminar (24/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (archivado: fuera de las listas, se restaura). |
+| `users` | 16 | Cuentas de los roles (`role`: superadmin, administrador, soporte, mesero, cliente; superadmin desde el 19/10/2026, M09, y soporte desde el 20/10/2026, M10), `menus_permitidos` (json, los menús que el SuperAdmin le habilitó; vacío = todos los de su rol), con `username` opcional y único y el permiso `puede_registrar_gastos` del Mesero autorizado. Eliminar (definitivo desde el 27/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (con historial: fuera de todas las listas, sin restaurar; su nombre o correo queda libre). |
 | `personal_access_tokens` | 12 | Sesiones (tokens de Sanctum) con IP y dispositivo; vencen por inactividad o duración máxima. |
 | `password_reset_tokens` | 3 | Enlaces de recuperación de contraseña (guardados con hash, vencen a la hora). |
 | `auditorias` | 9 | Historial de acciones críticas: quién, qué, sobre qué registro, antes y después, IP y navegador. Triggers de PostgreSQL impiden cambiarlo o borrarlo. |
@@ -39,14 +39,14 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `categorias` | 6 | Categorías del menú. Desactivar una oculta sus productos y combos. `permite_quitar_ingredientes` (26/10/2026): si el menú pregunta qué ingrediente quitar (las bebidas no). |
-| `productos` | 15 | Productos con precio base, tipo de venta (bebida, alimento u otro), disponibilidad y foto (`imagen_path`, archivo privado). `imagen_url` es una columna antigua que ya no se usa. Eliminar (24/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (archivado: fuera de las listas, se restaura). |
-| `variantes` | 8 | Presentaciones o tamaños de un producto, con su precio, su disponibilidad y, desde el 16/10/2026, una descripción y una foto propias. |
-| `extras` | 8 | Adicionales: generales (`producto_id` nulo) o específicos de un producto. |
+| `categorias` | 9 | Categorías del menú. Desactivar una oculta sus productos y combos. `permite_quitar_ingredientes` (26/10/2026): si el menú pregunta qué ingrediente quitar (las bebidas no). Eliminar (27/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (igual en `combos`, `extras` y `promociones`). |
+| `productos` | 15 | Productos con precio base, tipo de venta (bebida, alimento u otro), disponibilidad y foto (`imagen_path`, archivo privado). `imagen_url` es una columna antigua que ya no se usa. Eliminar (definitivo desde el 27/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (con historial: fuera de todas las listas, sin restaurar; su nombre o correo queda libre). |
+| `variantes` | 11 | Presentaciones o tamaños de un producto, con su precio, su disponibilidad y, desde el 16/10/2026, una descripción y una foto propias. |
+| `extras` | 11 | Adicionales: generales (`producto_id` nulo) o específicos de un producto. Con las columnas de eliminar (27/10/2026). |
 | `producto_extra` | 5 | Qué extras generales ofrece cada producto. Un extra general sin productos elegidos no se ofrece con ninguno (desde el 16/10/2026). |
-| `combos` | 12 | Combos con precio propio, tipo de venta, vigencia, franja horaria y días. |
+| `combos` | 15 | Combos con precio propio, tipo de venta, vigencia, franja horaria y días. Con las columnas de eliminar (27/10/2026). |
 | `combo_producto` | 4 | Productos y cantidades de cada combo (al menos dos unidades). |
-| `promociones` | 14 | Promociones automáticas o manuales: alcance (producto, categoría o total), porcentaje o valor, vigencia, franja y días. `variante_id` la limita a una presentación y `es_oferta` marca las creadas con «Poner en oferta». |
+| `promociones` | 19 | Promociones automáticas o manuales: alcance (producto, categoría o total), porcentaje o valor, vigencia, franja y días. `variante_id` la limita a una presentación y `es_oferta` marca las creadas con «Poner en oferta». Con las columnas de eliminar (27/10/2026). |
 | `promocion_producto` | 3 | Productos de una promoción. |
 | `promocion_categoria` | 3 | Categorías de una promoción. |
 
@@ -54,8 +54,8 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `mesas` | 11 | Mesas del local con su QR y su estado (libre, ocupada o reservada). `ocupada_desde` marca el inicio de la visita. Eliminar (24/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (archivado: fuera de las listas, se restaura). |
-| `reservas` | 35 | Reservas con el depósito: método, estado, en qué turno de caja se recibió o devolvió, abono al pedido, no-show y enlace secreto para el cliente. `descripcion` es la nota opcional del cliente (hasta 500 caracteres). Pago directo: captura del depósito (`deposito_comprobante_path` y `_mime`, en `storage/app/private/comprobantes-pago`), `deposito_referencia` y `deposito_rechazo_motivo`; `deposito_pasarela` acepta `breb`. |
+| `mesas` | 11 | Mesas del local con su QR y su estado (libre, ocupada o reservada). `ocupada_desde` marca el inicio de la visita. Eliminar (definitivo desde el 27/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (con historial: fuera de todas las listas, sin restaurar; su nombre o correo queda libre). |
+| `reservas` | 35 | Reservas con el depósito: método, estado, en qué turno de caja se recibió o devolvió, abono al pedido, no-show y enlace secreto para el cliente. `descripcion` es la nota opcional del cliente (hasta 500 caracteres). Pago directo: captura del depósito (`deposito_comprobante_path` y `_mime`, en `storage/app/private/comprobantes-pago`), `deposito_referencia` y `deposito_rechazo_motivo`; `deposito_pasarela` acepta `breb`. Desde el 26/10/2026 la misma columna guarda la foto que toma el personal al registrar un depósito manual por transferencia o tarjeta. |
 | `reserva_avisos` | 11 | Cada correo de una reserva (confirmación, recordatorio, cancelación, no-show): destino, estado, intentos y error. |
 
 ### Pedidos (M02, M07)
@@ -74,7 +74,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
 | `caja_turnos` | 14 | Un turno de caja por día: base, efectivo esperado y contado, diferencia y quién abrió y cerró. |
-| `pagos` | 23 | Pagos de un pedido (1:N, admite pago mixto, ADR-003) y abonos de depósito; anulación, reverso y cómo se aprobó (pasarela o manual). Pago directo: la captura que subió el Cliente (`comprobante_path` y `comprobante_mime`), `referencia_cliente` y `rechazo_motivo`; `pasarela` acepta `breb`. |
+| `pagos` | 23 | Pagos de un pedido (1:N, admite pago mixto, ADR-003) y abonos de depósito; anulación, reverso y cómo se aprobó (pasarela o manual). Pago directo: la captura que subió el Cliente (`comprobante_path` y `comprobante_mime`), `referencia_cliente` y `rechazo_motivo`; `pasarela` acepta `breb`. Desde el 26/10/2026 `comprobante_path` también guarda la foto que toma el Mesero al cobrar por transferencia (obligatoria) o tarjeta. |
 | `ajustes_caja` | 10 | Anulaciones o reembolsos hechos cuando la caja de ese día ya cerró (ADR-008). No reescriben el turno. |
 | `comprobantes` | 12 | Comprobantes de pago con consecutivo (FR-000001), copia del documento, impresiones y anulación con motivo. |
 | `transacciones_pasarela` | 28 | Cada intento de pago en Wompi (de un pago o de un depósito): referencia secreta, estado, respuesta completa, eventos, revisión y reembolso. |
@@ -227,6 +227,8 @@ Además, `transacciones_pasarela` se enlaza con un pago o con una reserva por `p
 | `2026_10_23_000002` | 16/10/2026 | `variantes.descripcion`, `imagen_url` e `imagen_path`. | — |
 | `2026_10_23_000003` | 16/10/2026 | `promociones.variante_id` y `promociones.es_oferta`. | — |
 | `2026_10_26_000001` | 19/10/2026 | `reservas.descripcion`: nota opcional del cliente en su reserva. | — |
+| `2026_11_04_000001` | 27/10/2026 | Eliminar definitivo: los índices únicos de `productos.nombre`, `categorias.nombre`, `mesas.nombre`, `users.email` y `users.username` pasan a contar solo lo vigente (`WHERE eliminado_at IS NULL`), para reutilizar el nombre o el correo de lo eliminado. | — |
+| `2026_11_03_000001` | 27/10/2026 | Eliminar del catálogo: `eliminado_at` (con índice), `eliminado_por` (→ `users`, nulo al borrarse) y `eliminado_motivo` en `categorias`, `combos`, `extras` y `promociones`. | — |
 | `2026_11_02_000001` | 26/10/2026 | Mejoras de operación: `pedidos.cuenta`, `ubicacion_lat`, `ubicacion_lng`, `paga_con` y `categorias.permite_quitar_ingredientes` (las categorías de bebidas quedan en falso). | — |
 | `2026_11_01_000001` | 24/10/2026 | Tabla `equipos_impresion` (M12): equipos del local que imprimen, con su clave, código de vinculación, señal y última prueba. | — |
 | `2026_10_31_000001` | 24/10/2026 | Eliminar: `eliminado_at` (con índice), `eliminado_por` (→ `users`, nulo al borrarse) y `eliminado_motivo` en `mesas`, `productos` y `users`. | — |

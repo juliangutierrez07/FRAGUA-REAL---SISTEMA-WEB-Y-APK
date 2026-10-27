@@ -55,7 +55,7 @@ class UpdateUsuarioRequest extends FormRequest
 
         return [
             'nombre' => ['required', 'string', 'max:80', 'regex:'.\App\Support\Validacion\Formatos::PERSONA],
-            'email' => ['bail', 'required', 'email', 'max:255', \App\Support\Validacion\Eliminados::libre('users', 'email', 'Ese correo es de una cuenta eliminada: restáurala desde Usuarios › Eliminados.', $usuario?->id), Rule::unique('users', 'email')->ignore($usuario?->id)],
+            'email' => ['bail', 'required', 'email', 'max:255', Rule::unique('users', 'email')->whereNull('eliminado_at')->ignore($usuario?->id)],
             'telefono' => ['nullable', 'string', 'regex:'.\App\Support\Validacion\Formatos::CELULAR],
             // Fase 3, tarea 3 (RF-M01-007/011): vacío = sin nombre de usuario (entra con el correo);
             // si no se envía, no se toca.

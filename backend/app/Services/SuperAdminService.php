@@ -39,7 +39,7 @@ class SuperAdminService
         }
 
         return DB::transaction(function () use ($correo, $nombre, $password) {
-            $usuario = User::where('email', $correo)->first();
+            $usuario = User::where('email', $correo)->whereNull('eliminado_at')->first();
             $creada = $usuario === null;
 
             if ($creada) {

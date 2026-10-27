@@ -1,4 +1,4 @@
-// Mejora (26/10/2026): la foto del comprobante que toma el Mesero con la cámara del teléfono pesa varios
+// Mejora (26/10/2026, RF-M06-037): la foto del comprobante que toma el Mesero con la cámara del teléfono pesa varios
 // MB. Antes de subirla se reduce a 1600 px por el lado mayor y se guarda como JPEG: el texto del
 // comprobante se sigue leyendo y el envío es rápido aunque la señal del local sea débil.
 const LADO_MAXIMO = 1600

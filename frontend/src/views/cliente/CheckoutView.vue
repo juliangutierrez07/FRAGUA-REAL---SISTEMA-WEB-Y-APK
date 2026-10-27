@@ -127,8 +127,8 @@ const promociones = computed(() => cotizacion.value?.promociones ?? [])
 const descuento = computed(() => cotizacion.value?.descuento ?? 0)
 const totalEstimado = computed(() => subtotal.value - descuento.value + costoDomicilio.value)
 
-// ---- Mejora (26/10/2026): ubicación actual del Cliente (domicilio) ----
-// CORREGIDO (26/10/2026): la ubicación del navegador puede caer lejos (en un computador o sin GPS sale de
+// ---- Mejora (26/10/2026, RF-M07-033): ubicación actual del Cliente (domicilio) ----
+// CORREGIDO (26/10/2026, RF-M07-033): la ubicación del navegador puede caer lejos (en un computador o sin GPS sale de
 // la red). Se toma la lectura más precisa de unos segundos (utils/ubicacion.ts) y el Cliente la confirma
 // en el mapa: tocar el mapa o arrastrar el pin la corrige. También puede marcarla sin GPS.
 const ubicacion = ref<Ubicacion | null>(null)
@@ -164,7 +164,7 @@ function quitarUbicacion() {
   mostrarMapa.value = false
 }
 
-// ---- Mejora (26/10/2026): con qué billete paga contra entrega (para llevar el cambio) ----
+// ---- Mejora (26/10/2026, RF-M07-034): con qué billete paga contra entrega (para llevar el cambio) ----
 const pagaCon = ref<number | null>(null) // null = valor exacto
 const otroValor = ref(false)
 const valorOtro = ref(0)
@@ -410,7 +410,7 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
               :icon="MapPin"
               :error="errores.direccion_entrega"
             />
-            <!-- Mejora (26/10/2026): compartir la ubicación para que el domiciliario llegue directo; el Cliente
+            <!-- Mejora (26/10/2026, RF-M07-033): compartir la ubicación para que el domiciliario llegue directo; el Cliente
                  la confirma o la corrige en el mapa. -->
             <div class="space-y-2.5">
               <div class="flex flex-col gap-2 sm:flex-row">
@@ -560,7 +560,7 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
               </span>
             </label>
 
-            <!-- Mejora (26/10/2026): con qué billete paga, para que el domiciliario lleve el cambio completo. -->
+            <!-- Mejora (26/10/2026, RF-M07-034): con qué billete paga, para que el domiciliario lleve el cambio completo. -->
             <div v-if="pideBillete" class="rounded-2xl border border-[#e3ded4] bg-white p-4">
               <p class="text-sm font-medium text-ink">Si pagas en efectivo, ¿con cuánto vas a pagar?</p>
               <p class="mt-0.5 text-xs text-[#6c655c]">Así el domiciliario lleva el cambio completo.</p>
@@ -635,7 +635,7 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
               </span>
             </label>
 
-            <!-- Mejora (26/10/2026): el medio en línea se elige con tarjetas, no con radios sueltos. -->
+            <!-- Mejora de diseño (26/10/2026): el medio en línea se elige con tarjetas, no con radios sueltos. -->
             <div v-if="enLineaDisponible && metodoPago === 'en_linea'" role="radiogroup" aria-label="Medio de pago en línea" class="grid gap-2.5 sm:grid-cols-2">
               <button
                 v-for="m in opcionesMedio"

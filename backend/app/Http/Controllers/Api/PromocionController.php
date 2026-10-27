@@ -22,9 +22,10 @@ use Illuminate\Http\Request;
  */
 class PromocionController extends Controller
 {
+    // Eliminar (27/10/2026, RF-M04-060): sin las eliminadas.
     public function index()
     {
-        return response()->json(Promocion::with(['productos', 'categorias', 'variante:id,nombre'])->latest()->get());
+        return response()->json(Promocion::with(['productos', 'categorias', 'variante:id,nombre'])->whereNull('eliminado_at')->latest()->get());
     }
 
     // Fase 2, tarea 1 (RF-M04-036, HU-M04-015): promociones de tipo "manual" activas y vigentes,
@@ -49,6 +50,7 @@ class PromocionController extends Controller
 
     public function update(StorePromocionRequest $request, Promocion $promocion)
     {
+        abort_if($promocion->eliminado_at !== null, 404, 'Esta promoción ya se eliminó.');
         $antes = $this->foto($promocion);
         $promocion = $this->guardar($promocion, $request);
         // RF-M04-040: desactivar una promoción es una edición más, y queda igual en la auditoría.

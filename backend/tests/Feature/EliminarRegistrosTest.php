@@ -15,9 +15,10 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * Eliminar mesas, productos y usuarios (24/10/2026, RF-M05-043, RF-M04-055, RF-M01-033): lo que nunca
- * se usó se borra; lo que tiene historial se archiva (sale de las listas y se restaura desde
- * «Eliminados»). Administrador y SuperAdmin, con contraseña y motivo; todo queda en la auditoría.
+ * Eliminar mesas, productos y usuarios (24/10/2026, RF-M05-043, RF-M04-055, RF-M01-033). Desde el
+ * 27/10/2026 es definitivo: lo que nunca se usó se borra; lo que tiene historial sale de todas las listas
+ * (sin «Eliminados» ni restaurar) y su nombre o correo queda libre. Administrador y SuperAdmin, con
+ * contraseña; el motivo solo al eliminar una cuenta. Todo queda en la auditoría.
  */
 class EliminarRegistrosTest extends TestCase
 {
@@ -41,7 +42,12 @@ class EliminarRegistrosTest extends TestCase
 
     private function eliminar(string $uri, array $datos = [])
     {
-        return $this->postJson($uri, $datos + ['password' => 'Clave12345', 'motivo' => 'Ya no se usa']);
+        return $this->postJson($uri, $datos + ['password' => 'Clave12345']);
+    }
+
+    private function eliminarCuenta(User $cuenta, array $datos = [])
+    {
+        return $this->eliminar("/api/usuarios/{$cuenta->id}/eliminar", $datos + ['motivo' => 'Ya no trabaja aquí']);
     }
 
     private function venderEnMesa(Mesa $mesa): void
@@ -65,7 +71,7 @@ class EliminarRegistrosTest extends TestCase
         $this->assertTrue(Auditoria::where('accion', 'eliminar_mesa')->where('entidad_id', $mesa->id)->exists());
     }
 
-    public function test_una_mesa_con_pedidos_se_archiva_sale_de_las_listas_y_se_restaura(): void
+    public function test_una_mesa_con_pedidos_sale_de_todo_y_su_nombre_queda_libre(): void
     {
         $mesa = Mesa::create(['nombre' => 'Mesa 1', 'qr_code' => 'qr-1', 'estado' => 'libre']);
         $this->venderEnMesa($mesa);
@@ -81,15 +87,14 @@ class EliminarRegistrosTest extends TestCase
         $mesa->refresh();
         $this->assertNotNull($mesa->eliminado_at);
         $this->assertFalse($mesa->activa);
-        $this->assertSame('Ya no se usa', $mesa->eliminado_motivo);
+        $this->assertNull($mesa->eliminado_motivo, 'Una mesa se elimina sin motivo.');
         $this->assertNotContains($mesa->id, collect($this->getJson('/api/mesas')->json())->pluck('id'));
-        $this->assertSame([$mesa->id], collect($this->getJson('/api/mesas?eliminadas=1')->json())->pluck('id')->all());
-        $this->postJson("/api/mesas/{$mesa->id}/activar")->assertStatus(422);
-        $this->postJson('/api/mesas', ['nombre' => 'mesa 1'])->assertStatus(422)->assertJsonValidationErrors('nombre');
-
-        $this->postJson("/api/mesas/{$mesa->id}/restaurar")->assertOk()->assertJsonPath('eliminado_at', null);
-        $this->assertContains($mesa->id, collect($this->getJson('/api/mesas')->json())->pluck('id'));
-        $this->assertTrue(Auditoria::where('accion', 'archivar_mesa')->exists() && Auditoria::where('accion', 'restaurar_mesa')->exists());
+        $this->assertNotContains($mesa->id, collect($this->getJson('/api/mesas?eliminadas=1')->json())->pluck('id'), 'Ya no hay lista de eliminadas.');
+        $this->postJson("/api/mesas/{$mesa->id}/activar")->assertNotFound();
+        $this->postJson("/api/mesas/{$mesa->id}/restaurar")->assertNotFound();
+        // El nombre queda libre para una mesa nueva.
+        $this->postJson('/api/mesas', ['nombre' => 'Mesa 1'])->assertCreated();
+        $this->assertTrue(Auditoria::where('accion', 'archivar_mesa')->exists());
     }
 
     public function test_no_se_elimina_una_mesa_con_reservas_proximas(): void
@@ -105,7 +110,7 @@ class EliminarRegistrosTest extends TestCase
         $this->eliminar("/api/mesas/{$mesa->id}/eliminar")->assertStatus(422);
     }
 
-    public function test_pide_contrasena_y_motivo_y_no_lo_hace_el_mesero(): void
+    public function test_pide_contrasena_el_motivo_solo_en_cuentas_y_no_lo_hace_el_mesero(): void
     {
         $mesa = Mesa::create(['nombre' => 'Mesa 3', 'qr_code' => 'qr-3', 'estado' => 'libre']);
 
@@ -113,12 +118,18 @@ class EliminarRegistrosTest extends TestCase
         $this->eliminar("/api/mesas/{$mesa->id}/eliminar")->assertForbidden();
 
         Sanctum::actingAs($this->admin);
+        $this->getJson("/api/mesas/{$mesa->id}/eliminacion")->assertOk()->assertJsonPath('pide_motivo', false);
         $this->eliminar("/api/mesas/{$mesa->id}/eliminar", ['password' => 'otra-clave'])->assertStatus(422)->assertJsonValidationErrors('password');
-        $this->eliminar("/api/mesas/{$mesa->id}/eliminar", ['motivo' => ''])->assertStatus(422)->assertJsonValidationErrors('motivo');
+        $this->eliminar("/api/mesas/{$mesa->id}/eliminar", ['password' => ''])->assertStatus(422)->assertJsonValidationErrors('password');
         $this->assertDatabaseHas('mesas', ['id' => $mesa->id, 'eliminado_at' => null]);
+        $this->eliminar("/api/mesas/{$mesa->id}/eliminar")->assertOk(); // sin motivo
+
+        $this->getJson("/api/usuarios/{$this->mesero->id}/eliminacion")->assertOk()->assertJsonPath('pide_motivo', true);
+        $this->eliminar("/api/usuarios/{$this->mesero->id}/eliminar")->assertStatus(422)->assertJsonValidationErrors('motivo');
+        $this->assertNull($this->mesero->fresh()->eliminado_at);
     }
 
-    public function test_un_producto_vendido_se_archiva_y_uno_nuevo_se_borra(): void
+    public function test_un_producto_vendido_sale_de_todo_y_uno_nuevo_se_borra(): void
     {
         $mesa = Mesa::create(['nombre' => 'Mesa 4', 'qr_code' => 'qr-4', 'estado' => 'libre']);
         $this->venderEnMesa($mesa);
@@ -133,46 +144,54 @@ class EliminarRegistrosTest extends TestCase
         $this->eliminar("/api/productos/{$this->producto->id}/eliminar")->assertOk()->assertJsonPath('resultado', 'archivado');
         $this->assertFalse($this->producto->fresh()->activo);
         $this->assertFalse($combo->fresh()->activo, 'El combo que lo trae deja de venderse.');
-        $this->assertNotContains($this->producto->id, collect($this->getJson('/api/productos')->json())->pluck('id'));
-        $this->assertSame([$this->producto->id], collect($this->getJson('/api/productos?eliminados=1')->json())->pluck('id')->all());
+        $this->assertNotContains($this->producto->id, collect($this->getJson('/api/productos?eliminados=1')->json())->pluck('id'));
         $this->putJson("/api/productos/{$this->producto->id}", ['nombre' => 'Clásica', 'precio_base' => 20000, 'categoria_id' => $this->producto->categoria_id, 'tipo_venta' => 'alimento'])
-            ->assertStatus(422);
+            ->assertNotFound();
+        // El nombre queda libre; el pedido viejo sigue nombrando al producto eliminado.
+        $this->postJson('/api/productos', ['nombre' => 'Clásica', 'precio_base' => 21000, 'categoria_id' => $this->producto->categoria_id, 'tipo_venta' => 'alimento'])
+            ->assertCreated();
+        $this->assertSame('Clásica', \App\Models\PedidoDetalle::firstOrFail()->producto->nombre);
 
         Sanctum::actingAs($this->mesero);
         $this->assertNotContains($this->producto->id, collect($this->getJson('/api/productos')->json())->pluck('id'));
     }
 
-    public function test_una_cuenta_con_historial_se_archiva_y_no_vuelve_a_entrar(): void
+    public function test_una_cuenta_con_historial_sale_de_todo_no_entra_y_su_correo_queda_libre(): void
     {
         $this->postJson('/api/auth/login', ['email' => 'mesero@test.co', 'password' => 'Clave12345'])->assertOk();
         $sinUso = User::create(['role' => 'mesero', 'nombre' => 'Nuevo Mesero', 'email' => 'nuevo@test.co', 'password' => bcrypt('Clave12345'), 'activo' => true]);
 
         Sanctum::actingAs($this->admin);
-        $this->eliminar("/api/usuarios/{$sinUso->id}/eliminar")->assertOk()->assertJsonPath('resultado', 'borrado');
+        $this->eliminarCuenta($sinUso)->assertOk()->assertJsonPath('resultado', 'borrado');
         $this->assertDatabaseMissing('users', ['id' => $sinUso->id]);
 
-        $this->eliminar("/api/usuarios/{$this->mesero->id}/eliminar")->assertOk()->assertJsonPath('resultado', 'archivado');
+        $this->eliminarCuenta($this->mesero)->assertOk()->assertJsonPath('resultado', 'archivado');
         $this->assertFalse($this->mesero->fresh()->activo);
+        $this->assertSame('Ya no trabaja aquí', $this->mesero->fresh()->eliminado_motivo);
         $this->assertSame(0, $this->mesero->tokens()->count());
-        $this->assertNotContains($this->mesero->id, collect($this->getJson('/api/usuarios')->json('data'))->pluck('id'));
-        $this->assertSame([$this->mesero->id], collect($this->getJson('/api/usuarios?eliminados=1')->json('data'))->pluck('id')->all());
-        $this->postJson('/api/usuarios', ['nombre' => 'Otro', 'email' => 'mesero@test.co', 'role' => 'mesero', 'password' => 'Clave12345', 'password_confirmation' => 'Clave12345'])
-            ->assertStatus(422)->assertJsonPath('errors.email.0', 'Ese correo es de una cuenta eliminada: restáurala desde Usuarios › Eliminados.');
+        $this->assertNotContains($this->mesero->id, collect($this->getJson('/api/usuarios?eliminados=1')->json('data'))->pluck('id'));
 
         $this->app['auth']->forgetGuards();
-        $this->postJson('/api/auth/login', ['email' => 'mesero@test.co', 'password' => 'Clave12345'])->assertStatus(422); // inactiva: no entra
+        $this->postJson('/api/auth/login', ['email' => 'mesero@test.co', 'password' => 'Clave12345'])->assertStatus(422); // eliminada: no entra
+
+        // El correo queda libre: una cuenta nueva con él entra normalmente, y no la confunde con la eliminada.
+        Sanctum::actingAs($this->admin);
+        $this->postJson('/api/usuarios', ['nombre' => 'Mario Regresa', 'email' => 'mesero@test.co', 'role' => 'mesero', 'password' => 'Clave12345', 'password_confirmation' => 'Clave12345'])
+            ->assertCreated();
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/auth/login', ['email' => 'mesero@test.co', 'password' => 'Clave12345'])->assertOk()->assertJsonPath('user.nombre', 'Mario Regresa');
     }
 
     public function test_reglas_de_quien_elimina_a_quien(): void
     {
         Sanctum::actingAs($this->admin);
         $this->getJson("/api/usuarios/{$this->admin->id}/eliminacion")->assertJsonPath('bloqueo', 'No puedes eliminar tu propia cuenta.');
-        $this->eliminar("/api/usuarios/{$this->admin->id}/eliminar")->assertStatus(422);
+        $this->eliminarCuenta($this->admin)->assertStatus(422);
         $otroAdmin = User::create(['role' => 'administrador', 'nombre' => 'Beto Admin', 'email' => 'beto@test.co', 'password' => bcrypt('Clave12345'), 'activo' => true]);
-        $this->eliminar("/api/usuarios/{$otroAdmin->id}/eliminar")->assertStatus(422);
-        $this->eliminar("/api/usuarios/{$this->super->id}/eliminar")->assertStatus(422);
+        $this->eliminarCuenta($otroAdmin)->assertStatus(422);
+        $this->eliminarCuenta($this->super)->assertStatus(422);
 
         Sanctum::actingAs($this->super);
-        $this->eliminar("/api/usuarios/{$otroAdmin->id}/eliminar")->assertOk();
+        $this->eliminarCuenta($otroAdmin)->assertOk();
     }
 }

@@ -9,7 +9,7 @@ import type { Categoria, Producto, Combo, Variante, Extra, DatosOferta, Promocio
 export interface CrearCategoriaPayload {
   nombre: string
   activo?: boolean
-  // Mejora (26/10/2026): el menú pregunta qué ingrediente quitar (las bebidas no).
+  // Mejora (26/10/2026, RF-M04-056): el menú pregunta qué ingrediente quitar (las bebidas no).
   permite_quitar_ingredientes?: boolean
 }
 
@@ -91,7 +91,7 @@ export const catalogoService = {
   },
   // Fase 1, tarea 5 (RF-M04-025): q busca por nombre, categoria_id filtra. El público solo recibe
   // lo que se puede pedir; el personal recibe también lo agotado, para poder reactivarlo.
-  productos(params?: { q?: string; categoria_id?: number; eliminados?: 1 }) {
+  productos(params?: { q?: string; categoria_id?: number }) {
     return api.get<Producto[]>('/productos', { params })
   },
   combos() {

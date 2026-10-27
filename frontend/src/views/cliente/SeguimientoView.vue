@@ -3,7 +3,7 @@
 // 011). El invitado no tiene cuenta: entra con el enlace privado que recibió al crear su pedido
 // (/seguimiento/<token>). Ve el estado, los productos, el total y lo pagado; mientras el pedido
 // está PENDIENTE puede pagarlo en línea o reintentar el pago (RF-M06-005/008) y cancelarlo
-// (RF-M07-016, RF-M07-R-009). La página se actualiza sola cada 10 segundos (26/10/2026).
+// (RF-M07-016, RF-M07-R-009). La página se actualiza sola cada 10 segundos (26/10/2026, RF-M07-036).
 // Pago directo (22/10/2026, RF-M06-030 a 033): sin Wompi, paga transfiriendo y subiendo la captura;
 // mientras se revisa lo dice, y si se rechaza ve el motivo y puede enviarla de nuevo.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -42,7 +42,7 @@ async function cargar(silencioso = false) {
   }
 }
 
-// Mejora (26/10/2026): el estado tardaba hasta 30 s en cambiar. Ahora se pregunta cada 10 s mientras
+// Mejora (26/10/2026, RF-M07-036): el estado tardaba hasta 30 s en cambiar. Ahora se pregunta cada 10 s mientras
 // la página está a la vista, y de inmediato al volver a ella (el teléfono pausa las pestañas ocultas).
 const CADA_MS = 10000
 let temporizador: ReturnType<typeof setInterval> | undefined

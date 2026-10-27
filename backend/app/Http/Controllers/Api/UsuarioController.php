@@ -34,8 +34,7 @@ class UsuarioController extends Controller
         $usuarios = User::query()
             ->withCount(['tokens as sesiones_activas' => fn ($q) => app(SesionService::class)->vigentes($q)])
             ->when($request->rol, fn ($q) => $q->where('role', $request->rol))
-            // Eliminar (24/10/2026): las cuentas archivadas solo salen con ?eliminados=1.
-            ->when($request->boolean('eliminados'), fn ($q) => $q->whereNotNull('eliminado_at'), fn ($q) => $q->whereNull('eliminado_at'))
+            ->whereNull('eliminado_at') // Eliminar (RF-M01-033): lo eliminado no vuelve a salir.
             // M10 (20/10/2026): la cuenta de Soporte solo la ven el SuperAdmin y ella misma.
             ->when(! $actor->esSuperAdmin() && ! $actor->esSoporte(), fn ($q) => $q->where('role', '!=', 'soporte'))
             ->when($request->busqueda, fn ($q) => $q->where(
@@ -93,7 +92,7 @@ class UsuarioController extends Controller
     public function update(UpdateUsuarioRequest $request, User $usuario)
     {
         // M10: UpdateUsuarioRequest ya rechazó editar la cuenta de Soporte (se cambia en el servidor).
-        abort_if($usuario->eliminado_at !== null, 422, 'La cuenta está eliminada: restáurala primero desde «Eliminados».');
+        abort_if($usuario->eliminado_at !== null, 404, 'Esta cuenta ya se eliminó.');
         $this->exigirGestion($request, $usuario);
         $datos = $request->validated();
         $motivo = $datos['role'] !== $usuario->role ? GestionCuentas::motivoNoAsigna($request->user(), $datos['role']) : null;
@@ -158,7 +157,7 @@ class UsuarioController extends Controller
     // sesiones es más drástico), el frontend las ofrece juntas para que no se olvide una.
     public function activar(Request $request, User $usuario)
     {
-        abort_if($usuario->eliminado_at !== null, 422, 'La cuenta está eliminada: restáurala primero desde «Eliminados».');
+        abort_if($usuario->eliminado_at !== null, 404, 'Esta cuenta ya se eliminó.');
         $this->impedirAutogestion($request, $usuario);
         $this->exigirGestion($request, $usuario);
         $usuario->update(['activo' => true]);

@@ -1,9 +1,12 @@
 <script setup lang="ts">
-// Eliminar (24/10/2026): la misma ventana para mesas, productos y usuarios. Antes de pedir la
-// contraseña dice qué va a pasar: «se borrará para siempre» (nunca se usó) o «se archivará» (tiene
-// historial; sale de las listas y se restaura desde «Eliminados»), o por qué no se puede ahora.
+// Eliminar (24/10/2026): la misma ventana para mesas, productos y usuarios (y, desde el 27/10/2026,
+// categorías, combos, extras y promociones). Antes de pedir la contraseña dice qué va a pasar, o por qué
+// no se puede ahora.
+// CAMBIO (27/10/2026): eliminar es definitivo (ya no hay «Eliminados» ni restaurar) y el motivo solo se
+// pide al eliminar una cuenta (`vista.pide_motivo`). Lo que tenía historial deja de verse, pero los pedidos
+// y reportes de antes lo siguen nombrando.
 import { ref, watch } from 'vue'
-import { Archive, ShieldAlert, Trash2 } from 'lucide-vue-next'
+import { ShieldAlert, Trash2 } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -53,15 +56,18 @@ watch(
 )
 
 async function confirmar() {
-  if (!props.registro) return
+  if (!props.registro || !vista.value) return
   errores.value = {}
   error.value = ''
-  if (motivo.value.trim().length < 3) errores.value.motivo = 'Escribe por qué lo eliminas (al menos 3 letras).'
+  if (vista.value.pide_motivo && motivo.value.trim().length < 3) errores.value.motivo = 'Escribe por qué eliminas la cuenta (al menos 3 letras).'
   if (!password.value) errores.value.password = 'Escribe tu contraseña para confirmar.'
   if (Object.keys(errores.value).length) return
   enviando.value = true
   try {
-    const { data } = await eliminacionService.eliminar(props.tipo, props.registro.id, { password: password.value, motivo: motivo.value.trim() })
+    const { data } = await eliminacionService.eliminar(props.tipo, props.registro.id, {
+      password: password.value,
+      motivo: vista.value.pide_motivo ? motivo.value.trim() : undefined,
+    })
     emit('eliminado', data)
   } catch (e) {
     const campos = erroresDeValidacion(e)
@@ -76,7 +82,7 @@ async function confirmar() {
 <template>
   <BaseModal :model-value="!!registro" :title="`Eliminar ${articulo}`" @update:model-value="emit('cerrar')">
     <p class="text-sm text-gray-600">
-      Vas a eliminar <strong class="text-ink">«{{ registro?.nombre }}»</strong>.
+      Vas a eliminar <strong class="text-ink">«{{ registro?.nombre }}»</strong>. No se puede deshacer.
     </p>
 
     <div v-if="cargando" class="mt-4 h-16 animate-pulse rounded-2xl bg-gray-100" />
@@ -85,24 +91,14 @@ async function confirmar() {
         <ShieldAlert :size="18" class="mt-px shrink-0" />
         {{ vista.bloqueo }}
       </p>
-      <div
-        v-else
-        class="mt-4 flex items-start gap-3 rounded-2xl px-3.5 py-3 text-sm"
-        :class="vista.se_borra ? 'bg-red-50 text-red-800' : 'bg-amber-50 text-amber-900'"
-      >
-        <component :is="vista.se_borra ? Trash2 : Archive" :size="18" class="mt-px shrink-0" />
-        <div>
-          <p class="font-semibold">{{ vista.se_borra ? 'Se borrará para siempre' : 'Se archivará' }}</p>
-          <p class="mt-0.5">{{ vista.detalle }}</p>
-          <p v-if="!vista.se_borra" class="mt-1 text-xs">
-            Desaparece de las listas y ya no se puede usar. Si fue un error, lo restauras desde «Eliminados».
-          </p>
-        </div>
+      <div v-else class="mt-4 flex items-start gap-3 rounded-2xl bg-red-50 px-3.5 py-3 text-sm text-red-800">
+        <Trash2 :size="18" class="mt-px shrink-0" />
+        <p>{{ vista.detalle }}</p>
       </div>
     </template>
 
     <template v-if="vista && !vista.bloqueo">
-      <label class="mt-4 block">
+      <label v-if="vista.pide_motivo" class="mt-4 block">
         <span class="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[#6c655c]">Motivo</span>
         <textarea
           v-model="motivo"
@@ -110,7 +106,7 @@ async function confirmar() {
           maxlength="255"
           rows="2"
           class="field"
-          placeholder="Ej.: se cerró esa zona, ya no se vende, ya no trabaja aquí"
+          placeholder="Ej.: ya no trabaja aquí"
         />
         <span v-if="errores.motivo" class="mt-1 block text-xs text-red-600">{{ errores.motivo }}</span>
       </label>
@@ -124,7 +120,7 @@ async function confirmar() {
     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       <BaseButton variant="ghost" :disabled="enviando" @click="emit('cerrar')">Volver</BaseButton>
       <BaseButton v-if="vista && !vista.bloqueo" v-escritura variant="danger" :disabled="enviando" @click="confirmar">
-        {{ enviando ? 'Eliminando…' : vista.se_borra ? 'Borrar para siempre' : 'Eliminar (archivar)' }}
+        {{ enviando ? 'Eliminando…' : 'Eliminar' }}
       </BaseButton>
     </div>
   </BaseModal>

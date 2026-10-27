@@ -1,6 +1,6 @@
-// Mejora (26/10/2026): ubicación actual del Cliente para el domicilio.
+// Mejora (26/10/2026, RF-M07-033): ubicación actual del Cliente para el domicilio.
 //
-// CORREGIDO (26/10/2026): la primera lectura del navegador suele ser aproximada (en un computador, o en
+// CORREGIDO (26/10/2026, RF-M07-033): la primera lectura del navegador suele ser aproximada (en un computador, o en
 // un teléfono que aún no fija el GPS, sale de la red y puede caer en otro barrio), y con maximumAge se
 // aceptaba una ubicación vieja. Ahora se escucha la ubicación hasta 12 s, sin datos guardados, y se
 // queda la más precisa; termina antes si llega una de 30 m o menos. Igual el Cliente confirma el punto

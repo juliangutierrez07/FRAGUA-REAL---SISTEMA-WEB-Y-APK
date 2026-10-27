@@ -3,12 +3,15 @@
 // cuando el usuario autenticado es Cliente (PedidoController::index); GET /mis-reservas
 // identifica las reservas propias por correo de contacto, ya que Reserva no tiene
 // cliente_id (RN-M05-12 — ver ReservaController::misReservas()).
+// Mejora (26/10/2026, RF-M05-044): una reserva pendiente de pago se paga desde aquí (antes solo con el enlace
+// del correo); mientras el personal revisa el comprobante se ve «Pago en revisión».
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { CalendarClock, ChevronDown, PackageSearch, XCircle } from 'lucide-vue-next'
 import mascota from '@/assets/img/mascota-fragua-real.png'
 import BotonComprobante from '@/components/pedidos/BotonComprobante.vue'
 import TotalesPedido from '@/components/pedidos/TotalesPedido.vue'
 import PagoEnLinea from '@/components/pagos/PagoEnLinea.vue'
+import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
 import { usePagosEnLinea } from '@/composables/usePagosEnLinea'
 import { pedidoService, type PagoEnLineaPayload } from '@/services/pedido.service'
 import { reservaService } from '@/services/reserva.service'
@@ -135,7 +138,7 @@ async function cargarPedidos(silencioso = false) {
   }
 }
 
-// Mejora (26/10/2026): mientras haya un pedido en curso, la lista se pone al día cada 10 s (con la
+// Mejora (26/10/2026, RF-M07-036): mientras haya un pedido en curso, la lista se pone al día cada 10 s (con la
 // página a la vista) y al volver a ella.
 let temporizador: ReturnType<typeof setInterval> | undefined
 const hayEnCurso = () => pedidos.value.some((p) => ['pendiente', 'confirmado', 'preparando'].includes(p.estado))
@@ -219,6 +222,41 @@ const ESTADOS_RESERVA: Record<EstadoReserva, { texto: string; clase: string }> =
   cancelada: { texto: 'Cancelada', clase: 'bg-red-100 text-red-800' },
   no_show: { texto: 'No asistió', clase: 'bg-neutral-200 text-neutral-700' },
   completada: { texto: 'Completada', clase: 'bg-green-100 text-green-800' },
+}
+
+// Ya mandó el comprobante (o el pago quedó en proceso) y el personal aún no lo revisa.
+function depositoEnRevision(reserva: Reserva) {
+  return reserva.estado === 'pendiente_pago' && reserva.deposito_estado === 'pendiente' && !reserva.puede_pagar
+}
+const EN_REVISION = { texto: 'Pago en revisión', clase: 'bg-sky-100 text-sky-800' }
+function estadoReservaVisible(reserva: Reserva) {
+  return depositoEnRevision(reserva) ? EN_REVISION : ESTADOS_RESERVA[reserva.estado]
+}
+
+const pagoReservaAbierto = ref<number | null>(null)
+const pagandoReserva = ref<number | null>(null)
+const errorPagoReserva = ref('')
+
+function abrirPagoReserva(reserva: Reserva) {
+  pagoReservaAbierto.value = reserva.id
+  errorPagoReserva.value = ''
+}
+
+async function pagarReserva(reserva: Reserva, datosPago: PagoEnLineaPayload) {
+  pagandoReserva.value = reserva.id
+  errorPagoReserva.value = ''
+  try {
+    const { data } = await reservaService.pagarMiDeposito(reserva.id, datosPago)
+    if (irAlCheckout(data.checkout)) return // con la pasarela se paga allá y se vuelve por /pago/retorno
+    const { checkout: _checkout, ...actualizada } = data
+    const idx = reservas.value.findIndex((r) => r.id === reserva.id)
+    if (idx !== -1) reservas.value[idx] = { ...reservas.value[idx], ...actualizada }
+    pagoReservaAbierto.value = null
+  } catch (e) {
+    errorPagoReserva.value = Object.values(erroresDeValidacion(e))[0] ?? mensajeDeError(e, 'No pudimos registrar el pago del depósito.')
+  } finally {
+    pagandoReserva.value = null
+  }
 }
 
 // RN-M05-09: "Una reserva puede cancelarse antes de su hora por quien la creó, o por el
@@ -468,8 +506,8 @@ onMounted(() => cargarPedidos())
                 <p class="mt-0.5 text-xs text-[#6c655c]">{{ formatoFecha(reserva.fecha_hora) }}</p>
               </div>
             </div>
-            <span class="rounded-full px-3 py-1 text-xs font-medium" :class="ESTADOS_RESERVA[reserva.estado].clase">
-              {{ ESTADOS_RESERVA[reserva.estado].texto }}
+            <span class="shrink-0 rounded-full px-3 py-1 text-xs font-medium" :class="estadoReservaVisible(reserva).clase">
+              {{ estadoReservaVisible(reserva).texto }}
             </span>
           </div>
 
@@ -490,6 +528,48 @@ onMounted(() => cargarPedidos())
             >
               Pagaste el depósito en el local: para cancelarla, llama o pasa por el restaurante.
             </span>
+          </div>
+
+          <!-- Mejora (26/10/2026, RF-M05-044): pagar el depósito pendiente sin buscar el correo. -->
+          <p v-if="depositoEnRevision(reserva)" class="mt-3 rounded-xl bg-sky-50 px-3 py-2 text-xs text-sky-800">
+            <template v-if="reserva.deposito_tiene_comprobante">Recibimos tu comprobante.</template>
+            <template v-else>Tu pago quedó en proceso.</template>
+            En cuanto lo verifiquemos, confirmamos tu reserva y te avisamos por correo.
+          </p>
+          <div v-else-if="reserva.puede_pagar" class="mt-3 border-t border-[#e2dbcf] pt-3">
+            <p v-if="reserva.deposito_estado === 'rechazado'" class="mb-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+              Tu pago anterior no se aprobó<template v-if="reserva.deposito_rechazo_motivo">: <strong>{{ reserva.deposito_rechazo_motivo }}</strong></template>.
+              Revisa los datos y vuelve a intentarlo.
+            </p>
+            <template v-if="enLineaDisponible">
+              <button
+                v-if="pagoReservaAbierto !== reserva.id"
+                type="button"
+                class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-ink shadow-[0_8px_20px_rgba(214,164,58,0.3)] transition hover:bg-brand-400 active:scale-[0.99] sm:w-auto"
+                @click="abrirPagoReserva(reserva)"
+              >
+                Pagar el depósito de {{ formatoPrecio(reserva.deposito_valor) }}
+              </button>
+              <template v-else>
+                <AvisoDestacado>Tu reserva se confirma en cuanto verifiquemos el pago del depósito.</AvisoDestacado>
+                <PagoEnLinea
+                  class="mt-3"
+                  :config="configPagos"
+                  :monto="Number(reserva.deposito_valor)"
+                  :enviando="pagandoReserva === reserva.id"
+                  :error="errorPagoReserva"
+                  :medio-inicial="reserva.deposito_pasarela"
+                  concepto="el depósito de"
+                  @pagar="pagarReserva(reserva, $event)"
+                />
+                <button type="button" class="mt-2 text-xs font-medium text-[#6c655c] underline-offset-2 hover:underline" @click="pagoReservaAbierto = null">
+                  Pagar después
+                </button>
+              </template>
+            </template>
+            <AvisoDestacado v-else tono="atencion">
+              Por ahora el depósito no se puede pagar en línea. Escríbenos por WhatsApp y te decimos cómo pagarlo.
+            </AvisoDestacado>
           </div>
         </li>
       </ul>

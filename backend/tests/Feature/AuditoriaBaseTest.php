@@ -83,7 +83,7 @@ class AuditoriaBaseTest extends TestCase
         ]);
         $pago = app(PagoService::class)->registrarCobro($pedido, $this->mesero, ['metodo' => 'efectivo', 'monto' => 20000]);
         app(PagoService::class)->anular($pago, $this->admin, 'Cobro equivocado');
-        // 26/10/2026: la caja solo cierra con todos los pedidos finalizados o cancelados.
+        // 26/10/2026 (RF-M06-038): la caja solo cierra con todos los pedidos finalizados o cancelados.
         app(PedidoService::class)->cancelar($pedido->fresh(), $this->admin, 'El cliente se fue');
         $caja->cerrar($turno->fresh(), $this->admin, 49000, 'Faltó cambio');
 

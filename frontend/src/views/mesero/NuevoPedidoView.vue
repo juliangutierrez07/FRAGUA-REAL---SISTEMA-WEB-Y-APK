@@ -22,9 +22,12 @@ import { pedidoService, type LineaPedidoPayload } from '@/services/pedido.servic
 import { configuracionService } from '@/services/configuracion.service'
 import { useCotizacion } from '@/composables/useCotizacion'
 import { erroresDeValidacion, mensajeDeError } from '@/services/errors'
+import { comandaService } from '@/services/comanda.service'
+import { abrirPdf } from '@/utils/documentos'
+import { avisarComandas, imprimirAlConfirmar, porImprimir } from '@/utils/comandas'
 import { iconoPorNombre } from '@/utils/iconoCategoria'
 import { etiquetaPromocion, precioConPromocion } from '@/utils/promociones'
-import type { Categoria, Combo, Extra, Mesa, Producto, Variante } from '@/types/models'
+import type { Categoria, Combo, Extra, Mesa, Pedido, Producto, Variante } from '@/types/models'
 
 const route = useRoute()
 const router = useRouter()
@@ -135,7 +138,7 @@ async function cargarMesas() {
   }
 }
 
-// Mejora (26/10/2026): cuentas separadas. En una mesa ocupada se elige si el pedido sigue en una de
+// Mejora (26/10/2026, RF-M02-L-033): cuentas separadas. En una mesa ocupada se elige si el pedido sigue en una de
 // sus cuentas o abre una cuenta nueva, que se cobra aparte.
 const cuentaSeleccionada = ref<number | null>(null)
 const mesaPorElegirCuenta = ref<Mesa | null>(null)
@@ -369,24 +372,30 @@ const CAMPOS_DATOS: Record<string, keyof typeof datosCliente> = {
   observaciones_entrega: 'observaciones',
 }
 
+// Mejora (27/10/2026, RF-M02-L-036): el pedido que crea el Mesero ya nace confirmado y su comanda queda
+// lista para la impresora de la cocina. Si este equipo abre la comanda al confirmar (Impresoras), se abre
+// aquí mismo, como antes al tocar «Confirmar pedido»; la pestaña se abre en el clic para que el navegador
+// no la bloquee.
 async function crearPedido() {
   if (!destinoListo.value || !carrito.value.length) return
   errorCrear.value = ''
   creando.value = true
 
   const lineas = lineasDelCarrito()
+  const ventana = imprimirAlConfirmar.get() ? window.open('', '_blank') : null
+  let creado: Pedido
 
   try {
     if (canal.value === 'local') {
-      await pedidoService.crear({
+      ;({ data: creado } = await pedidoService.crear({
         tipo: 'local',
         origen: 'mesero',
         mesa_id: mesaSeleccionada.value!.id,
         cuenta: cuentaSeleccionada.value ?? undefined,
         lineas,
-      })
+      }))
     } else {
-      await pedidoService.crear({
+      ;({ data: creado } = await pedidoService.crear({
         tipo: canal.value,
         origen: 'mesero',
         cliente_invitado_nombre: datosCliente.nombre.trim(),
@@ -401,10 +410,21 @@ async function crearPedido() {
           : {}),
         observaciones_entrega: datosCliente.observaciones.trim() || undefined,
         lineas,
-      })
+      }))
     }
-    router.push({ name: 'mesero-pedidos' })
+    const comanda = (creado.comandas ?? []).find(porImprimir)
+    if (ventana && comanda) {
+      await abrirPdf(() => comandaService.ticket(comanda.id), '', ventana).catch(() => undefined) // si falla, sigue en «por imprimir»
+    } else {
+      ventana?.close()
+    }
+    avisarComandas()
+    const aviso = creado.estado === 'confirmado'
+      ? `Pedido #${creado.id} creado: la comanda ya va para la cocina.`
+      : `Pedido #${creado.id} creado: confírmalo para enviarlo a la cocina.`
+    router.push({ name: 'mesero-pedidos', state: { aviso } })
   } catch (e) {
+    ventana?.close()
     // Si el servidor rechaza un dato del cliente, se vuelve a ese paso con el error en su campo.
     const errores = erroresDeValidacion(e)
     const deDatos = Object.entries(errores).filter(([campo]) => campo in CAMPOS_DATOS)
@@ -937,7 +957,7 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- Mejora (26/10/2026): mesa ocupada → seguir una cuenta o abrir una cuenta separada. -->
+    <!-- Mejora (26/10/2026, RF-M02-L-033): mesa ocupada → seguir una cuenta o abrir una cuenta separada. -->
     <BaseModal
       :model-value="!!mesaPorElegirCuenta"
       :title="mesaPorElegirCuenta ? `${mesaPorElegirCuenta.nombre} está ocupada` : ''"

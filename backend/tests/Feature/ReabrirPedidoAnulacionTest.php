@@ -51,8 +51,7 @@ class ReabrirPedidoAnulacionTest extends TestCase
     {
         $this->como($this->mesero);
         $id = $this->postJson('/api/pedidos', ['tipo' => 'local', 'origen' => 'mesero', 'mesa_id' => $this->mesa->id,
-            'lineas' => [['producto_id' => $this->hamburguesa->id, 'cantidad' => 2]]])->json('id');
-        $this->postJson("/api/pedidos/{$id}/confirmar")->assertOk();
+            'lineas' => [['producto_id' => $this->hamburguesa->id, 'cantidad' => 2]]])->json('id'); // nace confirmado (RF-M02-L-036)
         $this->postJson("/api/pedidos/{$id}/preparando")->assertOk();
         $this->postJson("/api/pedidos/{$id}/cobrar", ['metodo' => 'efectivo', 'monto' => 25000])->assertOk();
         $this->postJson("/api/pedidos/{$id}/cobrar", ['metodo' => 'tarjeta', 'monto' => 15000])->assertOk();

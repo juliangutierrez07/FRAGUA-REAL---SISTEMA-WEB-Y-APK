@@ -317,7 +317,7 @@ class ComandaService
             'canal' => self::CANALES[$pedido->tipo] ?? strtoupper($pedido->tipo),
             'origen' => $pedido->origen,
             'mesa' => $pedido->mesa?->nombre,
-            // Mejora (26/10/2026): con cuentas separadas en la mesa, la comanda dice a cuál va.
+            // Mejora (26/10/2026, RF-M02-L-034): con cuentas separadas en la mesa, la comanda dice a cuál va.
             'cuenta' => $pedido->esLocal() && $pedido->mesa && ($pedido->cuenta > 1 || count($pedido->mesa->cuentasDeLaVisita()) > 1)
                 ? (int) ($pedido->cuenta ?? 1)
                 : null,

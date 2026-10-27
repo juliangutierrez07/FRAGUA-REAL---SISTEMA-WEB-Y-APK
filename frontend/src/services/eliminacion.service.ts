@@ -1,9 +1,10 @@
-// Eliminar mesas, productos y usuarios (24/10/2026): lo que nunca se usó se borra; lo que tiene
-// historial se archiva y se restaura desde «Eliminados» (EliminacionService del backend).
-// Administrador y SuperAdmin, con su contraseña y un motivo.
+// Eliminar mesas, productos y usuarios (24/10/2026) y, desde el 27/10/2026 (RF-M04-057 a 060), categorías,
+// combos, extras y promociones. Es definitivo: lo que nunca se usó se borra; lo que tiene historial sale de
+// todo y su fila se guarda para lo que ya pasó (EliminacionService del backend). Administrador y SuperAdmin,
+// con su contraseña; el motivo solo al eliminar una cuenta (`pide_motivo`).
 import api from './api'
 
-export type Eliminable = 'mesas' | 'productos' | 'usuarios'
+export type Eliminable = 'mesas' | 'productos' | 'usuarios' | 'categorias' | 'combos' | 'extras' | 'promociones'
 
 export interface VistaEliminacion {
   /** true = se borra para siempre; false = se archiva. */
@@ -11,6 +12,8 @@ export interface VistaEliminacion {
   detalle: string
   /** Por qué no se puede eliminar ahora (mesa ocupada, cuenta propia…), o null. */
   bloqueo: string | null
+  /** true solo al eliminar una cuenta (27/10/2026). */
+  pide_motivo: boolean
 }
 
 export interface ResultadoEliminacion {
@@ -22,10 +25,7 @@ export const eliminacionService = {
   vista(tipo: Eliminable, id: number) {
     return api.get<VistaEliminacion>(`/${tipo}/${id}/eliminacion`)
   },
-  eliminar(tipo: Eliminable, id: number, datos: { password: string; motivo: string }) {
+  eliminar(tipo: Eliminable, id: number, datos: { password: string; motivo?: string }) {
     return api.post<ResultadoEliminacion>(`/${tipo}/${id}/eliminar`, datos)
-  },
-  restaurar<T>(tipo: Eliminable, id: number) {
-    return api.post<T>(`/${tipo}/${id}/restaurar`)
   },
 }

@@ -228,7 +228,7 @@ class CajaService
     }
 
     /**
-     * Mejora (26/10/2026): la caja solo cierra con todos los pedidos finalizados o cancelados. Un pedido
+     * Mejora (26/10/2026, RF-M06-038, RN-M06-20): la caja solo cierra con todos los pedidos finalizados o cancelados. Un pedido
      * pendiente, confirmado o en preparación (con o sin saldo) queda en esta lista, de cualquier día.
      *
      * @return array<int, array{id: int, tipo: string, estado: string, destino: string, saldo: float}>

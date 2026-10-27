@@ -125,6 +125,8 @@ async function cargar(opciones: { silencioso?: boolean } = {}) {
 // cancelar) o está confirmando algo, para no cambiarle el pedido en medio de una acción.
 const REFRESCO_MS = 20000
 const avisoNuevos = ref('')
+// Mejora (27/10/2026, RF-M02-L-036): lo que dice Nuevo pedido al volver (el pedido ya va para la cocina).
+const avisoCreado = ref(typeof history.state?.aviso === 'string' ? (history.state.aviso as string) : '')
 let temporizador: ReturnType<typeof setInterval> | null = null
 
 function hayAccionEnCurso() {
@@ -373,6 +375,10 @@ onBeforeUnmount(() => {
     </div>
 
     <p v-if="error" class="mt-4 alert-error">{{ error }}</p>
+    <p v-if="avisoCreado" class="mt-4 alert-success flex items-center justify-between gap-3" role="status">
+      <span>{{ avisoCreado }}</span>
+      <button type="button" class="text-xs font-semibold underline" @click="avisoCreado = ''">Entendido</button>
+    </p>
     <p v-if="avisoNuevos && filtroEstado === 'activos'" class="mt-4 alert-info flex items-center justify-between gap-3">
       <span>{{ avisoNuevos }}</span>
       <button type="button" class="text-xs font-semibold underline" @click="avisoNuevos = ''">Entendido</button>
