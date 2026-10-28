@@ -27,7 +27,16 @@ services:
       QUEUE_CONNECTION: database
       CACHE_STORE: database
       SESSION_DRIVER: database
-      MAIL_MAILER: log
+      # Correo: los valores reales (y la contraseña) se ponen en Dokploy > Environment.
+      # Sin ellos, los correos quedan en el log y no se envían.
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_SCHEME: ${MAIL_SCHEME:-smtps}
+      MAIL_HOST: ${MAIL_HOST:-smtp.hostinger.com}
+      MAIL_PORT: ${MAIL_PORT:-465}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_FROM_NAME: "Fragua Real Burger"
       PASARELA_PROVEEDOR: manual
       CORS_ORIGENES: ""
     volumes:
