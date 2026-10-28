@@ -290,6 +290,21 @@ Usuarios.
       registra) y se ve el cambio; en transferencia hay que tomar la foto; en tarjeta es opcional. Después,
       la reserva tiene «Ver comprobante».
 
+## 8b-septies. Orden del menú (27/10/2026)
+
+- [ ] La barra de abajo del teléfono (y el riel de la tableta) va en este orden: Pedidos, Mesas, Cobrar,
+      Reservas, Menú y, si tiene permiso, Gastos.
+
+## 8b-octies. El pedido en el historial del cliente (27/10/2026)
+
+- [ ] Cobrar un pedido del QR: abajo aparece «Cliente (opcional, para su historial)». Escribir el documento
+      (con o sin puntos), el correo o el celular de un cliente y «Buscar»: sale su nombre y «Encontrado por …».
+- [ ] «Asignar»: dice «Listo: el pedido queda en el historial de …»; el cliente lo ve en «Mis pedidos» con la
+      mesa. «No es» limpia la búsqueda.
+- [ ] Un dato que no es de nadie dice «No hay un cliente registrado…» y se cobra igual.
+- [ ] En la cuenta de una mesa con cuentas separadas, se asigna la cuenta elegida; con «Toda la mesa», todos
+      sus pedidos. Un pedido web que ya tiene cliente solo muestra su nombre.
+
 ## 8c. Correcciones del 19/10/2026
 
 - [ ] Con una mesa dada de baja por el Administrador: no aparece en Mesas, ni en Nuevo pedido, ni en

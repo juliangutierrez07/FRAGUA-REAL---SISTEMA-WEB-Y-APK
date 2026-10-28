@@ -59,6 +59,13 @@ return [
     // Fase 4, tarea 2 (RF-M05-017/026, RN-M05-07/08/13, decisión D6 del 12/10/2026): valores
     // iniciales de las reservas. El Administrador los cambia en Configuración (tabla
     // `configuraciones`); estos solo se usan si esa fila aún no existe.
+    // Cierre automático de la caja (27/10/2026, RF-M06-039): valores iniciales; el Administrador los cambia
+    // en Configuración (tabla `configuraciones`).
+    'caja' => [
+        'hora_cierre' => env('FRAGUA_REAL_CAJA_HORA_CIERRE', '23:30'),
+        'tolerancia_minutos' => (int) env('FRAGUA_REAL_CAJA_TOLERANCIA_MINUTOS', 60),
+    ],
+
     'reservas' => [
         'tolerancia_minutos' => (int) env('FRAGUA_REAL_RESERVA_TOLERANCIA_MINUTOS', 15),
         'recordatorio_minutos' => (int) env('FRAGUA_REAL_RESERVA_RECORDATORIO_MINUTOS', 120),
@@ -119,8 +126,7 @@ return [
     'notificaciones' => [
         // «La reserva empieza en N minutos».
         'reserva_proxima_minutos' => (int) env('FRAGUA_REAL_NOTIF_RESERVA_PROXIMA_MINUTOS', 30),
-        // Desde esta hora se avisa si la caja del día sigue abierta.
-        'caja_abierta_hora' => env('FRAGUA_REAL_NOTIF_CAJA_ABIERTA_HORA', '23:30'),
+        // «La caja sigue abierta» sale a la hora de cierre de la caja ('caja.hora_cierre', 27/10/2026).
         // Desde esta hora se avisa si falta el cierre diario de ayer.
         'cierre_pendiente_hora' => env('FRAGUA_REAL_NOTIF_CIERRE_PENDIENTE_HORA', '10:00'),
         // A esta hora se corre la revisión antes de producción y se avisa si tiene errores.

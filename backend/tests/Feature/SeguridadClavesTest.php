@@ -36,7 +36,7 @@ class SeguridadClavesTest extends TestCase
 
     private function registro(string $clave)
     {
-        return $this->postJson('/api/auth/register', ['nombre' => 'Carla', 'email' => 'carla@test.co', 'password' => $clave, 'password_confirmation' => $clave]);
+        return $this->postJson('/api/auth/register', ['nombre' => 'Carla', 'email' => 'carla@test.co', 'documento' => '1020304050', 'password' => $clave, 'password_confirmation' => $clave]);
     }
 
     private function entrar(string $login, string $clave)

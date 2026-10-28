@@ -78,12 +78,12 @@ class LoginPorUsuarioTest extends TestCase
                 ->assertStatus(422)->assertJsonValidationErrors('username');
         }
 
-        $this->postJson('/api/auth/register', $base + ['email' => 'carla@test.co', 'username' => ' Carla_P '])
+        $this->postJson('/api/auth/register', $base + ['email' => 'carla@test.co', 'documento' => '1000000001', 'username' => ' Carla_P '])
             ->assertCreated()->assertJsonPath('user.username', 'carla_p');
         // Es opcional.
-        $this->postJson('/api/auth/register', $base + ['email' => 'otra@test.co', 'username' => ''])
+        $this->postJson('/api/auth/register', $base + ['email' => 'otra@test.co', 'documento' => '1000000002', 'username' => ''])
             ->assertCreated()->assertJsonPath('user.username', null);
-        $this->postJson('/api/auth/register', $base + ['email' => 'tercera@test.co'])->assertCreated();
+        $this->postJson('/api/auth/register', $base + ['email' => 'tercera@test.co', 'documento' => '1000000003'])->assertCreated();
     }
 
     public function test_el_administrador_pone_cambia_o_quita_el_nombre_de_usuario(): void

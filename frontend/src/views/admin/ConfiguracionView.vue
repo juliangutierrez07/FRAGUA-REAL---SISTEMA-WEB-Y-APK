@@ -5,9 +5,10 @@
 // "en cualquier momento"; el nuevo valor aplica a los pedidos/reservas creados después del
 // cambio y el histórico no se altera (precio congelado, ADR-002).
 // Lee con GET /configuracion (incluye el valor de respaldo si la tabla aún no tiene la fila) y
-// guarda con PUT /configuraciones.
+// guarda con PUT /configuraciones. Desde el 27/10/2026 también la hora de cierre de la caja y la
+// tolerancia antes de que se cierre sola (RF-M06-039).
 import { computed, onMounted, ref } from 'vue'
-import { Bike, CalendarClock, Timer } from 'lucide-vue-next'
+import { Bike, CalendarClock, LockKeyhole, Timer } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -15,7 +16,7 @@ import EstadoTareasAutomaticas from '@/components/configuracion/EstadoTareasAuto
 import RevisionProduccion from '@/components/configuracion/RevisionProduccion.vue'
 import DatosNegocio from '@/components/configuracion/DatosNegocio.vue'
 import PagosDirectos from '@/components/configuracion/PagosDirectos.vue'
-import { configuracionService, RANGOS_TIEMPOS_RESERVA } from '@/services/configuracion.service'
+import { configuracionService, RANGO_TOLERANCIA_CAJA, RANGOS_TIEMPOS_RESERVA } from '@/services/configuracion.service'
 import { erroresDeValidacion, mensajeDeError } from '@/services/errors'
 
 const domicilio = ref('')
@@ -24,12 +25,29 @@ const deposito = ref('')
 const tolerancia = ref('15')
 const recordatorio = ref('120')
 const ventana = ref('60')
+// 27/10/2026 (RF-M06-039): cierre automático de la caja.
+const horaCierre = ref('23:30')
+const toleranciaCaja = ref('60')
 // Valores guardados, para saber si hay cambios sin guardar.
-const guardados = ref({ domicilio: '', deposito: '', tolerancia: '', recordatorio: '', ventana: '' })
+const guardados = ref({ domicilio: '', deposito: '', tolerancia: '', recordatorio: '', ventana: '', horaCierre: '', toleranciaCaja: '' })
 
 function actuales() {
-  return { domicilio: domicilio.value, deposito: deposito.value, tolerancia: tolerancia.value, recordatorio: recordatorio.value, ventana: ventana.value }
+  return {
+    domicilio: domicilio.value, deposito: deposito.value, tolerancia: tolerancia.value, recordatorio: recordatorio.value,
+    ventana: ventana.value, horaCierre: horaCierre.value, toleranciaCaja: toleranciaCaja.value,
+  }
 }
+
+// "23:30" + 60 → "12:30 a. m." (la hora en que la caja se cierra sola).
+const cierreSolaTexto = computed(() => {
+  const coincide = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(horaCierre.value)
+  const extra = Number(toleranciaCaja.value)
+  if (!coincide || !/^\d+$/.test(toleranciaCaja.value)) return ''
+  const total = (Number(coincide[1]) * 60 + Number(coincide[2]) + extra) % (24 * 60)
+  const h = Math.floor(total / 60)
+  const m = String(total % 60).padStart(2, '0')
+  return `${h % 12 || 12}:${m} ${h < 12 ? 'a. m.' : 'p. m.'}`
+})
 
 // "120" → "2 horas"; "90" → "1 h 30 min"; "45" → "45 minutos".
 function duracionTexto(texto: string): string {
@@ -69,6 +87,8 @@ async function cargar() {
     tolerancia.value = String(data.reserva_tolerancia_minutos ?? 15)
     recordatorio.value = String(data.reserva_recordatorio_minutos ?? 120)
     ventana.value = String(data.reserva_ventana_reservada_minutos ?? 60)
+    horaCierre.value = data.caja_hora_cierre ?? '23:30'
+    toleranciaCaja.value = String(data.caja_tolerancia_minutos ?? 60)
     guardados.value = actuales()
   } catch (e) {
     error.value = mensajeDeError(e, 'No pudimos cargar la configuración.')
@@ -98,6 +118,14 @@ function validar(): boolean {
       errores.value[campo] = `Escribe minutos enteros, entre ${minimo} y ${maximo}.`
     }
   }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(horaCierre.value)) {
+    errores.value.caja_hora_cierre = 'Escoge la hora de cierre.'
+  }
+  const [minimo, maximo] = RANGO_TOLERANCIA_CAJA
+  const minutosCaja = Number(toleranciaCaja.value.trim())
+  if (!/^\d+$/.test(toleranciaCaja.value.trim()) || minutosCaja < minimo || minutosCaja > maximo) {
+    errores.value.caja_tolerancia_minutos = `Escribe minutos enteros, entre ${minimo} y ${maximo}.`
+  }
   return Object.keys(errores.value).length === 0
 }
 
@@ -113,11 +141,13 @@ async function guardar() {
       reserva_tolerancia_minutos: Number(tolerancia.value),
       reserva_recordatorio_minutos: Number(recordatorio.value),
       reserva_ventana_reservada_minutos: Number(ventana.value),
+      caja_hora_cierre: horaCierre.value,
+      caja_tolerancia_minutos: Number(toleranciaCaja.value),
     })
     domicilio.value = String(aNumero(domicilio.value))
     deposito.value = String(aNumero(deposito.value))
     guardados.value = actuales()
-    exito.value = 'Configuración guardada. Los valores en pesos aplican a los pedidos y reservas nuevos; los tiempos de reserva, desde ya.'
+    exito.value = 'Configuración guardada. Los valores en pesos aplican a los pedidos y reservas nuevos; los tiempos de reserva y de la caja, desde ya.'
   } catch (e) {
     errores.value = erroresDeValidacion(e)
     // Si el servidor señaló campos concretos, el mensaje va bajo cada campo; el general solo
@@ -233,6 +263,35 @@ onMounted(cargar)
               <div>
                 <BaseInput formato="entero" :maxlength="4" v-model="ventana" label="Mesa Reservada" type="text" placeholder="60" :error="errores.reserva_ventana_reservada_minutos" />
                 <p v-if="!errores.reserva_ventana_reservada_minutos" class="mt-1 text-xs text-gray-500">La mesa se ve Reservada desde {{ duracionTexto(ventana) || '…' }} antes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 27/10/2026 (RF-M06-039, RN-M06-22): la caja que nadie cerró se cierra sola. -->
+      <div class="card p-4 sm:p-5">
+        <div class="flex items-start gap-3">
+          <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+            <LockKeyhole :size="21" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <h2 class="text-[15px] font-semibold text-ink">Cierre automático de la caja</h2>
+            <p class="mt-0.5 text-xs text-gray-500">
+              Si nadie cierra el turno, se cierra solo pasada la tolerancia, sin contar el efectivo. Después registras
+              lo que contaste en Caja. Los pedidos que queden abiertos se avisan en la campana y se cobran con la caja
+              del día siguiente.
+            </p>
+            <div class="mt-3 grid gap-4 sm:grid-cols-2">
+              <div>
+                <BaseInput v-model="horaCierre" label="Hora de cierre del negocio" type="time" :error="errores.caja_hora_cierre" />
+                <p v-if="!errores.caja_hora_cierre" class="mt-1 text-xs text-gray-500">Antes de las 6:00 a. m. cuenta como la madrugada siguiente.</p>
+              </div>
+              <div>
+                <BaseInput formato="entero" :maxlength="3" v-model="toleranciaCaja" label="Tolerancia (minutos)" type="text" placeholder="60" :error="errores.caja_tolerancia_minutos" />
+                <p v-if="!errores.caja_tolerancia_minutos && cierreSolaTexto" class="mt-1 text-xs text-gray-500">
+                  La caja se cierra sola a las {{ cierreSolaTexto }}
+                </p>
               </div>
             </div>
           </div>

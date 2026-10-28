@@ -25,6 +25,10 @@ class UpdateConfiguracionesRequest extends FormRequest
         foreach (PoliticaReservas::RANGOS as $clave => [$minimo, $maximo]) {
             $reglas[$clave] = ['sometimes', 'integer', "min:{$minimo}", "max:{$maximo}"];
         }
+        // 27/10/2026 (RF-M06-039): hora de cierre de la caja y tolerancia antes de cerrarla sola.
+        [$minimo, $maximo] = \App\Support\Caja\PoliticaCaja::RANGO_TOLERANCIA;
+        $reglas[\App\Support\Caja\PoliticaCaja::HORA_CIERRE] = ['sometimes', 'string', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'];
+        $reglas[\App\Support\Caja\PoliticaCaja::TOLERANCIA] = ['sometimes', 'integer', "min:{$minimo}", "max:{$maximo}"];
 
         return $reglas;
     }
@@ -39,6 +43,8 @@ class UpdateConfiguracionesRequest extends FormRequest
             PoliticaReservas::VENTANA.'.min' => 'La mesa debe marcarse Reservada al menos :min minutos antes.',
             PoliticaReservas::VENTANA.'.max' => 'La mesa no puede marcarse Reservada más de 4 horas antes.',
             '*.integer' => 'Escribe un número entero de minutos.',
+            \App\Support\Caja\PoliticaCaja::HORA_CIERRE.'.regex' => 'Escribe la hora en formato de 24 horas, por ejemplo 23:30.',
+            \App\Support\Caja\PoliticaCaja::TOLERANCIA.'.max' => 'La tolerancia de la caja no puede pasar de 6 horas (360 minutos).',
         ];
     }
 }

@@ -4,7 +4,7 @@
 // refleja el error 422 que devuelva).
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowRight, AtSign, Lock, Mail, Phone, User } from 'lucide-vue-next'
+import { ArrowRight, AtSign, IdCard, Lock, Mail, Phone, User } from 'lucide-vue-next'
 import BaseInput from '@/components/common/BaseInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import RequisitosContrasena from '@/components/common/RequisitosContrasena.vue'
@@ -19,6 +19,8 @@ const { registrar } = useAuth()
 const nombre = ref('')
 const email = ref('')
 const telefono = ref('')
+// 27/10/2026 (RF-M01-035): con él, el Mesero encuentra al cliente al cobrar y le deja el pedido en su historial.
+const documento = ref('')
 const username = ref('')
 const password = ref('')
 const passwordConfirmation = ref('')
@@ -36,6 +38,7 @@ async function onSubmit() {
       email: email.value,
       username: username.value.trim() || undefined,
       telefono: telefono.value || undefined,
+      documento: documento.value,
       password: password.value,
       password_confirmation: passwordConfirmation.value,
     })
@@ -75,6 +78,18 @@ async function onSubmit() {
         :icon="Phone"
         :error="erroresCampo.telefono"
       />
+    </div>
+    <div>
+      <BaseInput formato="identificacion"
+        v-model="documento"
+        label="Número de documento"
+        placeholder="Cédula, cédula de extranjería o pasaporte"
+        :icon="IdCard"
+        :error="erroresCampo.documento"
+      />
+      <p v-if="!erroresCampo.documento" class="mt-1.5 text-xs text-[#6c655c]">
+        Al pagar en el local, dale tu documento (o tu correo o celular) al mesero y el pedido queda en tu historial.
+      </p>
     </div>
     <BaseInput formato="correo"
       v-model="email"

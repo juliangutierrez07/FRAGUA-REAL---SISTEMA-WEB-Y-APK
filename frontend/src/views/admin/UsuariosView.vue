@@ -282,7 +282,7 @@ async function confirmarCrear() {
 // Datos permitidos: nombre, correo, nombre de usuario, teléfono y rol (CA-M01-003.1). La contraseña no se cambia
 // aquí. Cambiar el rol cierra todas las sesiones de esa cuenta; nadie cambia su propio rol.
 const usuarioEditando = ref<Usuario | null>(null)
-const formEditar = ref({ nombre: '', email: '', username: '', telefono: '', role: 'mesero' as Rol, puede_registrar_gastos: false })
+const formEditar = ref({ nombre: '', email: '', username: '', telefono: '', documento: '', role: 'mesero' as Rol, puede_registrar_gastos: false })
 const erroresEditar = ref<Record<string, string>>({})
 const errorEditar = ref('')
 const guardandoEdicion = ref(false)
@@ -310,6 +310,7 @@ function abrirEditar(usuario: Usuario) {
     email: usuario.email,
     username: usuario.username ?? '',
     telefono: usuario.telefono ?? '',
+    documento: usuario.documento ?? '',
     role: usuario.role,
     puede_registrar_gastos: !!usuario.puede_registrar_gastos,
   }
@@ -331,6 +332,8 @@ async function confirmarEditar() {
       email: formEditar.value.email,
       username: formEditar.value.username.trim(),
       telefono: formEditar.value.telefono.trim() || null,
+      // 27/10/2026 (RF-M01-035): el documento solo es de un Cliente.
+      ...(formEditar.value.role === 'cliente' ? { documento: formEditar.value.documento.trim() || null } : {}),
       role: formEditar.value.role,
       puede_registrar_gastos: formEditar.value.role === 'mesero' && formEditar.value.puede_registrar_gastos,
     })
@@ -436,7 +439,7 @@ onMounted(cargar)
                 <span v-if="usuario.puede_registrar_gastos" class="badge bg-sky-50 text-sky-700 ring-sky-600/20">Compras y gastos</span>
               </p>
               <p class="mt-1 truncate text-xs text-gray-500">
-                {{ usuario.email }}<template v-if="usuario.username"> · @{{ usuario.username }}</template><template v-if="usuario.telefono"> · {{ usuario.telefono }}</template>
+                {{ usuario.email }}<template v-if="usuario.username"> · @{{ usuario.username }}</template><template v-if="usuario.telefono"> · {{ usuario.telefono }}</template><template v-if="usuario.documento"> · doc. {{ usuario.documento }}</template>
               </p>
             </div>
           </div>
@@ -676,6 +679,12 @@ onMounted(cargar)
           <span class="field-label">Teléfono (opcional)</span>
           <input v-formato="'celular'" v-model="formEditar.telefono" type="tel" class="field" autocomplete="off" />
           <span v-if="erroresEditar.telefono" class="mt-1 block text-xs text-red-600">{{ erroresEditar.telefono }}</span>
+        </label>
+
+        <label v-if="formEditar.role === 'cliente'" class="block">
+          <span class="field-label">Número de documento</span>
+          <input v-formato="'identificacion'" v-model="formEditar.documento" type="text" class="field" autocomplete="off" />
+          <span v-if="erroresEditar.documento" class="mt-1 block text-xs text-red-600">{{ erroresEditar.documento }}</span>
         </label>
 
         <div>

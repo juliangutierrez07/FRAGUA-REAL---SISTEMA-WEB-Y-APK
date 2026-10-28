@@ -129,6 +129,8 @@ class CajaController extends Controller
         return response()->json(array_merge($turno->toArray(), [
             'resumen' => $this->cajaService->resumen($turno),
             'pedidos_sin_finalizar' => $this->cajaService->pedidosSinFinalizar(),
+            // 27/10/2026 (RF-M06-039): cuándo se cierra sola si nadie la cierra (hora de cierre + tolerancia).
+            'se_cierra_sola_at' => \App\Support\Caja\PoliticaCaja::limite($turno->fecha)->toIso8601String(),
         ]));
     }
 
@@ -153,5 +155,19 @@ class CajaController extends Controller
         );
 
         return response()->json($turno);
+    }
+
+    // POST /api/caja/turnos/{turno}/conteo — 27/10/2026 (RF-M06-039): el efectivo contado de un turno que
+    // se cerró solo; con justificación si no cuadra, como al cerrar a mano.
+    public function registrarConteo(CerrarCajaRequest $request, CajaTurno $turno)
+    {
+        $this->authorize('cerrar', $turno);
+
+        return response()->json($this->cajaService->registrarConteo(
+            $turno,
+            $request->user(),
+            (float) $request->efectivo_contado,
+            $request->justificacion_descuadre,
+        ));
     }
 }

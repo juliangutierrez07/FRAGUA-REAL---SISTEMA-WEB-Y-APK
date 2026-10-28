@@ -82,6 +82,9 @@ final class CatalogoAuditoria
         // Caja y pagos
         'abrir_caja' => ['Apertura de caja', 'caja'],
         'cerrar_caja' => ['Cierre de caja', 'caja'],
+        'cerrar_caja_automatico' => ['Cierre automático de caja, sin contar', 'caja'], // 27/10/2026, RF-M06-039
+        'registrar_conteo_caja' => ['Conteo de caja tras el cierre automático', 'caja'],
+        'asignar_cliente_pedido' => ['Pedido asignado a un cliente al cobrar', 'pedidos'], // 27/10/2026, RF-M06-040
         'anular_pago' => ['Anulación de pago', 'caja'],
         'reembolsar_pago' => ['Reembolso de pago', 'caja'],
         'anular_comprobante' => ['Comprobante de pago anulado', 'caja'],

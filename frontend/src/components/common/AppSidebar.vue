@@ -77,28 +77,33 @@ interface Enlace {
   tambien?: string[]
   // M09 (20/10/2026): la clave del permiso de menú (MenusPorRol del servidor).
   menu: string
+  // Orden del menú (27/10/2026): el grupo al que pertenece (solo el Administrador).
+  grupo?: string
 }
 
+// Orden del menú (27/10/2026): por uso. Arriba lo del día a día, luego el negocio y al final lo de
+// administrar; cada grupo con su título en la barra completa y una línea en el riel de la tableta.
 const enlacesAdmin: Enlace[] = [
-  { to: '/admin', label: 'Dashboard', corto: 'Inicio', icon: LayoutDashboard, menu: 'dashboard' },
-  { to: '/admin/usuarios', label: 'Usuarios', corto: 'Usuarios', icon: Users, menu: 'usuarios' }, // M01
-  { to: '/admin/pedidos', label: 'Pedidos', corto: 'Pedidos', icon: ClipboardList, menu: 'pedidos' }, // M02
-  { to: '/admin/compras-gastos', label: 'Compras y Gastos', corto: 'Gastos', icon: Receipt, menu: 'compras_gastos' }, // M03
-  { to: '/admin/catalogo', label: 'Catálogo', corto: 'Catálogo', icon: UtensilsCrossed, tambien: ['/admin/disponibilidad'], menu: 'catalogo' }, // M04
-  { to: '/admin/mesas', label: 'Mesas y Reservas', corto: 'Mesas', icon: Armchair, tambien: ['/admin/reservas'], menu: 'mesas' }, // M05
-  { to: '/admin/caja', label: 'Caja', corto: 'Caja', icon: Wallet, menu: 'caja' }, // M06
-  { to: '/admin/reportes', label: 'Reportes', corto: 'Reportes', icon: BarChart3, menu: 'reportes' }, // M08
-  { to: '/admin/auditoria', label: 'Auditoría', corto: 'Auditoría', icon: ShieldCheck, menu: 'auditoria' }, // M01 (Fase 3)
-  { to: '/admin/configuracion', label: 'Configuración', corto: 'Ajustes', icon: Settings, menu: 'configuracion' }, // M05/M07
-  { to: '/admin/impresoras', label: 'Impresoras', corto: 'Impresoras', icon: Printer, menu: 'impresoras' }, // M12
+  { to: '/admin', label: 'Dashboard', corto: 'Inicio', icon: LayoutDashboard, menu: 'dashboard', grupo: 'Operación' },
+  { to: '/admin/pedidos', label: 'Pedidos', corto: 'Pedidos', icon: ClipboardList, menu: 'pedidos', grupo: 'Operación' }, // M02
+  { to: '/admin/mesas', label: 'Mesas y Reservas', corto: 'Mesas', icon: Armchair, tambien: ['/admin/reservas'], menu: 'mesas', grupo: 'Operación' }, // M05
+  { to: '/admin/caja', label: 'Caja', corto: 'Caja', icon: Wallet, menu: 'caja', grupo: 'Operación' }, // M06
+  { to: '/admin/catalogo', label: 'Catálogo', corto: 'Catálogo', icon: UtensilsCrossed, tambien: ['/admin/disponibilidad'], menu: 'catalogo', grupo: 'Negocio' }, // M04
+  { to: '/admin/compras-gastos', label: 'Compras y Gastos', corto: 'Gastos', icon: Receipt, menu: 'compras_gastos', grupo: 'Negocio' }, // M03
+  { to: '/admin/reportes', label: 'Reportes', corto: 'Reportes', icon: BarChart3, menu: 'reportes', grupo: 'Negocio' }, // M08
+  { to: '/admin/usuarios', label: 'Usuarios', corto: 'Usuarios', icon: Users, menu: 'usuarios', grupo: 'Administración' }, // M01
+  { to: '/admin/auditoria', label: 'Auditoría', corto: 'Auditoría', icon: ShieldCheck, menu: 'auditoria', grupo: 'Administración' }, // M01 (Fase 3)
+  { to: '/admin/impresoras', label: 'Impresoras', corto: 'Impresoras', icon: Printer, menu: 'impresoras', grupo: 'Administración' }, // M12
+  { to: '/admin/configuracion', label: 'Configuración', corto: 'Ajustes', icon: Settings, menu: 'configuracion', grupo: 'Administración' }, // M05/M07
 ]
 
+// Orden del menú (27/10/2026): lo que más usa en el turno primero (en el teléfono, la barra de abajo).
 const enlacesMesero: Enlace[] = [
   { to: '/mesero', label: 'Pedidos', corto: 'Pedidos', icon: ClipboardList, tambien: ['/mesero/pedidos'], menu: 'pedidos' }, // M02
   { to: '/mesero/mesas', label: 'Mesas', corto: 'Mesas', icon: Armchair, menu: 'mesas' }, // M05
+  { to: '/mesero/caja', label: 'Cobrar', corto: 'Cobrar', icon: Wallet, menu: 'cobrar' }, // M06
   { to: '/mesero/reservas', label: 'Reservas', corto: 'Reservas', icon: CalendarClock, menu: 'reservas' }, // M05 (Fase 1)
   { to: '/mesero/menu', label: 'Menú', corto: 'Menú', icon: UtensilsCrossed, menu: 'menu' }, // M04 (Fase 1)
-  { to: '/mesero/caja', label: 'Cobrar', corto: 'Cobrar', icon: Wallet, menu: 'cobrar' }, // M06
 ]
 // Fase 7, tarea 2 (RF-M03-32): solo el Mesero con permiso de compras y gastos.
 const enlaceGastos: Enlace = { to: '/mesero/gastos', label: 'Gastos', corto: 'Gastos', icon: Receipt, menu: 'gastos' }
@@ -113,6 +118,18 @@ function habilitados(lista: Enlace[]) {
 const enlaces = computed(() => {
   if (props.variant === 'admin') return habilitados(enlacesAdmin)
   return habilitados(usuario.value?.puede_registrar_gastos ? [...enlacesMesero, enlaceGastos] : enlacesMesero)
+})
+
+// Los enlaces juntos por grupo, en orden; un grupo sin menús habilitados no se muestra.
+const secciones = computed(() => {
+  const lista: { titulo: string | null; items: Enlace[] }[] = []
+  for (const item of enlaces.value) {
+    const titulo = item.grupo ?? null
+    const ultima = lista.at(-1)
+    if (ultima && ultima.titulo === titulo) ultima.items.push(item)
+    else lista.push({ titulo, items: [item] })
+  }
+  return lista
 })
 
 // "/admin" y "/mesero" son el índice de cada zona pero también el PREFIJO de todas las demás
@@ -234,32 +251,39 @@ const iniciales = computed(() =>
 
     <!-- CORREGIDO (26/10/2026, RNF-TRANS-035): sin min-h-0 la lista no se encogía en pantallas bajas y empujaba el
          perfil y «Cerrar sesión» fuera de la pantalla; ahora la lista se desplaza y el pie queda fijo. -->
-    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-2 md:px-2 lg:px-3">
-      <router-link
-        v-for="item in enlaces"
-        :key="item.to"
-        :to="item.to"
-        :title="item.label"
-        class="group relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition md:flex-col md:gap-1.5 md:px-1 md:py-2.5 lg:flex-row lg:gap-3 lg:px-3 lg:py-2.5"
-        :class="esActivo(item) ? 'bg-white/10 text-white' : 'text-white/55 hover:bg-white/5 hover:text-white'"
-        active-class=""
-        exact-active-class=""
-        @click="cerrar"
-      >
-        <span
-          v-if="esActivo(item)"
-          class="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-500 md:h-8"
-          aria-hidden="true"
-        />
-        <component
-          :is="item.icon"
-          :size="20"
-          class="shrink-0 transition"
-          :class="esActivo(item) ? 'text-brand-400' : 'text-white/50 group-hover:text-white'"
-        />
-        <span class="md:hidden lg:inline">{{ item.label }}</span>
-        <span class="hidden text-[10px] font-semibold leading-tight md:inline lg:hidden">{{ item.corto }}</span>
-      </router-link>
+    <nav class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2 md:px-2 lg:px-3">
+      <div v-for="(seccion, i) in secciones" :key="seccion.titulo ?? i" class="space-y-1" :class="i > 0 ? 'mt-4 md:mt-2 lg:mt-4' : ''">
+        <!-- Orden del menú (27/10/2026): el título del grupo; en el riel de la tableta, solo una línea. -->
+        <template v-if="seccion.titulo">
+          <p class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 md:hidden lg:block">{{ seccion.titulo }}</p>
+          <div v-if="i > 0" class="mx-3 mb-2 hidden border-t border-white/10 md:block lg:hidden" aria-hidden="true" />
+        </template>
+        <router-link
+          v-for="item in seccion.items"
+          :key="item.to"
+          :to="item.to"
+          :title="item.label"
+          class="group relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition md:flex-col md:gap-1.5 md:px-1 md:py-2.5 lg:flex-row lg:gap-3 lg:px-3 lg:py-2.5"
+          :class="esActivo(item) ? 'bg-white/10 text-white' : 'text-white/55 hover:bg-white/5 hover:text-white'"
+          active-class=""
+          exact-active-class=""
+          @click="cerrar"
+        >
+          <span
+            v-if="esActivo(item)"
+            class="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-500 md:h-8"
+            aria-hidden="true"
+          />
+          <component
+            :is="item.icon"
+            :size="20"
+            class="shrink-0 transition"
+            :class="esActivo(item) ? 'text-brand-400' : 'text-white/50 group-hover:text-white'"
+          />
+          <span class="md:hidden lg:inline">{{ item.label }}</span>
+          <span class="hidden text-[10px] font-semibold leading-tight md:inline lg:hidden">{{ item.corto }}</span>
+        </router-link>
+      </div>
     </nav>
 
     <div class="shrink-0 space-y-1 border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-2 lg:px-3">

@@ -727,6 +727,38 @@ Resumen; la lista completa del invitado está en `QA-CLIENTE.md` (secciones 4 a 
 - [ ] Una promoción que nunca se aplicó se borra; una que ya se aplicó desaparece y deja de descontar.
 - [ ] Auditoría registra cada eliminación («… eliminado» o «… eliminado (se guarda su historial)»).
 
+## 15i. Orden de la barra lateral (27/10/2026)
+
+- [ ] En el computador, la barra lateral tiene tres grupos con título: OPERACIÓN (Dashboard, Pedidos, Mesas
+      y Reservas, Caja), NEGOCIO (Catálogo, Compras y Gastos, Reportes) y ADMINISTRACIÓN (Usuarios,
+      Auditoría, Impresoras, Configuración). En el menú del teléfono, igual.
+- [ ] En la tableta (solo íconos) los grupos se separan con una línea.
+- [ ] Una cuenta a la que el SuperAdmin le quitó menús solo ve los suyos, en el mismo orden, sin títulos
+      de grupos vacíos.
+
+## 15j. Cierre automático de la caja (27/10/2026)
+
+- [ ] Configuración > «Cierre automático de la caja»: hora de cierre 11:30 p. m. y tolerancia 60 dicen «La
+      caja se cierra sola a las 12:30 a. m.». Al cambiar la tolerancia, la hora cambia. Una tolerancia de
+      más de 360 no se guarda.
+- [ ] Caja, con el turno abierto: «Si nadie la cierra, se cierra sola a las 12:30 a. m., sin contar el
+      efectivo».
+- [ ] A la hora de cierre llega a la campana «La caja sigue abierta», con la hora en que se cierra sola.
+- [ ] Sin cerrar la caja, pasada la tolerancia: el turno queda «Cerrada» con «Cierre automático, sin
+      contar», aunque haya pedidos sin finalizar. La campana avisa «La caja del dd/mm se cerró sola» con
+      esos pedidos, que se cobran con la caja del día siguiente.
+- [ ] «Registrar conteo»: con el efectivo esperado se guarda sin justificación; con otro valor muestra la
+      diferencia y pide justificación. Después el turno dice «Cierre automático» y el descuadre, y el
+      aviso de arriba desaparece.
+- [ ] Auditoría registra «Cierre automático de caja, sin contar» y «Conteo de caja tras el cierre
+      automático».
+
+## 15k. Documento del cliente (27/10/2026)
+
+- [ ] Usuarios > editar un Cliente: aparece «Número de documento»; uno que ya tiene otro cliente dice «Ese
+      número de documento ya lo tiene otro cliente». En la lista se ve «doc. …».
+- [ ] Auditoría registra «Pedido asignado a un cliente al cobrar» cuando el Mesero asigna un pedido.
+
 ## 16. Contraseña segura y bloqueo por intentos (21/10/2026)
 
 - [ ] Usuarios › Nuevo usuario: debajo de la contraseña salen los requisitos y se marcan al cumplirse; con

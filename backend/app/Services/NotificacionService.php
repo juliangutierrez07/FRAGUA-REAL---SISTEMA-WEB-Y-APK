@@ -52,6 +52,8 @@ class NotificacionService
         // Decisión del 22/10/2026: el pedido finalizado volvió a cobro; lo cobra el Mesero.
         'pedido_reabierto' => ['caja', self::PERSONAL, ['caja', 'cobrar', 'pedidos']],
         'caja_abierta' => ['caja', self::ADMIN, ['caja']],
+        // 27/10/2026 (RF-M06-039): la caja se cerró sola; falta registrar el conteo.
+        'caja_cerrada_sola' => ['caja', self::ADMIN, ['caja']],
         'cierre_pendiente' => ['caja', self::ADMIN, ['compras_gastos']],
         'producto_agotado' => ['operacion', self::PERSONAL, ['catalogo', 'menu', 'pedidos']],
         'comanda_no_salio' => ['operacion', self::PERSONAL, ['pedidos']],
@@ -258,19 +260,35 @@ class NotificacionService
         return $n;
     }
 
+    // 27/10/2026 (RF-M06-039): el aviso sale a la hora de cierre de Configuración (antes, a las 23:30
+    // fijas) y dice a qué hora se cierra sola si nadie la cierra.
     private function cajaAbierta(): int
     {
-        if (! $this->yaEs('caja_abierta_hora', '23:30')) {
-            return 0;
-        }
-        $turno = app(CajaService::class)->turnoAbierto();
-        if (! $turno instanceof CajaTurno) {
-            return 0;
-        }
-        $this->notificar('caja_abierta', 'La caja sigue abierta', 'Cierra el turno de hoy en Caja: cuenta el efectivo y registra el cierre.',
-            "caja_abierta:{$turno->id}", ['administrador' => '/admin/caja']);
+        $n = 0;
+        CajaTurno::where('estado', 'abierta')->get()->each(function (CajaTurno $turno) use (&$n) {
+            $limite = \App\Support\Caja\PoliticaCaja::limite($turno->fecha);
+            if (now()->lt($limite->subMinutes(\App\Support\Caja\PoliticaCaja::toleranciaMinutos()))) {
+                return;
+            }
+            $sola = \App\Support\Caja\PoliticaCaja::horaLegible($limite);
+            $this->notificar('caja_abierta', 'La caja sigue abierta', "Cierra el turno en Caja: cuenta el efectivo y registra el cierre. Si no, se cierra sola a las {$sola}, sin contar.",
+                "caja_abierta:{$turno->id}", ['administrador' => '/admin/caja']);
+            $n++;
+        });
 
-        return 1;
+        return $n;
+    }
+
+    /** 27/10/2026 (RF-M06-039): la caja se cerró sola; se pide el conteo y se listan los pedidos abiertos. */
+    public function cajaCerradaAutomaticamente(CajaTurno $turno, array $pendientes): void
+    {
+        $texto = 'Nadie la cerró a tiempo: registra en Caja el efectivo que contaste.';
+        if ($pendientes) {
+            $ids = implode(', ', array_map(fn ($p) => '#'.$p['id'], array_slice($pendientes, 0, 6)));
+            $texto .= ' Quedaron pedidos sin finalizar ('.$ids.(count($pendientes) > 6 ? '…' : '').'): se cobran con la próxima caja que se abra.';
+        }
+        $this->notificar('caja_cerrada_sola', 'La caja del '.$turno->fecha->format('d/m').' se cerró sola', $texto,
+            "caja_cerrada_sola:{$turno->id}", ['administrador' => '/admin/caja']);
     }
 
     private function cierrePendiente(): int

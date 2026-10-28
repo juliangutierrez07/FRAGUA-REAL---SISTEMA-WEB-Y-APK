@@ -181,6 +181,9 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         // cobrar ESTE pedido (siempre el Mesero; el grupo de rutas también deja pasar al
         // Administrador, pero la Policy lo rechaza — autorización fina en profundidad).
         Route::post('/pedidos/{pedido}/cobrar', [PagoController::class, 'cobrar'])->middleware('menu:cobrar,caja');
+        // Fidelización (27/10/2026, RF-M06-040): al cobrar, buscar al Cliente y dejarle el pedido en su historial.
+        Route::get('/clientes/buscar', [PedidoController::class, 'buscarCliente'])->middleware(['menu:cobrar,mesas', 'throttle:30,1']);
+        Route::post('/pedidos/asignar-cliente', [PedidoController::class, 'asignarCliente'])->middleware('menu:cobrar,mesas');
 
         // Fase 6, tarea 2 (RN-PED-06/09/17 a 19, D5): comandas de cocina impresas desde el navegador.
         Route::get('/comandas/pendientes', [ComandaController::class, 'pendientes']);
@@ -387,6 +390,8 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         Route::get('/caja/turno-actual', [CajaController::class, 'turnoActual'])->middleware('menu:caja');
         Route::post('/caja/abrir', [CajaController::class, 'abrir'])->middleware('menu:caja');
         Route::post('/caja/turnos/{turno}/cerrar', [CajaController::class, 'cerrar'])->middleware('menu:caja');
+        // 27/10/2026 (RF-M06-039): el conteo de un turno que se cerró solo.
+        Route::post('/caja/turnos/{turno}/conteo', [CajaController::class, 'registrarConteo'])->middleware('menu:caja');
 
         // Pagos: anular (control financiero)
         Route::post('/pagos/{pago}/anular', [PagoController::class, 'anular'])->middleware('menu:caja');

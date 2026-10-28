@@ -11,6 +11,7 @@ export type Formato =
   | 'persona'
   | 'nombre'
   | 'documento'
+  | 'identificacion'
   | 'cuenta'
   | 'entero'
   | 'pesos'
@@ -71,6 +72,9 @@ export const REGLAS: Record<Formato, Regla> = {
     maxlength: 12,
     inputmode: 'numeric',
   },
+  // Documento de una persona (27/10/2026, RF-M01-035): cédula, cédula de extranjería o pasaporte; letras y
+  // números en mayúscula, sin puntos ni espacios.
+  identificacion: { limpiar: (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, ''), maxlength: 15, autocapitalize: 'characters' },
   // Número de cuenta Bancolombia: 11 dígitos, sin guiones.
   cuenta: { limpiar: digitos, maxlength: 11, inputmode: 'numeric' },
   entero: { limpiar: digitos, maxlength: 6, inputmode: 'numeric' },
@@ -178,7 +182,7 @@ export function atributosDeFormato(formato: Formato): Record<string, string> {
   const attrs: Record<string, string> = {}
   if (regla.inputmode) attrs.inputmode = regla.inputmode
   if (regla.autocapitalize) attrs.autocapitalize = regla.autocapitalize
-  if (['correo', 'usuario', 'llave', 'ip', 'codigo', 'referencia', 'cuenta', 'documento', 'celular'].includes(formato)) {
+  if (['correo', 'usuario', 'llave', 'ip', 'codigo', 'referencia', 'cuenta', 'documento', 'identificacion', 'celular'].includes(formato)) {
     attrs.spellcheck = 'false'
     attrs.autocorrect = 'off'
   }

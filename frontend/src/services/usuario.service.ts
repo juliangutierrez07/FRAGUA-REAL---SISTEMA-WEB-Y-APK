@@ -20,6 +20,8 @@ export interface EditarUsuarioPayload {
   // Fase 3, tarea 3: vacío = sin nombre de usuario (entra solo con el correo).
   username: string
   telefono: string | null
+  // 27/10/2026 (RF-M01-035): solo se envía para un Cliente.
+  documento?: string | null
   role: Rol
   // Fase 7, tarea 2 (RF-M03-32): solo cuenta para un Mesero; al cambiar a otro rol se quita.
   puede_registrar_gastos?: boolean

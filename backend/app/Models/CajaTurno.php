@@ -11,7 +11,7 @@ class CajaTurno extends Model
     protected $fillable = [
         'fecha', 'base_inicial', 'efectivo_esperado', 'efectivo_contado',
         'diferencia', 'justificacion_descuadre', 'abierto_por', 'abierto_at',
-        'cerrado_por', 'cerrado_at', 'estado',
+        'cerrado_por', 'cerrado_at', 'estado', 'cierre_automatico',
     ];
 
     protected $casts = [
@@ -22,6 +22,7 @@ class CajaTurno extends Model
         'efectivo_esperado' => 'decimal:2',
         'efectivo_contado' => 'decimal:2',
         'diferencia' => 'decimal:2',
+        'cierre_automatico' => 'boolean', // 27/10/2026, RF-M06-039
     ];
 
     // Nombrado "...PorUsuario" (no "abiertoPor"/"cerradoPor" a secas) a propósito: Eloquent

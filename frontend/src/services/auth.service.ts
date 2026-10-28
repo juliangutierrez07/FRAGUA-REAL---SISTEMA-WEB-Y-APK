@@ -15,6 +15,8 @@ export interface RegistroPayload {
   // Opcional (Fase 3, tarea 3): con él también se puede iniciar sesión.
   username?: string
   telefono?: string
+  // 27/10/2026 (RF-M01-035): obligatorio y único.
+  documento: string
   password: string
   password_confirmation: string
 }
@@ -29,6 +31,8 @@ export interface ActualizarPerfilPayload {
   telefono?: string
   // Fase 3, tarea 3: vacío = quitarlo; sin enviar = no se toca.
   username?: string
+  // 27/10/2026 (RF-M01-035): solo el Cliente.
+  documento?: string
 }
 
 export interface CambiarPasswordPayload {

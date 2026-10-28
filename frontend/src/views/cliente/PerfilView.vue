@@ -2,8 +2,8 @@
 // M01 — el usuario autenticado (Cliente, Mesero o Administrador) edita sus propios
 // datos y cambia su propia contraseña. Dos formularios independientes: cada uno
 // envía y valida por separado (AuthController::actualizarPerfil / cambiarPassword).
-import { onMounted, reactive, ref, watch } from 'vue'
-import { AtSign, CheckCircle2, KeyRound, Lock, Mail, Phone, User } from 'lucide-vue-next'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { AtSign, CheckCircle2, IdCard, KeyRound, Lock, Mail, Phone, User } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import SesionesLista from '@/components/common/SesionesLista.vue'
@@ -22,7 +22,9 @@ const ROLES: Record<string, string> = {
 }
 
 // ---- Datos del perfil ----
-const datos = reactive({ nombre: '', telefono: '', username: '' })
+const datos = reactive({ nombre: '', telefono: '', username: '', documento: '' })
+// 27/10/2026 (RF-M01-035): el documento es del Cliente; quien se registró antes lo agrega aquí.
+const esCliente = computed(() => auth.usuario?.role === 'cliente')
 
 watch(
   () => auth.usuario,
@@ -31,6 +33,7 @@ watch(
       datos.nombre = usuario.nombre
       datos.telefono = usuario.telefono ?? ''
       datos.username = usuario.username ?? ''
+      datos.documento = usuario.documento ?? ''
     }
   },
   { immediate: true },
@@ -48,7 +51,12 @@ async function guardarDatos() {
   exitoDatos.value = false
   try {
     // username siempre se envía: vacío = quitarlo (Fase 3, tarea 3).
-    await auth.actualizarPerfil({ nombre: datos.nombre, telefono: datos.telefono || undefined, username: datos.username.trim() })
+    await auth.actualizarPerfil({
+      nombre: datos.nombre,
+      telefono: datos.telefono || undefined,
+      username: datos.username.trim(),
+      ...(esCliente.value && datos.documento ? { documento: datos.documento } : {}),
+    })
     exitoDatos.value = true
   } catch (error) {
     const campos = erroresDeValidacion(error)
@@ -189,6 +197,12 @@ onMounted(cargarSesiones)
             </p>
           </div>
           <BaseInput formato="celular" v-model="datos.telefono" label="Teléfono (opcional)" :icon="Phone" :error="erroresDatos.telefono" />
+          <div v-if="esCliente">
+            <p v-if="!auth.usuario.documento" class="mb-2 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">
+              Agrega tu número de documento para que el mesero te encuentre al pagar y el pedido quede en tu historial.
+            </p>
+            <BaseInput formato="identificacion" v-model="datos.documento" label="Número de documento" placeholder="Cédula, cédula de extranjería o pasaporte" :icon="IdCard" :error="erroresDatos.documento" />
+          </div>
 
           <p v-if="errorDatos" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ errorDatos }}</p>
           <p v-if="exitoDatos" class="flex items-center gap-2 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">

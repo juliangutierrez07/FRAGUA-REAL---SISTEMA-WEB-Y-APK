@@ -1065,4 +1065,40 @@ class PedidoService
         return User::whereIn('role', User::ROLES_ADMINISTRACION)->where('activo', true)->get()
             ->first(fn (User $admin) => \Illuminate\Support\Facades\Hash::check($password, $admin->password));
     }
+
+    /**
+     * Fidelización (27/10/2026, RF-M06-040, RN-M06-23): al cobrar, el Mesero deja los pedidos en el
+     * historial del Cliente que encontró por documento, correo o celular. Un pedido cancelado no se asigna y
+     * uno que ya es de otro cliente no cambia de dueño; los que ya son suyos se dejan igual.
+     *
+     * @param  \Illuminate\Support\Collection<int, Pedido>  $pedidos
+     * @return array<int, int> los pedidos que quedaron con este cliente
+     */
+    public function asignarCliente(\Illuminate\Support\Collection $pedidos, User $cliente, User $actor): array
+    {
+        return DB::transaction(function () use ($pedidos, $cliente, $actor) {
+            $ids = [];
+            foreach ($pedidos as $pedido) {
+                $pedido = Pedido::whereKey($pedido->id)->lockForUpdate()->firstOrFail();
+                if ($pedido->estado === 'cancelado') {
+                    throw new RuntimeException("El pedido #{$pedido->id} está cancelado: no se asigna a un cliente.");
+                }
+                if ($pedido->cliente_id !== null && $pedido->cliente_id !== $cliente->id) {
+                    throw new RuntimeException("El pedido #{$pedido->id} ya está a nombre de otro cliente.");
+                }
+                $ids[] = $pedido->id;
+                if ($pedido->cliente_id === $cliente->id) {
+                    continue;
+                }
+                $pedido->cliente_id = $cliente->id;
+                $pedido->save();
+                app(\App\Services\AuditoriaService::class)->registrar('asignar_cliente_pedido', 'Pedido', $pedido->id, [
+                    'cliente_id' => $cliente->id,
+                    'cliente' => $cliente->nombre,
+                ], $actor);
+            }
+
+            return $ids;
+        });
+    }
 }

@@ -1,6 +1,6 @@
 # Base de datos — Fragua Real Burger
 
-PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 41 tablas (35 del sistema y 6 de Laravel para la cola, la caché y las sesiones) más la de control de migraciones, creadas por 70 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
+PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 41 tablas (35 del sistema y 6 de Laravel para la cola, la caché y las sesiones) más la de control de migraciones, creadas por 72 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
 
 ## Contenido
 
@@ -30,7 +30,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `users` | 16 | Cuentas de los roles (`role`: superadmin, administrador, soporte, mesero, cliente; superadmin desde el 19/10/2026, M09, y soporte desde el 20/10/2026, M10), `menus_permitidos` (json, los menús que el SuperAdmin le habilitó; vacío = todos los de su rol), con `username` opcional y único y el permiso `puede_registrar_gastos` del Mesero autorizado. Eliminar (definitivo desde el 27/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (con historial: fuera de todas las listas, sin restaurar; su nombre o correo queda libre). |
+| `users` | 17 | Cuentas de los roles (`role`: superadmin, administrador, soporte, mesero, cliente; superadmin desde el 19/10/2026, M09, y soporte desde el 20/10/2026, M10), `menus_permitidos` (json, los menús que el SuperAdmin le habilitó; vacío = todos los de su rol), con `username` opcional y único y el permiso `puede_registrar_gastos` del Mesero autorizado. `documento` (27/10/2026): número de documento del Cliente; el documento y el celular no se repiten entre clientes vigentes. Eliminar (definitivo desde el 27/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (con historial: fuera de todas las listas, sin restaurar; su nombre o correo queda libre). |
 | `personal_access_tokens` | 12 | Sesiones (tokens de Sanctum) con IP y dispositivo; vencen por inactividad o duración máxima. |
 | `password_reset_tokens` | 3 | Enlaces de recuperación de contraseña (guardados con hash, vencen a la hora). |
 | `auditorias` | 9 | Historial de acciones críticas: quién, qué, sobre qué registro, antes y después, IP y navegador. Triggers de PostgreSQL impiden cambiarlo o borrarlo. |
@@ -73,7 +73,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `caja_turnos` | 14 | Un turno de caja por día: base, efectivo esperado y contado, diferencia y quién abrió y cerró. |
+| `caja_turnos` | 15 | Un turno de caja por día: base, efectivo esperado y contado, diferencia y quién abrió y cerró. `cierre_automatico` (27/10/2026): se cerró solo pasada la hora de cierre más la tolerancia; el conteo queda vacío hasta que el Administrador lo registre. |
 | `pagos` | 23 | Pagos de un pedido (1:N, admite pago mixto, ADR-003) y abonos de depósito; anulación, reverso y cómo se aprobó (pasarela o manual). Pago directo: la captura que subió el Cliente (`comprobante_path` y `comprobante_mime`), `referencia_cliente` y `rechazo_motivo`; `pasarela` acepta `breb`. Desde el 26/10/2026 `comprobante_path` también guarda la foto que toma el Mesero al cobrar por transferencia (obligatoria) o tarjeta. |
 | `ajustes_caja` | 10 | Anulaciones o reembolsos hechos cuando la caja de ese día ya cerró (ADR-008). No reescriben el turno. |
 | `comprobantes` | 12 | Comprobantes de pago con consecutivo (FR-000001), copia del documento, impresiones y anulación con motivo. |
@@ -227,6 +227,8 @@ Además, `transacciones_pasarela` se enlaza con un pago o con una reserva por `p
 | `2026_10_23_000002` | 16/10/2026 | `variantes.descripcion`, `imagen_url` e `imagen_path`. | — |
 | `2026_10_23_000003` | 16/10/2026 | `promociones.variante_id` y `promociones.es_oferta`. | — |
 | `2026_10_26_000001` | 19/10/2026 | `reservas.descripcion`: nota opcional del cliente en su reserva. | — |
+| `2026_11_06_000001` | 27/10/2026 | Fidelización: `users.documento` y los índices únicos parciales del documento y del celular entre clientes (`WHERE role = 'cliente' AND eliminado_at IS NULL`). Se detiene sin cambiar nada si hay clientes con el mismo celular. | — |
+| `2026_11_05_000001` | 27/10/2026 | Cierre automático de la caja: `caja_turnos.cierre_automatico` (booleano, falso por defecto). | — |
 | `2026_11_04_000001` | 27/10/2026 | Eliminar definitivo: los índices únicos de `productos.nombre`, `categorias.nombre`, `mesas.nombre`, `users.email` y `users.username` pasan a contar solo lo vigente (`WHERE eliminado_at IS NULL`), para reutilizar el nombre o el correo de lo eliminado. | — |
 | `2026_11_03_000001` | 27/10/2026 | Eliminar del catálogo: `eliminado_at` (con índice), `eliminado_por` (→ `users`, nulo al borrarse) y `eliminado_motivo` en `categorias`, `combos`, `extras` y `promociones`. | — |
 | `2026_11_02_000001` | 26/10/2026 | Mejoras de operación: `pedidos.cuenta`, `ubicacion_lat`, `ubicacion_lng`, `paga_con` y `categorias.permite_quitar_ingredientes` (las categorías de bebidas quedan en falso). | — |
@@ -326,6 +328,8 @@ Estas reglas no se pueden expresar solo con columnas; las aplica Laravel:
 | Solo el Mesero registra cobros presenciales (RF-M06-003/004) | `PedidoPolicy::cobrar()`, `PagoService::validarQuienCobra()` |
 | Los pagos no superan el total del pedido (RF-M06-011) | `PagoService` |
 | Un turno de caja por día (RN-M06-03) | `caja_turnos.fecha` única y `CajaService` |
+| El documento y el celular no se repiten entre clientes (RN-USR-26) | índices parciales `users_documento_cliente_unique`, `users_telefono_cliente_unique` e `IdentidadCliente` |
+| Un pedido de otro cliente no cambia de dueño al asignarlo (RN-M06-23) | `PedidoService::asignarCliente()` |
 | Sin caja abierta no hay cobros ni depósitos presenciales (RN-M06-02) | `PagoService`, `ReservaService` |
 | Un combo no se ofrece si un componente está agotado o de baja (RN-M04-11) | `Combo::disponible()`, `ComboService::disponibleParaPedido()` |
 | Un producto con presentaciones se pide con una de ellas (RN-M04-04) | `Producto::puedeAgregarseAPedido()`, `PedidoService` |

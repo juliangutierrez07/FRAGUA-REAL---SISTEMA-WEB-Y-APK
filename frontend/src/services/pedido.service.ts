@@ -220,4 +220,14 @@ export const pedidoService = {
   cobrar(id: number, payload: CobrarPayload) {
     return api.post<Pedido>(`/pedidos/${id}/cobrar`, formularioCobro(payload))
   },
+  // Fidelización (27/10/2026, RF-M06-040): al cobrar, buscar al cliente y dejarle los pedidos en su historial.
+  buscarCliente(dato: string) {
+    return api.get<{ id: number; nombre: string; coincide: 'documento' | 'correo' | 'celular' }>('/clientes/buscar', { params: { dato } })
+  },
+  asignarCliente(pedidoIds: number[], clienteId: number) {
+    return api.post<{ cliente: { id: number; nombre: string }; pedido_ids: number[] }>('/pedidos/asignar-cliente', {
+      pedido_ids: pedidoIds,
+      cliente_id: clienteId,
+    })
+  },
 }

@@ -40,7 +40,7 @@ class CrearPedidoSeguridadTest extends TestCase
 
         $this->mesero = User::create(['role' => 'mesero', 'nombre' => 'Mesero', 'email' => 'mesero@test.co', 'password' => 'secreto123', 'activo' => true]);
         $this->cliente = User::create(['role' => 'cliente', 'nombre' => 'Ana', 'email' => 'ana@test.co', 'telefono' => '3001234567', 'password' => 'secreto123', 'activo' => true]);
-        $this->otroCliente = User::create(['role' => 'cliente', 'nombre' => 'Luis', 'email' => 'luis@test.co', 'telefono' => '3001234567', 'password' => 'secreto123', 'activo' => true]);
+        $this->otroCliente = User::create(['role' => 'cliente', 'nombre' => 'Luis', 'email' => 'luis@test.co', 'telefono' => '3007654321', 'password' => 'secreto123', 'activo' => true]);
 
         $this->categoria = Categoria::create(['nombre' => 'Hamburguesas']);
         $this->producto = Producto::create(['categoria_id' => $this->categoria->id, 'nombre' => 'Doble', 'precio_base' => 30000, 'tipo_venta' => 'alimento']);

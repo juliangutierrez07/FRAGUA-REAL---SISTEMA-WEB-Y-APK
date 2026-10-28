@@ -1,6 +1,6 @@
 # API — Fragua Real Burger
 
-Referencia de los 201 endpoints de `backend/routes/api.php`, agrupados por módulo. Donde dice «Administrador» entra también el SuperAdmin (M09) y, solo para consultar, la cuenta de Soporte (M10): a ella el servidor le rechaza con 403 «La cuenta de Soporte solo puede consultar.» toda escritura (POST, PUT, PATCH o DELETE), salvo las de su propia cuenta (`/auth/*`, `/perfil`), `POST /reportes/exportar`, `POST /pedidos/cotizacion` y marcar sus notificaciones como leídas, y también `GET /comandas/{comanda}/ticket`, que marca la comanda como impresa. Las rutas del personal llevan además el permiso de menú de la cuenta (M09): si el SuperAdmin le quitó ese menú, responden 403 «Esta opción no está habilitada para tu cuenta…». Todas las rutas van bajo `/api` y responden JSON, salvo los PDF, tickets, fotos y archivos exportados.
+Referencia de los 204 endpoints de `backend/routes/api.php`, agrupados por módulo. Donde dice «Administrador» entra también el SuperAdmin (M09) y, solo para consultar, la cuenta de Soporte (M10): a ella el servidor le rechaza con 403 «La cuenta de Soporte solo puede consultar.» toda escritura (POST, PUT, PATCH o DELETE), salvo las de su propia cuenta (`/auth/*`, `/perfil`), `POST /reportes/exportar`, `POST /pedidos/cotizacion` y marcar sus notificaciones como leídas, y también `GET /comandas/{comanda}/ticket`, que marca la comanda como impresa. Las rutas del personal llevan además el permiso de menú de la cuenta (M09): si el SuperAdmin le quitó ese menú, responden 403 «Esta opción no está habilitada para tu cuenta…». Todas las rutas van bajo `/api` y responden JSON, salvo los PDF, tickets, fotos y archivos exportados.
 
 Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). Si cambia una ruta, actualiza esta tabla.
 
@@ -22,7 +22,7 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 - [Comandas de cocina (M02)](#comandas-de-cocina-m02) (5)
 - [Mesas (M05)](#mesas-m05) (14)
 - [Reservas (M05)](#reservas-m05) (18)
-- [Caja y pagos (M06)](#caja-y-pagos-m06) (23)
+- [Caja y pagos (M06)](#caja-y-pagos-m06) (26)
 - [Compras, gastos y cierre diario (M03)](#compras-gastos-y-cierre-diario-m03) (12)
 - [Reportes (M08)](#reportes-m08) (9)
 - [Notificaciones del personal (M11)](#notificaciones-del-personal-m11) (4)
@@ -38,12 +38,12 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 | `POST` | `/auth/logout-todos` | Con sesión (cualquier rol) | Cierra todas las sesiones de la cuenta. |  |
 | `GET` | `/auth/me` | Con sesión (cualquier rol) | Datos de la cuenta con sesión (rol, permisos). |  |
 | `POST` | `/auth/recuperar` | Pública | Envía el correo para recuperar la contraseña. No revela si el correo existe. | 10/min |
-| `POST` | `/auth/register` | Pública | Crea la cuenta de un Cliente (autorregistro). Solo crea Clientes. La contraseña debe ser segura: 8 caracteres como mínimo, con al menos una mayúscula, una minúscula y un número (en producción, además, no filtrada). | 10/min |
+| `POST` | `/auth/register` | Pública | Crea la cuenta de un Cliente (autorregistro). Solo crea Clientes. 27/10/2026: `documento` obligatorio y único entre clientes; el celular, si se da, también único. La contraseña debe ser segura: 8 caracteres como mínimo, con al menos una mayúscula, una minúscula y un número (en producción, además, no filtrada). | 10/min |
 | `POST` | `/auth/restablecer` | Pública | Cambia la contraseña con el enlace del correo (contraseña segura), cierra todas las sesiones y quita el bloqueo por intentos de la cuenta. | 10/min |
 | `GET` | `/auth/sesiones` | Con sesión (cualquier rol) | Sesiones abiertas de la cuenta: dispositivo, IP, último uso y vencimiento. |  |
 | `POST` | `/auth/sesiones/cerrar-otras` | Con sesión (cualquier rol) | Cierra todas las sesiones menos la actual. |  |
 | `DELETE` | `/auth/sesiones/{sesion}` | Con sesión (cualquier rol) | Cierra una sesión propia. |  |
-| `PUT` | `/perfil` | Con sesión (cualquier rol) | Edita nombre, teléfono y nombre de usuario propios. |  |
+| `PUT` | `/perfil` | Con sesión (cualquier rol) | Edita nombre, teléfono y nombre de usuario propios. 27/10/2026: el Cliente agrega o corrige su `documento` (quien ya lo tiene no lo deja vacío). |  |
 | `POST` | `/perfil/password` | Con sesión (cualquier rol) | Cambia la contraseña propia (pide la actual; la nueva debe ser segura). |  |
 
 ## Usuarios y auditoría (M01)
@@ -54,7 +54,7 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 | `GET` | `/auditorias/opciones` | Administrador | Listas para los filtros de Auditoría y resumen de seguridad (intentos fallidos). |  |
 | `GET` | `/usuarios` | Administrador | Usuarios con filtros por rol y texto (nombre, correo o usuario); sin las eliminadas. Cada cuenta trae `gestionable`: si quien mira puede modificarla (M09). La cuenta de Soporte solo la ven el SuperAdmin y ella misma (M10). |  |
 | `POST` | `/usuarios` | Administrador | Crea una cuenta de Mesero; la de Administrador, solo el SuperAdmin (403 para el Administrador). El rol `superadmin` no se crea aquí. La contraseña inicial debe ser segura. |  |
-| `PUT` | `/usuarios/{usuario}` | Administrador | Edita datos, rol y el permiso de compras y gastos (cambiar el rol cierra sus sesiones). Una cuenta de Administrador solo la edita el SuperAdmin y la del SuperAdmin no se edita aquí (403). |  |
+| `PUT` | `/usuarios/{usuario}` | Administrador | Edita datos, rol y el permiso de compras y gastos (cambiar el rol cierra sus sesiones). Una cuenta de Administrador solo la edita el SuperAdmin y la del SuperAdmin no se edita aquí (403). 27/10/2026: el `documento` de un Cliente. |  |
 | `POST` | `/usuarios/{usuario}/activar` | Administrador | Activa una cuenta. |  |
 | `POST` | `/usuarios/{usuario}/desactivar` | Administrador | Desactiva una cuenta y cierra sus sesiones. |  |
 | `GET` | `/usuarios/{usuario}/eliminacion` | Administrador | Muestra qué pasa al eliminar: se borra (nunca se usó) o sale de todo y su historial se guarda; `bloqueo` dice qué lo impide ahora y `pide_motivo` si hace falta motivo (solo cuentas). |  |
@@ -197,10 +197,11 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 |---|---|---|---|---|
 | `POST` | `/caja/abrir` | Administrador | Abre la caja del día con la base inicial. Un solo turno por día. |  |
 | `GET` | `/caja/estado` | Administrador, Mesero | Estado de la caja de hoy (sin abrir, abierta o cerrada), quién la abrió y el efectivo esperado. Solo lectura. |  |
-| `GET` | `/caja/turno-actual` | Administrador | Turno abierto hoy con su `resumen` (ingresos por método, desglose del efectivo esperado, depósitos de reserva del día y anulados), o nulo. 26/10/2026: `pedidos_sin_finalizar` (lo que impide cerrar). |  |
-| `GET` | `/caja/turnos` | Administrador | Historial de turnos de caja. |  |
+| `GET` | `/caja/turno-actual` | Administrador | Turno abierto hoy con su `resumen` (ingresos por método, desglose del efectivo esperado, depósitos de reserva del día y anulados), o nulo. 26/10/2026: `pedidos_sin_finalizar` (lo que impide cerrar). 27/10/2026: `se_cierra_sola_at`, cuándo se cierra sola si nadie la cierra. |  |
+| `GET` | `/caja/turnos` | Administrador | Historial de turnos de caja. Cada turno trae `cierre_automatico` (27/10/2026). |  |
 | `GET` | `/caja/turnos/{turno}` | Administrador | Detalle de un turno: pagos, pagos y depósitos en línea del día (`depositos_en_linea`), gastos, ajustes y `resumen`. |  |
 | `POST` | `/caja/turnos/{turno}/cerrar` | Administrador | Cierra el turno con el efectivo contado y guarda la diferencia. 26/10/2026: 422 si queda un pedido sin finalizar o cancelar. |  |
+| `POST` | `/caja/turnos/{turno}/conteo` | Administrador | 27/10/2026: el efectivo contado (`efectivo_contado`, `justificacion_descuadre` si no cuadra) de un turno que se cerró solo; una sola vez. 422 si el turno no espera conteo o falta la justificación. |  |
 | `POST` | `/pagos/{pago}/anular` | Administrador | Anula o reembolsa un pago; con la caja del día cerrada pide contraseña y queda como ajuste. Si es una anulación y el pedido estaba finalizado y queda con saldo, el pedido vuelve a `preparando` y la respuesta trae `pedido_reabierto` (`pedido_id`, `saldo`); un reembolso no lo reabre. |  |
 | `POST` | `/pagos/{pago}/confirmar-en-linea` | Administrador, Mesero | Aprueba a mano un pago en línea (respaldo de la pasarela). |  |
 | `GET` | `/pagos/{pago}/comprobante` | Administrador, Mesero | La captura del pago en línea que subió el Cliente (imagen o PDF, sin caché). 404 si no hay. |  |
@@ -214,6 +215,8 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 | `GET` | `/pedidos/seguimiento/{token}/comprobante` | Pública | Comprobante del pedido para el invitado, con su enlace. | 30/min |
 | `POST` | `/pedidos/seguimiento/{token}/pagar-en-linea` | Pública | Inicia el pago en línea del invitado con su enlace. Formulario: `pasarela` (`nequi`, `bancolombia` o, sin Wompi, `breb`); sin Wompi también `comprobante` (JPG, PNG, WebP o PDF, hasta 5 MB, obligatorio) y `referencia` (opcional). El monto es siempre el saldo del pedido. Sin Wompi, 422 si el medio no está configurado. | 30/min |
 | `POST` | `/pedidos/{pedido}/cobrar` | Administrador, Mesero | Registra un cobro presencial (efectivo, tarjeta o transferencia). Solo el Mesero, con la caja abierta. 26/10/2026: `comprobante` (foto, multipart), obligatorio en transferencia. |  |
+| `GET` | `/clientes/buscar` | Mesero | 27/10/2026: al cobrar, busca al Cliente por `dato` (documento, correo o celular, exactos) y devuelve `id`, `nombre` y `coincide`; 404 si no hay. | 30/min |
+| `POST` | `/pedidos/asignar-cliente` | Mesero | 27/10/2026: deja los pedidos (`pedido_ids`: uno, una cuenta o toda la mesa) en el historial del Cliente (`cliente_id`). 422 si uno está cancelado o ya es de otro cliente. |  |
 | `GET` | `/pedidos/{pedido}/comprobante` | Administrador, Mesero, Cliente | Comprobante vigente del pedido: ticket de 80 mm o PDF. El Cliente solo el de sus pedidos; cada impresión del personal se cuenta. |  |
 | `GET` | `/pedidos/{pedido}/comprobantes` | Administrador, Mesero, Cliente | Todos los comprobantes del pedido, también los anulados. Solo el Administrador (Policy). |  |
 | `GET` | `/pedidos/{pedido}/comprobantes/{comprobante}` | Administrador, Mesero, Cliente | Abre un comprobante puntual (el anulado sale con su sello). Solo el Administrador (Policy). |  |
@@ -285,7 +288,7 @@ Los equipos del local que imprimen (decisión D5: imprime el navegador). La clav
 
 | Método | Ruta | Quién | Para qué | Límite |
 |---|---|---|---|---|
-| `GET` | `/configuracion` | Pública | Valores públicos: valor del domicilio, depósito de reserva, tiempos de reserva y su horario (`reserva_hora_inicio`, `reserva_hora_fin`, `reserva_anticipacion_minutos`) `clave` (requisitos de la contraseña: `minimo` y `mezcla`), `pagos_directos` (`activo`, `automatico` = Wompi activo, y `medios`: solo las cuentas completas, con `campos` `{campo, etiqueta, valor, copiar}`) y `negocio` (nombre, dirección, teléfono, enlace de WhatsApp, `latitud`/`longitud` del local, `mapa_url` de «Cómo llegar» y `logo_url`). |  |
+| `GET` | `/configuracion` | Pública | Valores públicos: valor del domicilio, depósito de reserva, tiempos de reserva y su horario (`reserva_hora_inicio`, `reserva_hora_fin`, `reserva_anticipacion_minutos`), cierre automático de la caja (`caja_hora_cierre`, `caja_tolerancia_minutos`; 27/10/2026), `clave` (requisitos de la contraseña: `minimo` y `mezcla`), `pagos_directos` (`activo`, `automatico` = Wompi activo, y `medios`: solo las cuentas completas, con `campos` `{campo, etiqueta, valor, copiar}`) y `negocio` (nombre, dirección, teléfono, enlace de WhatsApp, `latitud`/`longitud` del local, `mapa_url` de «Cómo llegar» y `logo_url`). |  |
 | `GET` | `/negocio/logo` | Pública | El logo del negocio (PNG). 404 si no hay. | 600/min |
 | `GET` | `/negocio/pagos-directos` | Administrador | Las cuentas para pagos en línea sin Wompi: `datos` (Nequi `numero`/`titular`; Bancolombia `tipo`/`numero`/`titular`/`documento`; Bre-B `llave`/`titular`) y `publico` (lo que ve el Cliente). |  |
 | `PUT` | `/negocio/pagos-directos` | SuperAdmin | Cambia esas cuentas (vacío = el medio no se ofrece; 403 si lo intenta el Administrador). Queda en Auditoría (`editar_pagos_directos`, antes y después). |  |

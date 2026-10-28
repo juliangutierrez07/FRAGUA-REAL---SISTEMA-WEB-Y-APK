@@ -23,7 +23,7 @@ armado el backend hoy y guarda el historial de los 60 cambios técnicos que lo l
 
 Cada petición pasa por las mismas capas:
 
-1. **Ruta** (`routes/api.php`): 201 endpoints bajo `/api`, agrupados por nivel de acceso con los
+1. **Ruta** (`routes/api.php`): 204 endpoints bajo `/api`, agrupados por nivel de acceso con los
    middleware `auth:sanctum`, `activo` y `role:...`, y límites de peticiones en las rutas públicas.
 2. **Form Request** (`app/Http/Requests/Api`, 38 clases): valida los datos y devuelve los mensajes
    en español (`lang/es/validation.php`).
@@ -104,7 +104,8 @@ En el servidor, cron corre `php artisan schedule:run` cada minuto y Supervisor m
 | Comando | Cuándo | Qué hace |
 |---|---|---|
 | `reservas:procesar` | Cada minuto | No-show automático al vencer la tolerancia, mesa Reservada desde la ventana previa y recordatorios por correo |
-| `notificaciones:revisar` | Cada minuto | Notificaciones del personal que dependen de la hora: reserva que empieza pronto, caja abierta de noche, cierre diario pendiente, cola detenida o con trabajos fallidos y la revisión antes de producción diaria (M11) |
+| `caja:cerrar-vencidas` | Cada minuto | Cierra sola, sin contar el efectivo, la caja que sigue abierta pasada la hora de cierre más la tolerancia (Configuración; 27/10/2026) |
+| `notificaciones:revisar` | Cada minuto | Notificaciones del personal que dependen de la hora: reserva que empieza pronto, caja abierta a la hora de cierre, cierre diario pendiente, cola detenida o con trabajos fallidos y la revisión antes de producción diaria (M11) |
 | `notificaciones:limpiar` | 3:40 a. m., hora de Colombia | Borra las notificaciones de más de 30 días (M11) |
 | `pasarela:conciliar` | Cada 5 minutos | Pregunta a Wompi por los pagos pendientes, por si un evento se perdió |
 | `fragua:latido` | Cada minuto | Deja el latido del programador y encola el de la cola (Configuración > Tareas automáticas) |
@@ -133,13 +134,14 @@ Además de las variables estándar de Laravel (`APP_*`, `DB_*`, `MAIL_*`, `QUEUE
 | `FRAGUA_REAL_DURACION_RESERVA_MINUTOS` | 120 | Cuánto ocupa una reserva su mesa: dos reservas de la misma mesa no se cruzan |
 | `FRAGUA_REAL_VALOR_DOMICILIO`, `FRAGUA_REAL_DEPOSITO_RESERVA` | 2000 y 20000 | Respaldo si la tabla `configuraciones` no tiene el valor |
 | `FRAGUA_REAL_RESERVA_TOLERANCIA_MINUTOS`, `_RECORDATORIO_MINUTOS`, `_VENTANA_MINUTOS` | 15, 120 y 60 | Respaldo de los tiempos de reserva (se editan en Configuración) |
+| `FRAGUA_REAL_CAJA_HORA_CIERRE`, `FRAGUA_REAL_CAJA_TOLERANCIA_MINUTOS` | `23:30` y 60 | Respaldo de la hora de cierre de la caja y la tolerancia antes de que se cierre sola (se editan en Configuración) |
 | `PASARELA_PROVEEDOR` | `manual` | `wompi` activa la confirmación automática; `manual` deja la aprobación a mano |
 | `PASARELA_MINUTOS_CHECKOUT` | 30 | Tiempo para terminar un pago en Wompi |
 | `PASARELA_EVENTOS_MAX_HORAS` | 72 | Un evento de Wompi más viejo no se aplica |
 | `WOMPI_AMBIENTE` | `sandbox` | `sandbox` o `produccion` |
 | `WOMPI_LLAVE_PUBLICA`, `_PRIVADA`, `_SECRETO_EVENTOS`, `_SECRETO_INTEGRIDAD` | vacías | Llaves de Wompi > Desarrolladores |
 
-El valor del domicilio, el depósito de reserva y los tiempos de las reservas se cambian en la
+El valor del domicilio, el depósito de reserva, los tiempos de las reservas y el cierre automático de la caja se cambian en la
 aplicación (Administrador > Configuración, tabla `configuraciones`); las variables de arriba son solo
 el respaldo.
 
@@ -160,8 +162,8 @@ partir de la copia guardada en la base, así una reimpresión dice exactamente l
 
 ## Pruebas automáticas
 
-`backend/tests/Feature` tiene 64 archivos y 443 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
-En total son 344.
+`backend/tests/Feature` tiene 66 archivos y 458 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
+En total son 459.
 
 ```bash
 php artisan test                    # SQLite en memoria (4 pruebas se saltan: usan funciones de PostgreSQL)
@@ -170,7 +172,7 @@ php artisan test --filter=Caja      # solo las que coinciden
 
 Para correrlas contra PostgreSQL, como en producción, se apunta a una base de prueba con las variables
 `DB_CONNECTION=pgsql`, `DB_DATABASE`, `DB_USERNAME` y `DB_PASSWORD` al lanzar `php artisan test`; ahí
-pasan las 344. Cada prueba cita el requisito que cubre. `DiaCompletoTest` recorre un día completo de
+pasan las 459. Cada prueba cita el requisito que cubre. `DiaCompletoTest` recorre un día completo de
 operación por la API con los tres roles.
 
 ## Qué falta a propósito
@@ -1717,7 +1719,7 @@ inconsistencias con lo que existía o era correcto en Laravel:
       cliente, no-show automático), `ComandaService` (comanda que no salió) y `CatalogoController`
       (producto o presentación agotada).
     - `notificaciones:revisar` cada minuto: reserva que empieza en 30 min, caja abierta desde las
-      23:30, cierre diario de ayer pendiente desde las 10:00, cola detenida o con trabajos fallidos y la
+      23:30 (desde el 27/10/2026, desde la hora de cierre de Configuración), cierre diario de ayer pendiente desde las 10:00, cola detenida o con trabajos fallidos y la
       revisión antes de producción a las 07:00. `notificaciones:limpiar` a las 3:40 a. m. borra las de
       más de 30 días. El programador detenido lo detecta `GET /notificaciones/contador`. Horas en
       `config/fragua_real.php` (`notificaciones`, `FRAGUA_REAL_NOTIF_*`).
@@ -1996,4 +1998,58 @@ inconsistencias con lo que existía o era correcto en Laravel:
       avisa a la franja de comandas; Pedidos muestra «Pedido #N creado: la comanda ya va para la cocina».
     - `ComandaAutomaticaTest` (3 pruebas); `DiaCompletoTest`, `ImpresorasTest`, `PedidoTelefonicoTest`,
       `ReabrirPedidoAnulacionTest` y `SoporteTest` ajustadas (el pedido del Mesero ya nace confirmado).
+
+80. **Orden de la barra lateral (27/10/2026).** Solo frontend (`AppSidebar.vue`).
+    - Administrador, por uso y en tres grupos con título: Operación (Dashboard, Pedidos, Mesas y Reservas,
+      Caja), Negocio (Catálogo, Compras y Gastos, Reportes) y Administración (Usuarios, Auditoría,
+      Impresoras, Configuración). En el riel de la tableta los grupos se separan con una línea; un grupo
+      sin menús habilitados para la cuenta (M09) no aparece.
+    - Mesero: Pedidos, Mesas, Cobrar, Reservas, Menú y, con permiso, Gastos (también la barra de abajo
+      del teléfono).
+
+81. **Cierre automático de la caja (27/10/2026, M06, RF-M06-039, RN-M06-22).** Migración
+    `2026_11_05_000001_cierre_automatico_de_caja`: `caja_turnos.cierre_automatico` (booleano, falso).
+    - `App\Support\Caja\PoliticaCaja`: hora de cierre (`caja_hora_cierre`, "HH:MM", por defecto 23:30) y
+      tolerancia (`caja_tolerancia_minutos`, 0 a 360, por defecto 60) en la tabla `configuraciones`, con
+      respaldo en `config/fragua_real.php` (`caja`). `limite($fecha)` = el día del turno a la hora de
+      cierre (antes de las 6:00 a. m., la madrugada siguiente) más la tolerancia.
+    - `caja:cerrar-vencidas` (cada minuto) → `CajaService::cerrarVencidos()`: el turno abierto que pasó
+      su límite se cierra con `cerrarAutomaticamente()`: recalcula el efectivo esperado, deja contado,
+      diferencia y `cerrado_por` vacíos y `cierre_automatico` = verdadero. No espera a que los pedidos
+      estén finalizados (a diferencia del cierre a mano): los abiertos se cobran con la próxima caja.
+      Auditoría `cerrar_caja_automatico` (con los pedidos sin finalizar) y aviso `caja_cerrada_sola`
+      (categoría caja, Administrador) con esos pedidos.
+    - `POST /caja/turnos/{turno}/conteo` → `CajaService::registrarConteo()`: el efectivo contado de un
+      turno que se cerró solo, una sola vez; con justificación si no cuadra (`CerrarCajaRequest`).
+      Auditoría `registrar_conteo_caja`.
+    - El aviso «La caja sigue abierta» sale a la hora de cierre (antes, a las 23:30 fijas; se quitó
+      `FRAGUA_REAL_NOTIF_CAJA_ABIERTA_HORA`) y dice a qué hora se cierra sola. `GET /caja/turno-actual`
+      trae `se_cierra_sola_at`; `GET /configuracion` y `PUT /configuraciones`, los dos valores.
+    - Frontend: Caja muestra «Si nadie la cierra, se cierra sola a las…», el aviso de las cajas que se
+      cerraron solas, la etiqueta «Cierre automático, sin contar» y la ventana «Registrar conteo» (con la
+      diferencia y la justificación si no cuadra). Configuración tiene la tarjeta «Cierre automático de
+      la caja». De paso, el historial ya no muestra «Descuadre $ 0» cuando la diferencia es cero.
+    - `CierreCajaAutomaticoTest` (7 pruebas).
+
+82. **Fidelización: el pedido queda en el historial del cliente (27/10/2026; M01: RF-M01-035, RN-USR-26,
+    HU-M01-026; M06: RF-M06-040, RN-M06-23, HU-M06-021).** Migración `2026_11_06_000001_documento_del_cliente`.
+    - `users.documento` (cédula, cédula de extranjería o pasaporte; letras y números en mayúscula, sin puntos
+      ni espacios). Índices únicos parciales `users_documento_cliente_unique` y `users_telefono_cliente_unique`
+      (`WHERE role = 'cliente' AND eliminado_at IS NULL`): el documento y el celular no se repiten entre
+      clientes; el personal no cuenta. La migración se detiene, sin cambiar nada, si encuentra clientes con
+      el mismo celular y dice cuáles corregir en Usuarios.
+    - `App\Support\Usuarios\IdentidadCliente`: normaliza el documento, las reglas de unicidad y `buscar()`
+      (correo sin distinguir mayúsculas, documento o celular, exactos; solo clientes activos y vigentes).
+    - Registro: el documento es obligatorio. Perfil: el Cliente que se registró antes lo agrega (después no lo
+      deja vacío). Usuarios: el Administrador corrige el documento de un Cliente.
+    - Al cobrar: `GET /clientes/buscar?dato=` (solo el Mesero; menú Cobrar o Mesas; 30 por minuto) devuelve
+      `id`, `nombre` y `coincide` (documento, correo o celular), o 404. `POST /pedidos/asignar-cliente`
+      (`pedido_ids`, `cliente_id`) → `PedidoService::asignarCliente()`: deja los pedidos —del QR o del Mesero,
+      uno, una cuenta o toda la mesa— a nombre del Cliente; uno cancelado o de otro cliente da 422. Auditoría
+      `asignar_cliente_pedido`. Nunca impide cobrar.
+    - Frontend: `ClienteDelCobro.vue` en Cobrar y en la cuenta de la mesa (buscar, confirmar el nombre y
+      «Asignar»); campo «Número de documento» en Registro, Perfil y Usuarios; «Mis pedidos» muestra la mesa de
+      un pedido del local.
+    - `FidelizacionClienteTest` (8 pruebas); `CrearPedidoSeguridadTest` y las pruebas de registro ajustadas
+      (dos clientes de prueba compartían celular; el registro ahora envía el documento).
 

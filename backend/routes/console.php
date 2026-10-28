@@ -49,6 +49,14 @@ Artisan::command('notificaciones:revisar', function (\App\Services\NotificacionS
 
 \Illuminate\Support\Facades\Schedule::command('notificaciones:revisar')->everyMinute()->withoutOverlapping(5);
 
+// Cierre automático de la caja (27/10/2026, RF-M06-039, RN-M06-22): el turno que sigue abierto después de
+// la hora de cierre más la tolerancia (Configuración) se cierra solo, sin contar el efectivo.
+Artisan::command('caja:cerrar-vencidas', function (\App\Services\CajaService $caja) {
+    $n = $caja->cerrarVencidos();
+    $this->info($n ? "Turnos cerrados automáticamente: {$n}." : 'No hay turnos vencidos.');
+})->purpose('Cierra la caja que nadie cerró a la hora de cierre más la tolerancia');
+\Illuminate\Support\Facades\Schedule::command('caja:cerrar-vencidas')->everyMinute()->withoutOverlapping(5);
+
 Artisan::command('notificaciones:limpiar', function (\App\Services\NotificacionService $servicio) {
     $this->info('Notificaciones borradas: '.$servicio->limpiar());
 })->purpose('Borra las notificaciones más viejas que los días configurados (30 por defecto)');

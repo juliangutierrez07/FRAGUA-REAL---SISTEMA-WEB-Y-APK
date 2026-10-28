@@ -33,7 +33,7 @@ class FormatosCamposTest extends TestCase
 
     public function test_el_telefono_se_guarda_solo_con_numeros_y_debe_tener_10_digitos(): void
     {
-        $base = ['nombre' => 'Carla Pérez', 'email' => 'carla@test.co', 'password' => 'Clave12345', 'password_confirmation' => 'Clave12345'];
+        $base = ['nombre' => 'Carla Pérez', 'email' => 'carla@test.co', 'documento' => '1020304050', 'password' => 'Clave12345', 'password_confirmation' => 'Clave12345'];
 
         foreach (['31125339', '311253394162', '3112533941j6p', 'abc', '1234567890'] as $malo) {
             $this->postJson('/api/auth/register', $base + ['telefono' => $malo])->assertStatus(422)->assertJsonValidationErrors('telefono');
@@ -44,7 +44,7 @@ class FormatosCamposTest extends TestCase
 
     public function test_el_nombre_de_una_persona_no_lleva_numeros(): void
     {
-        $base = ['email' => 'luis@test.co', 'password' => 'Clave12345', 'password_confirmation' => 'Clave12345'];
+        $base = ['email' => 'luis@test.co', 'documento' => '1020304050', 'password' => 'Clave12345', 'password_confirmation' => 'Clave12345'];
         $this->postJson('/api/auth/register', $base + ['nombre' => '888787'])->assertStatus(422)->assertJsonValidationErrors('nombre');
         $this->postJson('/api/auth/register', $base + ['nombre' => 'Luis 2'])->assertStatus(422)->assertJsonValidationErrors('nombre');
         $this->postJson('/api/auth/register', $base + ['nombre' => "  María   José O'Neill-Gómez "])->assertCreated();

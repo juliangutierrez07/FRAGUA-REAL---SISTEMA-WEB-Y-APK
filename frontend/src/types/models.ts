@@ -17,6 +17,8 @@ export interface Usuario {
   // Fase 3, tarea 3 (RF-M01-007/011): opcional, único, en minúsculas; sirve para iniciar sesión.
   username: string | null
   telefono: string | null
+  // 27/10/2026 (RF-M01-035): número de documento del Cliente (cédula, CE o pasaporte); único entre clientes.
+  documento?: string | null
   role: Rol
   activo: boolean
   // Fase 7, tarea 2 (RF-M03-32): Mesero autorizado para registrar compras y gastos.
@@ -352,6 +354,11 @@ export interface CajaTurno {
   cerrado_por: number | null
   cerrado_at: string | null
   estado: EstadoCajaTurno
+  // 27/10/2026 (RF-M06-039): el turno se cerró solo (hora de cierre + tolerancia) y el conteo queda
+  // pendiente mientras efectivo_contado sea null.
+  cierre_automatico?: boolean
+  // Solo en GET /caja/turno-actual: cuándo se cierra sola si nadie la cierra.
+  se_cierra_sola_at?: string
   // Mejora (26/10/2026, RF-M06-038): solo en GET /caja/turno-actual — lo que impide cerrar la caja.
   pedidos_sin_finalizar?: PedidoSinFinalizar[]
   abierto_por_usuario?: Usuario

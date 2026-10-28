@@ -12,6 +12,7 @@ import CampoPesos from '@/components/common/CampoPesos.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import FotoComprobante from '@/components/pagos/FotoComprobante.vue'
 import EfectivoRecibido from '@/components/pagos/EfectivoRecibido.vue'
+import ClienteDelCobro from '@/components/pagos/ClienteDelCobro.vue'
 import { mesaService, type CuentaMesa } from '@/services/mesa.service'
 import { mensajeDeError } from '@/services/errors'
 import { formatoHoraPedido, saldoPendiente } from '@/utils/pedidoUi'
@@ -112,6 +113,24 @@ watch(
   },
   { immediate: true },
 )
+
+// Fidelización (27/10/2026, RF-M06-040): los pedidos de la cuenta que se cobra (o de toda la mesa) se pueden
+// dejar en el historial de un cliente.
+const pedidosElegidos = computed(() => {
+  if (!cuenta.value) return []
+  if (cuentaElegida.value === null) return cuenta.value.pedidos
+  const ids = cuenta.value.cuentas.find((c) => c.numero === cuentaElegida.value)?.pedidos ?? []
+  return cuenta.value.pedidos.filter((p) => ids.includes(p.id))
+})
+function clienteAsignado(cliente: { id: number; nombre: string }, ids: number[]) {
+  if (!cuenta.value) return
+  cuenta.value = {
+    ...cuenta.value,
+    pedidos: cuenta.value.pedidos.map((p) =>
+      ids.includes(p.id) ? { ...p, cliente_id: cliente.id, cliente: { ...(p.cliente ?? {}), ...cliente } as Pedido['cliente'] } : p,
+    ),
+  }
+}
 
 // Lo pagado antes de preparar no finaliza el pedido (RN-PED-32): se avisa qué sigue.
 const pendientesDePreparar = computed(
@@ -278,6 +297,7 @@ async function cobrar() {
         <p class="mt-1.5 text-xs text-gray-400">Para un pago mixto, cobra una parte con cada método.</p>
         <EfectivoRecibido v-if="metodo === 'efectivo'" v-model="recibido" :total="monto || 0" />
         <FotoComprobante v-else v-model="foto" :obligatoria="metodo === 'transferencia'" />
+        <ClienteDelCobro :pedidos="pedidosElegidos" @asignado="clienteAsignado" />
         <p v-if="pendientesDePreparar" class="mt-2 text-xs text-amber-700">
           {{ pendientesDePreparar }} {{ pendientesDePreparar === 1 ? 'pedido aún no pasa' : 'pedidos aún no pasan' }} a preparación:
           quedan pagados y se finalizan después.

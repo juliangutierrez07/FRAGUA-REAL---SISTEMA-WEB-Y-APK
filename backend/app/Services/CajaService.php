@@ -291,4 +291,87 @@ class CajaService
 
         return $turno;
     }
+
+    // ------------------------------------------------------------------ cierre automático
+
+    /**
+     * Cada minuto (routes/console.php, «caja:cerrar-vencidas»): cierra los turnos que siguen abiertos
+     * después de la hora de cierre más la tolerancia (27/10/2026, RF-M06-039, RN-M06-22).
+     *
+     * @return int cuántos turnos cerró
+     */
+    public function cerrarVencidos(): int
+    {
+        $n = 0;
+        CajaTurno::where('estado', 'abierta')->orderBy('fecha')->get()
+            ->filter(fn (CajaTurno $turno) => now()->gte(\App\Support\Caja\PoliticaCaja::limite($turno->fecha)))
+            ->each(function (CajaTurno $turno) use (&$n) {
+                $this->cerrarAutomaticamente($turno);
+                $n++;
+            });
+
+        return $n;
+    }
+
+    /**
+     * Cierra el turno sin contar el efectivo: queda «Cierre automático, sin contar» con el efectivo
+     * esperado, para que el Administrador registre el conteo después (registrarConteo()). A diferencia del
+     * cierre manual, no espera a que los pedidos estén finalizados: los que quedan abiertos se cobran con la
+     * caja del día siguiente y se avisan en la campana.
+     */
+    public function cerrarAutomaticamente(CajaTurno $turno): CajaTurno
+    {
+        if (! $turno->estaAbierta()) {
+            throw new RuntimeException('Este turno ya está cerrado.');
+        }
+        $esperado = $this->recalcularEfectivoEsperado($turno);
+        $pendientes = $this->pedidosSinFinalizar();
+
+        $turno->efectivo_contado = null;
+        $turno->diferencia = null;
+        $turno->justificacion_descuadre = null;
+        $turno->cerrado_por = null;
+        $turno->cerrado_at = now();
+        $turno->estado = 'cerrada';
+        $turno->cierre_automatico = true;
+        $turno->save();
+
+        app(AuditoriaService::class)->registrar('cerrar_caja_automatico', 'CajaTurno', $turno->id, array_filter([
+            'fecha' => $turno->fecha->toDateString(),
+            'efectivo_esperado' => $esperado,
+            'pedidos_sin_finalizar' => $pendientes ? array_column($pendientes, 'id') : null,
+        ], fn ($v) => $v !== null));
+        app(NotificacionService::class)->cajaCerradaAutomaticamente($turno, $pendientes);
+
+        return $turno;
+    }
+
+    /**
+     * El conteo del efectivo de un turno que se cerró solo (27/10/2026, RF-M06-039): igual que al cerrar a
+     * mano, con justificación si no cuadra. Se registra una sola vez.
+     */
+    public function registrarConteo(CajaTurno $turno, User $actor, float $efectivoContado, ?string $justificacion = null): CajaTurno
+    {
+        if (! $turno->cierre_automatico || $turno->efectivo_contado !== null) {
+            throw new RuntimeException('Este turno no espera un conteo: el conteo se registra solo en un cierre automático sin contar.');
+        }
+        $diferencia = round($efectivoContado - (float) $turno->efectivo_esperado, 2);
+        if ($diferencia !== 0.0 && empty($justificacion)) {
+            throw new RuntimeException('Hay un descuadre de caja: se requiere justificación para registrar el conteo (RF-M06-015/016).');
+        }
+
+        $turno->efectivo_contado = $efectivoContado;
+        $turno->diferencia = $diferencia;
+        $turno->justificacion_descuadre = $diferencia !== 0.0 ? $justificacion : null;
+        $turno->save();
+
+        app(AuditoriaService::class)->registrar('registrar_conteo_caja', 'CajaTurno', $turno->id, [
+            'efectivo_esperado' => (float) $turno->efectivo_esperado,
+            'efectivo_contado' => $efectivoContado,
+            'diferencia' => $diferencia,
+            'justificacion' => $turno->justificacion_descuadre,
+        ], $actor);
+
+        return $turno;
+    }
 }

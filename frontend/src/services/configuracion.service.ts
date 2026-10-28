@@ -36,6 +36,10 @@ export interface Configuracion {
   reserva_hora_inicio?: string
   reserva_hora_fin?: string
   reserva_anticipacion_minutos?: number
+  // 27/10/2026 (RF-M06-039): hora de cierre de la caja ("HH:MM", Colombia) y tolerancia en minutos;
+  // pasado ese tiempo, el turno que nadie cerró se cierra solo.
+  caja_hora_cierre?: string
+  caja_tolerancia_minutos?: number
   // Seguridad (21/10/2026): requisitos de la contraseña (los hace cumplir el servidor).
   clave?: { minimo: number; mezcla: boolean }
   // Pago directo (22/10/2026): las cuentas a las que se transfiere (solo las que están completas).
@@ -68,6 +72,9 @@ export const RANGOS_TIEMPOS_RESERVA = {
   reserva_recordatorio_minutos: [30, 2880],
   reserva_ventana_reservada_minutos: [15, 240],
 } as const
+
+// 27/10/2026 (RF-M06-039): la misma que valida el backend (PoliticaCaja::RANGO_TOLERANCIA).
+export const RANGO_TOLERANCIA_CAJA = [0, 360] as const
 
 // Fase 4, tarea 1: estado del programador de tareas (cron) y de la cola de trabajos en el
 // servidor, con su último latido. GET /sistema/estado, solo Administrador.

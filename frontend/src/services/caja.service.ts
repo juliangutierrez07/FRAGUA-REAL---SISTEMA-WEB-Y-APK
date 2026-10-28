@@ -43,4 +43,8 @@ export const cajaService = {
   cerrar(turnoId: number, payload: { efectivo_contado: number; justificacion_descuadre?: string }) {
     return api.post<CajaTurno>(`/caja/turnos/${turnoId}/cerrar`, payload)
   },
+  // 27/10/2026 (RF-M06-039): el conteo de un turno que se cerró solo.
+  registrarConteo(turnoId: number, payload: { efectivo_contado: number; justificacion_descuadre?: string }) {
+    return api.post<CajaTurno>(`/caja/turnos/${turnoId}/conteo`, payload)
+  },
 }

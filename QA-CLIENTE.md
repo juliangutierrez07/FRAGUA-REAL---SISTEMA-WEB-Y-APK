@@ -333,6 +333,15 @@ Antes: el SuperAdmin puso al menos una cuenta en Configuración > «Cuentas para
       captura queda «Pago en revisión». Si el personal la rechaza, se ve el motivo y se puede pagar otra vez.
       Sin cuentas de pago configuradas, dice que se escriba por WhatsApp.
 
+## 13e. Documento y pedidos del local en el historial (27/10/2026)
+
+- [ ] Registro: «Número de documento» es obligatorio; los puntos y espacios se quitan solos y las letras
+      quedan en mayúscula. Un documento o un celular que ya tiene otro cliente no deja registrarse.
+- [ ] Un cliente que se registró antes ve en su Perfil «Agrega tu número de documento…»; al guardarlo ya no
+      lo puede dejar vacío.
+- [ ] Pagar en el local y darle al mesero el documento, el correo o el celular: el pedido aparece en «Mis
+      pedidos» como «En el local · Mesa N», sin botones de cancelar ni de pagar en línea.
+
 ## 14. Correcciones del 19/10/2026 (reservas)
 
 - [ ] Reservar: la hora es una lista de 4:00 p. m. a 11:00 p. m., cada 30 minutos; debajo dice «Las

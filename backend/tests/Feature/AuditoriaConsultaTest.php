@@ -66,7 +66,7 @@ class AuditoriaConsultaTest extends TestCase
         Notification::fake();
 
         $registro = $this->postJson('/api/auth/register', [
-            'nombre' => 'Carla Cliente', 'email' => 'carla@test.co',
+            'nombre' => 'Carla Cliente', 'email' => 'carla@test.co', 'documento' => '1020304050',
             'password' => 'Clave12345', 'password_confirmation' => 'Clave12345',
         ])->assertCreated();
         $cliente = User::where('email', 'carla@test.co')->sole();

@@ -112,7 +112,7 @@ class UsuarioController extends Controller
 
         abort_if($cambiaRol && $usuario->is($request->user()), 422, 'No puedes cambiar tu propio rol. Pídeselo a otro Administrador.');
 
-        $campos = array_values(array_intersect(['nombre', 'email', 'username', 'telefono'], array_keys($datos)));
+        $campos = array_values(array_intersect(['nombre', 'email', 'username', 'telefono', 'documento'], array_keys($datos)));
         $antes = $usuario->only([...$campos, 'role']);
 
         DB::transaction(function () use ($usuario, $datos, $cambiaRol, $campos, $antes, $request, $permisoAntes, $permisoDespues) {

@@ -295,4 +295,43 @@ class PedidoController extends Controller
 
         return response()->json($this->paraEnlacePublico($this->pedidoService->cancelar($pedido, null, $request->motivo)));
     }
+
+    // ---- Fidelización (27/10/2026, RF-M06-040, RN-M06-23, HU-M06-021) ----
+
+    // GET /clientes/buscar?dato=… — al cobrar, el Mesero busca al Cliente por documento, correo o celular.
+    // Solo devuelve el nombre: lo justo para confirmarlo con el cliente en la mesa.
+    public function buscarCliente(Request $request)
+    {
+        abort_unless($request->user()->esMesero(), 403, 'Solo el Mesero asigna el pedido a un cliente al cobrar.');
+        $dato = (string) $request->validate(['dato' => ['required', 'string', 'max:120']])['dato'];
+        $hallado = \App\Support\Usuarios\IdentidadCliente::buscar($dato);
+        abort_if($hallado === null, 404, 'No hay un cliente registrado con ese documento, correo o celular.');
+
+        return response()->json([
+            'id' => $hallado['cliente']->id,
+            'nombre' => $hallado['cliente']->nombre,
+            'coincide' => $hallado['coincide'],
+        ]);
+    }
+
+    // POST /pedidos/asignar-cliente — deja los pedidos que se cobran (uno, una cuenta o toda la mesa) en el
+    // historial del Cliente.
+    public function asignarCliente(Request $request)
+    {
+        $datos = $request->validate([
+            'pedido_ids' => ['required', 'array', 'min:1', 'max:30'],
+            'pedido_ids.*' => ['integer', 'distinct', 'exists:pedidos,id'],
+            'cliente_id' => ['required', 'integer'],
+        ], ['pedido_ids.*.exists' => 'Uno de los pedidos no existe.']);
+        $pedidos = Pedido::whereIn('id', $datos['pedido_ids'])->get();
+        foreach ($pedidos as $pedido) {
+            $this->authorize('cobrar', $pedido);
+        }
+        $cliente = \App\Models\User::where('role', 'cliente')->where('activo', true)->whereNull('eliminado_at')->find($datos['cliente_id']);
+        abort_if($cliente === null, 422, 'Ese cliente ya no está disponible.');
+
+        $asignados = $this->pedidoService->asignarCliente($pedidos, $cliente, $request->user());
+
+        return response()->json(['cliente' => $cliente->only(['id', 'nombre']), 'pedido_ids' => $asignados]);
+    }
 }

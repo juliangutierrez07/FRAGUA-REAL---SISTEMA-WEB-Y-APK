@@ -19,7 +19,8 @@ class User extends Authenticatable
     // trait, que el modelo tampoco traía.
     use Notifiable;
 
-    protected $fillable = ['role', 'nombre', 'email', 'username', 'telefono', 'password', 'activo', 'puede_registrar_gastos', 'menus_permitidos'];
+    // 27/10/2026 (RF-M01-035): `documento`, el número de documento del Cliente (único entre clientes).
+    protected $fillable = ['role', 'nombre', 'email', 'username', 'telefono', 'documento', 'password', 'activo', 'puede_registrar_gastos', 'menus_permitidos'];
 
     protected $hidden = ['password', 'remember_token'];
 

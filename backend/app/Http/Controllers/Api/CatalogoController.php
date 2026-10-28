@@ -477,6 +477,8 @@ class CatalogoController extends Controller
             ),
             // Fase 4, tarea 2: tiempos de las reservas (el Cliente ve la tolerancia al reservar).
             ...\App\Support\Reservas\PoliticaReservas::valores(),
+            // 27/10/2026 (RF-M06-039): hora de cierre de la caja y tolerancia (Configuración).
+            ...\App\Support\Caja\PoliticaCaja::valores(),
             // Seguridad (21/10/2026): las pantallas muestran los requisitos de la contraseña.
             'clave' => [
                 'minimo' => max(8, (int) config('fragua_real.seguridad.clave_minimo', 8)),

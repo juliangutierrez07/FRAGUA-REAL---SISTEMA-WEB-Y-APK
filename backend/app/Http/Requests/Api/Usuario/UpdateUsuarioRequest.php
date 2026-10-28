@@ -47,16 +47,25 @@ class UpdateUsuarioRequest extends FormRequest
             $this->merge(['username' => NombreUsuario::normalizar($this->input('username'))]);
         }
         \App\Support\Validacion\Formatos::normalizar($this, ['telefono' => 'telefono', 'nombre' => 'nombre']);
+        if ($this->has('documento')) {
+            $this->merge(['documento' => \App\Support\Usuarios\IdentidadCliente::normalizarDocumento($this->input('documento'))]);
+        }
     }
 
     public function rules(): array
     {
         $usuario = $this->route('usuario');
+        // 27/10/2026 (RF-M01-035): documento y celular no se repiten entre clientes; el Administrador
+        // corrige el documento de un Cliente (o lo deja vacío).
+        $cliente = $this->input('role') === 'cliente';
+        $identidad = \App\Support\Usuarios\IdentidadCliente::class;
 
         return [
             'nombre' => ['required', 'string', 'max:80', 'regex:'.\App\Support\Validacion\Formatos::PERSONA],
             'email' => ['bail', 'required', 'email', 'max:255', Rule::unique('users', 'email')->whereNull('eliminado_at')->ignore($usuario?->id)],
-            'telefono' => ['nullable', 'string', 'regex:'.\App\Support\Validacion\Formatos::CELULAR],
+            'telefono' => ['nullable', 'string', 'regex:'.\App\Support\Validacion\Formatos::CELULAR,
+                ...($cliente ? [$identidad::reglaCelularUnico($usuario?->id)] : [])],
+            ...($cliente ? ['documento' => ['sometimes', ...$identidad::reglasDocumento(false, $usuario?->id)]] : []),
             // Fase 3, tarea 3 (RF-M01-007/011): vacío = sin nombre de usuario (entra con el correo);
             // si no se envía, no se toca.
             'username' => ['sometimes', ...NombreUsuario::reglas($usuario?->id)],
@@ -71,6 +80,9 @@ class UpdateUsuarioRequest extends FormRequest
         return [
             ...NombreUsuario::mensajes(),
             'email.unique' => 'Ese correo ya lo usa otra cuenta.',
+            'documento.regex' => \App\Support\Usuarios\IdentidadCliente::MENSAJE_DOCUMENTO,
+            'documento.unique' => 'Ese número de documento ya lo tiene otro cliente.',
+            'telefono.unique' => 'Ese celular ya lo tiene otro cliente.',
             'role.in' => 'Ese rol no existe. Los roles del sistema son Administrador, Mesero y Cliente.',
         ];
     }

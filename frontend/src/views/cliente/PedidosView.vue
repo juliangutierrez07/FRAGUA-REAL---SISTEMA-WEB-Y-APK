@@ -377,7 +377,7 @@ onMounted(() => cargarPedidos())
                 <PackageSearch :size="18" />
               </span>
               <div>
-                <p class="font-display text-base text-ink">Pedido #{{ pedido.id }} · {{ TIPOS[pedido.tipo] }}</p>
+                <p class="font-display text-base text-ink">Pedido #{{ pedido.id }} · {{ TIPOS[pedido.tipo] }}<template v-if="pedido.tipo === 'local' && pedido.mesa"> · {{ pedido.mesa.nombre }}</template></p>
                 <p class="mt-0.5 text-xs text-[#6c655c]">{{ formatoFecha(pedido.created_at) }}</p>
               </div>
             </div>

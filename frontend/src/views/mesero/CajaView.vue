@@ -19,6 +19,7 @@ import CuentaMesaModal from '@/components/pedidos/CuentaMesaModal.vue'
 import RevisarComprobanteModal from '@/components/pagos/RevisarComprobanteModal.vue'
 import FotoComprobante from '@/components/pagos/FotoComprobante.vue'
 import EfectivoRecibido from '@/components/pagos/EfectivoRecibido.vue'
+import ClienteDelCobro from '@/components/pagos/ClienteDelCobro.vue'
 import { pedidoService } from '@/services/pedido.service'
 import { cajaService, type EstadoCaja } from '@/services/caja.service'
 import { pagoService } from '@/services/pago.service'
@@ -172,6 +173,14 @@ function abrirCobro(pedido: Pedido) {
 
 function cerrarCobro() {
   pedidoACobrar.value = null
+}
+
+// Fidelización (27/10/2026, RF-M06-040): el pedido quedó en el historial del cliente.
+function clienteAsignado(cliente: { id: number; nombre: string }) {
+  if (!pedidoACobrar.value) return
+  const actualizado = { ...pedidoACobrar.value, cliente_id: cliente.id, cliente: { ...(pedidoACobrar.value.cliente ?? {}), ...cliente } as Pedido['cliente'] }
+  pedidoACobrar.value = actualizado
+  reemplazarPedido(actualizado)
 }
 
 async function confirmarCobro() {
@@ -518,6 +527,7 @@ onMounted(cargar)
         </p>
         <EfectivoRecibido v-if="metodo === 'efectivo'" v-model="recibido" :total="monto || 0" />
         <FotoComprobante v-else v-model="fotoCobro" :obligatoria="metodo === 'transferencia'" />
+        <ClienteDelCobro :pedidos="[pedidoACobrar]" @asignado="clienteAsignado" />
 
         <p v-if="errorCobro" class="mt-3 alert-error">{{ errorCobro }}</p>
 

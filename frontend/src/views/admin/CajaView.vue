@@ -40,6 +40,16 @@ function formatoFecha(valor: string) {
   return `${dia}/${mes}/${anio}`
 }
 
+// 27/10/2026 (RF-M06-039): "12:30 a. m.", hora de Colombia.
+function horaColombia(valor: string) {
+  return new Date(valor).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Bogota' })
+}
+
+// El turno se cerró solo y nadie ha registrado lo que contó.
+function esperaConteo(turno: CajaTurno) {
+  return !!turno.cierre_automatico && turno.efectivo_contado === null
+}
+
 function formatoFechaHora(valor: string | null) {
   if (!valor) return '—'
   return new Date(valor).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
@@ -189,6 +199,43 @@ async function cargarHistorial(page = 1) {
 }
 
 const contadorTexto = computed(() => (total.value === 1 ? '1 turno' : `${total.value} turnos`))
+const turnosSinConteo = computed(() => turnos.value.filter(esperaConteo))
+
+// ---- Conteo de un turno que se cerró solo (27/10/2026, RF-M06-039) ----
+const turnoAContar = ref<CajaTurno | null>(null)
+const conteo = ref(0)
+const justificacionConteo = ref('')
+const errorConteo = ref('')
+const guardandoConteo = ref(false)
+const diferenciaConteo = computed(() =>
+  turnoAContar.value ? Math.round((conteo.value - Number(turnoAContar.value.efectivo_esperado)) * 100) / 100 : 0,
+)
+
+function abrirConteo(turno: CajaTurno) {
+  turnoAContar.value = turno
+  conteo.value = Number(turno.efectivo_esperado)
+  justificacionConteo.value = ''
+  errorConteo.value = ''
+}
+
+async function guardarConteo() {
+  if (!turnoAContar.value) return
+  guardandoConteo.value = true
+  errorConteo.value = ''
+  try {
+    const { data } = await cajaService.registrarConteo(turnoAContar.value.id, {
+      efectivo_contado: conteo.value,
+      justificacion_descuadre: justificacionConteo.value.trim() || undefined,
+    })
+    if (turnoDetalle.value?.id === data.id) turnoDetalle.value = { ...turnoDetalle.value, ...data }
+    turnoAContar.value = null
+    await cargarHistorial(paginaActual.value)
+  } catch (e) {
+    errorConteo.value = mensajeDeError(e, 'No pudimos registrar el conteo.')
+  } finally {
+    guardandoConteo.value = false
+  }
+}
 
 // Mejora (26/10/2026, RF-M06-037): la foto del comprobante que tomó el Mesero al cobrar.
 const fotoPago = ref<{ pago: Pago; url: string } | null>(null)
@@ -360,6 +407,9 @@ onMounted(() => {
             Base inicial {{ formatoPrecio(turnoActual.base_inicial) }} · abierto por
             {{ turnoActual.abierto_por_usuario?.nombre ?? '—' }}
           </p>
+          <p v-if="turnoActual.se_cierra_sola_at" class="mt-1 text-xs text-white/55">
+            Si nadie la cierra, se cierra sola a las {{ horaColombia(turnoActual.se_cierra_sola_at) }}, sin contar el efectivo.
+          </p>
         </div>
         <BaseButton v-escritura variant="danger" @click="abrirModalCerrar">Cerrar turno</BaseButton>
       </div>
@@ -387,6 +437,19 @@ onMounted(() => {
 
       <p v-if="errorHistorial" class="alert-error mt-3">{{ errorHistorial }}</p>
 
+      <!-- 27/10/2026 (RF-M06-039): turnos que se cerraron solos y esperan el conteo. -->
+      <div v-if="turnosSinConteo.length" class="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+        <p class="font-semibold">
+          {{ turnosSinConteo.length === 1 ? 'Una caja se cerró sola' : `${turnosSinConteo.length} cajas se cerraron solas` }}
+        </p>
+        <p class="mt-1 text-xs text-amber-800">Nadie las cerró a tiempo. Registra el efectivo que contaste para dejar el turno cuadrado.</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <BaseButton v-for="t in turnosSinConteo" :key="t.id" v-escritura variant="secondary" size="sm" @click="abrirConteo(t)">
+            Registrar conteo del {{ formatoFecha(t.fecha) }}
+          </BaseButton>
+        </div>
+      </div>
+
       <div v-if="cargandoHistorial" class="loading-state">Cargando turnos…</div>
 
       <div v-else-if="!turnos.length" class="mt-5 empty-state">
@@ -412,7 +475,12 @@ onMounted(() => {
                 >
                   {{ turno.estado === 'abierta' ? 'Abierta' : 'Cerrada' }}
                 </span>
-                <span v-if="turno.diferencia !== null && turno.diferencia !== 0" class="badge bg-amber-50 text-amber-700 ring-amber-600/20">
+                <span v-if="esperaConteo(turno)" class="badge bg-amber-50 text-amber-700 ring-amber-600/20">
+                  Cierre automático, sin contar
+                </span>
+                <span v-else-if="turno.cierre_automatico" class="badge bg-gray-100 text-gray-500 ring-gray-500/20">Cierre automático</span>
+                <!-- La diferencia llega como texto ("0.00"): se compara como número para no mostrar «Descuadre $ 0». -->
+                <span v-if="Number(turno.diferencia ?? 0) !== 0" class="badge bg-amber-50 text-amber-700 ring-amber-600/20">
                   Descuadre {{ formatoPrecio(turno.diferencia) }}
                 </span>
               </p>
@@ -421,6 +489,7 @@ onMounted(() => {
                 <template v-if="turno.efectivo_contado !== null"> · contado {{ formatoPrecio(turno.efectivo_contado) }}</template>
                 · abrió {{ turno.abierto_por_usuario?.nombre ?? '—' }}
                 <template v-if="turno.cerrado_por_usuario"> · cerró {{ turno.cerrado_por_usuario.nombre }}</template>
+                <template v-else-if="turno.cierre_automatico"> · se cerró sola</template>
               </p>
             </div>
             <BaseButton variant="ghost" size="sm" class="shrink-0" @click.stop="verDetalle(turno)">Ver detalle</BaseButton>
@@ -504,6 +573,36 @@ onMounted(() => {
       </div>
     </BaseModal>
 
+    <!-- Conteo de un turno que se cerró solo (27/10/2026, RF-M06-039) -->
+    <BaseModal :model-value="!!turnoAContar" :title="turnoAContar ? `Conteo de la caja del ${formatoFecha(turnoAContar.fecha)}` : ''" @update:model-value="turnoAContar = null">
+      <template v-if="turnoAContar">
+        <p class="text-xs text-gray-500">La caja se cerró sola. Escribe el efectivo que contaste.</p>
+        <label class="mt-4 block text-xs font-medium text-gray-700">
+          Efectivo contado
+          <CampoPesos v-model="conteo" class="mt-2 field" />
+        </label>
+        <p class="mt-1 text-xs text-gray-400">
+          Efectivo esperado: {{ formatoPrecio(turnoAContar.efectivo_esperado) }}
+          <template v-if="diferenciaConteo !== 0">
+            · <span class="font-semibold text-amber-700">diferencia {{ formatoPrecio(diferenciaConteo) }}</span>
+          </template>
+        </p>
+        <label v-if="diferenciaConteo !== 0" class="mt-4 block text-xs font-medium text-gray-700">
+          Justificación del descuadre
+          <textarea v-formato="'texto'" maxlength="500" v-model="justificacionConteo" rows="2" class="mt-2 field" />
+        </label>
+
+        <p v-if="errorConteo" class="mt-3 alert-error">{{ errorConteo }}</p>
+
+        <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <BaseButton variant="ghost" @click="turnoAContar = null">Cancelar</BaseButton>
+          <BaseButton variant="primary" :disabled="guardandoConteo || (diferenciaConteo !== 0 && !justificacionConteo.trim())" @click="guardarConteo">
+            {{ guardandoConteo ? 'Guardando…' : 'Registrar conteo' }}
+          </BaseButton>
+        </div>
+      </template>
+    </BaseModal>
+
     <BaseModal :model-value="!!fotoPago" :title="fotoPago ? `Comprobante · pedido #${fotoPago.pago.pedido_id}` : ''" @update:model-value="cerrarFoto">
       <img v-if="fotoPago" :src="fotoPago.url" alt="Foto del comprobante" class="mx-auto max-h-[70vh] rounded-xl object-contain" />
     </BaseModal>
@@ -525,6 +624,11 @@ onMounted(() => {
         <p v-if="turnoDetalle.justificacion_descuadre" class="mt-2 text-xs text-gray-500">
           Justificación: {{ turnoDetalle.justificacion_descuadre }}
         </p>
+        <div v-if="esperaConteo(turnoDetalle)" class="mt-3 flex flex-col gap-2 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+          <span>Se cerró sola{{ turnoDetalle.cerrado_at ? ` el ${formatoFechaHora(turnoDetalle.cerrado_at)}` : '' }}, sin contar el efectivo.</span>
+          <BaseButton v-escritura variant="secondary" size="sm" class="shrink-0" @click="abrirConteo(turnoDetalle)">Registrar conteo</BaseButton>
+        </div>
+        <p v-else-if="turnoDetalle.cierre_automatico" class="mt-2 text-xs text-gray-500">Se cerró sola; el conteo se registró después.</p>
         <!-- Mejora (16/10/2026): el mismo resumen del turno de hoy (antes, notas sueltas sobre el esperado). -->
         <ResumenTurno v-if="turnoDetalle.resumen" :resumen="turnoDetalle.resumen" compacto class="mt-5" />
 
