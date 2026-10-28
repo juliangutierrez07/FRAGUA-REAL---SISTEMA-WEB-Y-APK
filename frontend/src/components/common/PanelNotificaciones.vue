@@ -6,6 +6,7 @@ import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { AlertTriangle, BellOff, CalendarClock, CheckCheck, ClipboardList, Settings, Wallet, X } from 'lucide-vue-next'
 import { useNotificacionesStore } from '@/stores/notificaciones'
+import AvisosPushEquipo from '@/components/common/AvisosPushEquipo.vue'
 import type { CategoriaNotificacion, Notificacion } from '@/services/notificacion.service'
 
 const notificaciones = useNotificacionesStore()
@@ -89,6 +90,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', alTeclado))
         </header>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
+          <!-- M11 (28/10/2026, RF-M11-013): los avisos push de este equipo. -->
+          <AvisosPushEquipo />
           <p v-if="notificaciones.cargando" class="px-4 py-10 text-center text-sm text-gray-500">Cargando…</p>
           <p v-else-if="notificaciones.error" class="m-4 alert-error">{{ notificaciones.error }}</p>
           <div v-else-if="!notificaciones.lista.length" class="px-4 py-12 text-center">

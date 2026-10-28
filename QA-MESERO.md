@@ -305,6 +305,22 @@ Usuarios.
 - [ ] En la cuenta de una mesa con cuentas separadas, se asigna la cuenta elegida; con «Toda la mesa», todos
       sus pedidos. Un pedido web que ya tiene cliente solo muestra su nombre.
 
+## 8b-nonies. Avisos push en el teléfono (28/10/2026)
+
+- [ ] En la campana, «Activar avisos» y aceptar el permiso del navegador; «Enviar prueba» llega al teléfono.
+- [ ] Con el teléfono bloqueado, un pedido nuevo por el QR o una reserva que empieza pronto llega como aviso;
+      al tocarlo abre su pantalla.
+- [ ] En iPhone funciona solo con la app instalada en la pantalla de inicio.
+
+## 8b-decies. Correcciones del 28/10/2026
+
+- [ ] Sin mesas creadas, Mesas y el paso de la mesa en Nuevo pedido dicen que todavía no hay mesas.
+- [ ] La última tarjeta de Pedidos queda completa y con espacio sobre la barra de abajo.
+- [ ] Pedidos muestra los de hoy; «Ayer» y «Otra fecha» traen los de esos días.
+- [ ] Al abrir un pedido cobrado con foto del comprobante, «Ver foto» la muestra.
+- [ ] En el teléfono, el menú del Cliente muestra dos productos por fila, y en el menú lateral solo queda
+      marcada la sección donde se está.
+
 ## 8c. Correcciones del 19/10/2026
 
 - [ ] Con una mesa dada de baja por el Administrador: no aparece en Mesas, ni en Nuevo pedido, ni en

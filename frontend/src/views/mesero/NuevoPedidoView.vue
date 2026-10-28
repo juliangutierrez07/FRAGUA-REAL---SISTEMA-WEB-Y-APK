@@ -605,6 +605,12 @@ onMounted(() => {
       <template v-else>
       <p v-if="errorMesas" class="alert-error">{{ errorMesas }}</p>
       <div v-if="cargandoMesas" class="loading-state">Cargando mesas…</div>
+      <!-- Mejora (28/10/2026): sin mesas creadas el paso quedaba vacío. -->
+      <div v-else-if="!mesas.length && !errorMesas" class="empty-state">
+        <Armchair :size="32" class="mx-auto text-gray-300" />
+        <p class="mt-3 text-sm font-medium text-ink">Todavía no hay mesas creadas</p>
+        <p class="mt-1 text-xs text-gray-500">Las crea el Administrador en «Mesas y Reservas». Puedes tomar un domicilio o una recogida.</p>
+      </div>
       <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         <button
           v-for="mesa in mesas"

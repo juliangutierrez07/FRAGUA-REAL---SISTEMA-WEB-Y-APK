@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { LayoutDashboard, LogOut, MapPin, Menu, MessageCircle, PackageSearch, ShoppingBag, User, X } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useCarritoStore } from '@/stores/carrito'
 import BotonInstalarApp from '@/components/common/BotonInstalarApp.vue'
@@ -61,6 +61,43 @@ const enlaces = [
   { to: { path: '/', hash: '#contacto' }, texto: 'Contacto' },
 ]
 
+// CORREGIDO (28/10/2026): «Contacto» es una sección del Inicio (/#contacto) y el router marcaba los dos
+// enlaces como activos. Ahora el activo se decide aquí: Contacto solo con #contacto, Inicio sin él.
+// Mejora (28/10/2026): en el computador, al agregar algo «Mi pedido» da un salto y muestra debajo qué se
+// agregó (en el teléfono lo hace el botón flotante del menú).
+const saltoCarrito = ref(false)
+const avisoCarrito = ref<string | null>(null)
+let temporizadorSalto: ReturnType<typeof setTimeout> | undefined
+let temporizadorAviso: ReturnType<typeof setTimeout> | undefined
+watch(
+  () => carrito.ultimoAgregado?.id,
+  () => {
+    if (!carrito.ultimoAgregado) return
+    saltoCarrito.value = false
+    clearTimeout(temporizadorSalto)
+    // Espera a que el punto dorado llegue (volarAlCarrito) y deja que la animación vuelva a empezar.
+    temporizadorSalto = setTimeout(() => {
+      saltoCarrito.value = true
+      temporizadorSalto = setTimeout(() => (saltoCarrito.value = false), 500)
+    }, 600)
+    avisoCarrito.value = carrito.ultimoAgregado.texto
+    clearTimeout(temporizadorAviso)
+    temporizadorAviso = setTimeout(() => (avisoCarrito.value = null), 3200)
+  },
+)
+onBeforeUnmount(() => {
+  clearTimeout(temporizadorSalto)
+  clearTimeout(temporizadorAviso)
+})
+
+const route = useRoute()
+function enlaceActivo(enlace: (typeof enlaces)[number]) {
+  const conContacto = route.hash === '#contacto'
+  if (enlace.texto === 'Contacto') return route.path === '/' && conContacto
+  if (enlace.to === '/') return route.path === '/' && !conContacto
+  return typeof enlace.to === 'string' && route.path.startsWith(enlace.to)
+}
+
 // Mejora (19/10/2026): dirección, teléfono y WhatsApp salen de Configuración (los cambia el
 // Administrador); antes estaban escritos aquí y en el Home.
 const negocio = useNegocioStore()
@@ -100,9 +137,10 @@ const anioActual = new Date().getFullYear()
             v-for="enlace in enlaces"
             :key="enlace.texto"
             :to="enlace.to"
-            class="border-b-2 border-transparent py-1 transition hover:text-ink"
-            active-class="border-brand-500 text-ink"
-            exact-active-class="border-brand-500 text-ink"
+            class="border-b-2 py-1 transition hover:text-ink"
+            :class="enlaceActivo(enlace) ? 'border-brand-500 text-ink' : 'border-transparent'"
+            active-class=""
+            exact-active-class=""
           >
             {{ enlace.texto }}
           </router-link>
@@ -148,18 +186,41 @@ const anioActual = new Date().getFullYear()
           >
             <LogOut :size="18" />
           </button>
-          <router-link
-            to="/carrito"
-            class="flex items-center gap-2 rounded-full border border-[#ddd7cd] bg-white px-4 py-2.5 text-sm font-medium text-ink transition hover:border-brand-500"
-          >
-            <ShoppingBag :size="16" />
-            <span class="hidden sm:inline">Mi pedido</span>
-            <span
-              class="flex size-5 items-center justify-center rounded-full bg-brand-500 text-[11px] font-medium text-ink"
+          <div class="relative">
+            <router-link
+              to="/carrito"
+              data-destino-carrito
+              class="flex items-center gap-2 rounded-full border bg-white px-4 py-2.5 text-sm font-medium text-ink transition hover:border-brand-500"
+              :class="saltoCarrito ? 'carrito-salto border-brand-500' : 'border-[#ddd7cd]'"
             >
-              {{ carrito.totalProductos }}
-            </span>
-          </router-link>
+              <ShoppingBag :size="16" />
+              <span class="hidden sm:inline">Mi pedido</span>
+              <span
+                class="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1 text-[11px] font-medium text-ink"
+              >
+                {{ carrito.totalProductos }}
+              </span>
+            </router-link>
+            <Transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="-translate-y-2 opacity-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-to-class="-translate-y-2 opacity-0"
+            >
+              <div
+                v-if="avisoCarrito"
+                class="absolute right-0 top-full z-30 mt-3 hidden w-80 items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-sm text-white shadow-[0_12px_30px_rgba(23,21,16,0.35)] lg:flex"
+                role="status"
+                aria-live="polite"
+              >
+                <span class="absolute -top-1.5 right-8 size-3 rotate-45 bg-ink" aria-hidden="true" />
+                <span class="min-w-0 truncate">{{ avisoCarrito }}</span>
+                <router-link to="/carrito" class="shrink-0 font-medium text-brand-400 hover:text-brand-300" @click="avisoCarrito = null">
+                  Ver pedido
+                </router-link>
+              </div>
+            </Transition>
+          </div>
         </div>
       </div>
     </header>
@@ -252,9 +313,10 @@ const anioActual = new Date().getFullYear()
           v-for="enlace in enlaces"
           :key="enlace.texto"
           :to="enlace.to"
-          class="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-[#3f3b35] hover:bg-brand-50 hover:text-brand-700"
-          active-class="bg-brand-50 text-brand-700"
-          exact-active-class="bg-brand-50 text-brand-700"
+          class="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-brand-50 hover:text-brand-700"
+          :class="enlaceActivo(enlace) ? 'bg-brand-50 text-brand-700' : 'text-[#3f3b35]'"
+          active-class=""
+          exact-active-class=""
           @click="cerrarMenu"
         >
           {{ enlace.texto }}
@@ -380,3 +442,28 @@ const anioActual = new Date().getFullYear()
     </footer>
   </div>
 </template>
+
+<style scoped>
+/* Mejora (28/10/2026): salto de «Mi pedido» al agregar un producto (computador). */
+@keyframes carrito-salto {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.12);
+  }
+  65% {
+    transform: scale(0.96);
+  }
+}
+.carrito-salto {
+  animation: carrito-salto 0.5s ease-out;
+  box-shadow: 0 0 0 4px rgba(214, 164, 58, 0.18);
+}
+@media (prefers-reduced-motion: reduce) {
+  .carrito-salto {
+    animation: none;
+  }
+}
+</style>

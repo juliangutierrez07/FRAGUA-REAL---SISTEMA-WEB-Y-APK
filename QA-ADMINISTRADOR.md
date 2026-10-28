@@ -643,6 +643,32 @@ Resumen; la lista completa del invitado está en `QA-CLIENTE.md` (secciones 4 a 
       automáticas están detenidas». Si la revisión antes de producción tiene errores, llega a las 7:00 a. m.
 - [ ] «Marcar todo como leído» deja el contador en cero. Un aviso no se repite.
 
+## 15m. Correcciones y protección (28/10/2026)
+
+- [ ] Pedidos muestra solo los de hoy; «Ayer», «Últimos 7 días» y «Otra fecha» traen los de esos días. Si
+      quedaron pedidos sin terminar de días anteriores, un aviso amarillo lo dice y «Ver» los muestra.
+- [ ] Al abrir un pedido cobrado por transferencia, «Pagos» muestra el cobro con «Ver foto» y abre la foto.
+- [ ] Con la Caja abierta en el computador, un cobro que registra el Mesero aparece en unos 15 segundos sin
+      recargar la página.
+- [ ] Varios intentos fallidos con otra cuenta no impiden entrar con la propia. Si alguien bloquea tu cuenta
+      desde otro equipo, desde el tuyo de siempre sigues entrando.
+- [ ] Un mismo celular no puede dejar más de 3 pedidos web esperando confirmación; más de 20 unidades de un
+      producto tampoco (el mensaje pide llamar).
+
+## 15l. Avisos push en el teléfono (28/10/2026)
+
+- [ ] En el servidor de pruebas, con las llaves de `php artisan push:generar-llaves` en el `.env`: al abrir la
+      campana aparece «Avisos en este equipo» con «Activar avisos». Al tocarlo, el navegador pide permiso.
+- [ ] Con el permiso dado dice «Avisos activos en este equipo»; «Enviar prueba» hace llegar «Avisos activados»
+      en unos segundos, también con la app cerrada.
+- [ ] Con la app cerrada (o el teléfono bloqueado), un pedido nuevo por el QR llega como aviso del teléfono;
+      al tocarlo se abre Pedidos. El mismo aviso no llega dos veces.
+- [ ] «Apagar» deja de enviarlos. Cerrar sesión también: otra cuenta que entre en ese equipo tiene que
+      activarlos de nuevo y recibe solo los suyos.
+- [ ] Si se negó el permiso, la campana explica cómo permitirlo. En iPhone sin la app instalada, explica cómo
+      instalarla primero.
+- [ ] La revisión antes de producción dice «Avisos push del personal» en verde con las llaves puestas.
+
 ## 15b. Anular un pago de un pedido finalizado (22/10/2026)
 
 - [ ] Cobrar un pedido local en dos pagos (por ejemplo, efectivo y tarjeta) hasta que quede finalizado.

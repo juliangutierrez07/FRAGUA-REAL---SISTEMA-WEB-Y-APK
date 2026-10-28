@@ -121,8 +121,33 @@ return [
         'bloqueo_minutos' => (int) env('FRAGUA_REAL_LOGIN_BLOQUEO_MINUTOS', 15),
     ],
 
+    // Seguridad (28/10/2026, RNF-TRANS-045, RN-PED-36): límites de peticiones de las rutas públicas
+    // (App\Support\Seguridad\LimitesDePeticiones) y topes de los pedidos de la web y del QR
+    // (App\Support\Seguridad\LimitePedidosPublicos, StorePedidoRequest).
+    'limites' => [
+        'login_cuenta_minuto' => (int) env('FRAGUA_REAL_LIMITE_LOGIN_CUENTA', 10),
+        'login_ip_minuto' => (int) env('FRAGUA_REAL_LIMITE_LOGIN_IP', 40),
+        'registro_ip_hora' => (int) env('FRAGUA_REAL_LIMITE_REGISTRO_IP_HORA', 20),
+        'pedidos_ip_minuto' => (int) env('FRAGUA_REAL_LIMITE_PEDIDOS_IP_MINUTO', 10),
+        'pedidos_ip_hora' => (int) env('FRAGUA_REAL_LIMITE_PEDIDOS_IP_HORA', 60),
+        'pedidos_comprador_hora' => (int) env('FRAGUA_REAL_LIMITE_PEDIDOS_COMPRADOR_HORA', 10),
+        'pendientes_por_comprador' => (int) env('FRAGUA_REAL_PEDIDOS_PENDIENTES_COMPRADOR', 3),
+        'pendientes_por_mesa' => (int) env('FRAGUA_REAL_PEDIDOS_PENDIENTES_MESA', 4),
+        'lineas_por_pedido' => 30,
+        'unidades_por_linea' => 20,
+    ],
+
     // M11 (21/10/2026): notificaciones del sistema (la campana del Mesero y del Administrador).
     // Horas en hora de Colombia ("HH:MM"). Los avisos se borran solos después de 'dias_guardadas'.
+    // M11 — Avisos push del personal (28/10/2026, RF-M11-013): llaves VAPID (php artisan push:generar-llaves).
+    // Sin ellas la campana sigue funcionando igual, sin avisos push. `asunto`: un correo de contacto
+    // («mailto:…») que los servicios push usan si hay un problema con los envíos.
+    'push' => [
+        'publica' => env('FRAGUA_REAL_PUSH_PUBLICA', ''),
+        'privada' => env('FRAGUA_REAL_PUSH_PRIVADA', ''),
+        'asunto' => env('FRAGUA_REAL_PUSH_ASUNTO', 'mailto:'.env('MAIL_FROM_ADDRESS', 'soporte@fraguareal.com')),
+    ],
+
     'notificaciones' => [
         // «La reserva empieza en N minutos».
         'reserva_proxima_minutos' => (int) env('FRAGUA_REAL_NOTIF_RESERVA_PROXIMA_MINUTOS', 30),

@@ -57,8 +57,9 @@ export default {
         gold: '0 8px 20px rgba(214,164,58,0.35)',
       },
       spacing: {
-        // Altura de la barra inferior móvil del Mesero (incluye el área segura del iPhone).
-        'nav-m': 'calc(4.25rem + env(safe-area-inset-bottom))',
+        // Altura de la barra inferior móvil del Mesero (incluye el área segura del iPhone), más un
+        // respiro (28/10/2026): la última tarjeta quedaba pegada a la barra y su sombra se cortaba.
+        'nav-m': 'calc(6rem + env(safe-area-inset-bottom))',
       },
     },
   },

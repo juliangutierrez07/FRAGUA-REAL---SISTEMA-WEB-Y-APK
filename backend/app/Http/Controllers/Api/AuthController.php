@@ -56,9 +56,16 @@ class AuthController extends Controller
         $identificador = $request->identificador();
         $esCorreo = $request->esCorreo();
 
+        $user = $esCorreo
+            ? User::where('email', $identificador)->whereNull('eliminado_at')->first()
+            : User::where('username', mb_strtolower($identificador))->whereNull('eliminado_at')->first();
+        // Seguridad (28/10/2026, RF-M01-036, RN-USR-27): si entra desde un equipo de confianza de esta cuenta,
+        // el bloqueo de la cuenta o de la IP (por los intentos de otro) no lo detiene.
+        $equipo = $bloqueo->equipoDeConfianza($user, $request->input('equipos_confianza'));
+
         // Seguridad (21/10/2026, RF-M01-029, RN-USR-24): con demasiados intentos fallidos de esta
         // cuenta o de esta IP, ni siquiera se revisa la contraseña hasta que pase el bloqueo.
-        if ($minutos = $bloqueo->minutosBloqueado($identificador, $request)) {
+        if ($minutos = $bloqueo->minutosBloqueado($identificador, $request, $equipo)) {
             app(AuditoriaService::class)->registrar('inicio_sesion_bloqueado', 'User', null, [
                 ($esCorreo ? 'correo' : 'usuario') => mb_substr($identificador, 0, 120),
                 'minutos_restantes' => $minutos,
@@ -66,10 +73,6 @@ class AuthController extends Controller
 
             return response()->json(['message' => $bloqueo->mensaje($minutos), 'bloqueado_minutos' => $minutos], 429);
         }
-
-        $user = $esCorreo
-            ? User::where('email', $identificador)->whereNull('eliminado_at')->first()
-            : User::where('username', mb_strtolower($identificador))->whereNull('eliminado_at')->first();
 
         if (! $user || ! Hash::check($request->password, $user->password) || ! $user->activo) {
             // RF-M01-017 (Fase 3, tarea 1): el intento fallido queda registrado con el correo
@@ -82,7 +85,7 @@ class AuthController extends Controller
                 'motivo' => $motivo,
             ]);
 
-            if ($bloqueo->fallido($identificador, $request, $user)) {
+            if ($bloqueo->fallido($identificador, $request, $user, $equipo)) {
                 $minutos = (int) config('fragua_real.seguridad.bloqueo_minutos', 15);
 
                 return response()->json(['message' => $bloqueo->mensaje($minutos), 'bloqueado_minutos' => $minutos], 429);
@@ -93,12 +96,17 @@ class AuthController extends Controller
             ]);
         }
 
-        $bloqueo->limpiar($identificador);
+        $bloqueo->limpiar($identificador, $equipo);
 
         ['token' => $token, 'sesion' => $sesion] = app(SesionService::class)->abrir($user, $request);
         $this->auditar('inicio_sesion', $user, ['via' => $esCorreo ? 'correo' : 'usuario', 'sesion_id' => $sesion->id], $user);
 
-        return response()->json(['user' => $user, 'token' => $token]);
+        // `equipo_confianza`: la llave que el navegador guarda y manda en los próximos inicios de sesión.
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+            'equipo_confianza' => $bloqueo->recordarEquipo($user, $request->input('equipos_confianza')),
+        ]);
     }
 
     public function logout(Request $request)

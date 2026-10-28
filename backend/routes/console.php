@@ -49,6 +49,15 @@ Artisan::command('notificaciones:revisar', function (\App\Services\NotificacionS
 
 \Illuminate\Support\Facades\Schedule::command('notificaciones:revisar')->everyMinute()->withoutOverlapping(5);
 
+// M11 — Avisos push (28/10/2026, RF-M11-013): crea el par de llaves VAPID para el .env del servidor. Se hace una
+// sola vez: si se cambian, los equipos que ya tenían los avisos activos tienen que volver a activarlos.
+Artisan::command('push:generar-llaves', function () {
+    $llaves = \App\Support\Push\WebPush::generarLlaves();
+    $this->info('Copia estas dos líneas en el .env del servidor (la privada no se comparte):');
+    $this->line('FRAGUA_REAL_PUSH_PUBLICA='.$llaves['publica']);
+    $this->line('FRAGUA_REAL_PUSH_PRIVADA='.$llaves['privada']);
+})->purpose('Crea las llaves VAPID de los avisos push del personal');
+
 // Cierre automático de la caja (27/10/2026, RF-M06-039, RN-M06-22): el turno que sigue abierto después de
 // la hora de cierre más la tolerancia (Configuración) se cierra solo, sin contar el efectivo.
 Artisan::command('caja:cerrar-vencidas', function (\App\Services\CajaService $caja) {

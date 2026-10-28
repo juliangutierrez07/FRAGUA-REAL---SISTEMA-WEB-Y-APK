@@ -15,6 +15,7 @@ use App\Models\PedidoAviso;
 use App\Models\PedidoDetalle;
 use App\Services\AvisoPedidoService;
 use App\Services\PedidoService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use RuntimeException;
@@ -48,7 +49,22 @@ class PedidoController extends Controller
     // Panel de pedidos del Administrador (RF-M02-T-017): filtra por tipo/estado.
     public function index(Request $request)
     {
+        // Mejora (28/10/2026, RF-M02-T-018): pedidos de un día o de un rango de días (`desde`/`hasta`,
+        // fechas de calendario en hora de Colombia). Las pantallas del personal muestran hoy por defecto;
+        // antes salían todos los pedidos de todas las semanas.
+        $request->validate([
+            'desde' => ['nullable', 'date_format:Y-m-d'],
+            'hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:desde'],
+        ], [
+            'hasta.after_or_equal' => 'La fecha final no puede ser anterior a la inicial.',
+        ]);
+        $zona = 'America/Bogota';
+        $desde = $request->filled('desde') ? CarbonImmutable::parse($request->desde, $zona)->startOfDay()->utc() : null;
+        $hasta = $request->filled('hasta') ? CarbonImmutable::parse($request->hasta, $zona)->endOfDay()->utc() : null;
+
         $pedidos = Pedido::with(self::CON_DETALLES)
+            ->when($desde, fn ($q) => $q->where('created_at', '>=', $desde))
+            ->when($hasta, fn ($q) => $q->where('created_at', '<=', $hasta))
             ->when($request->tipo, fn ($q) => $q->where('tipo', $request->tipo))
             ->when($request->estado, fn ($q) => $q->where('estado', $request->estado))
             // Fase 1, tarea 3: pedidos de una mesa (RF-M02-L-020).
@@ -84,6 +100,9 @@ class PedidoController extends Controller
                 (float) config('fragua_real.valor_domicilio_default')
             );
         }
+
+        // Seguridad (28/10/2026, RN-PED-36): topes de pedidos esperando confirmación (web y QR).
+        app(\App\Support\Seguridad\LimitePedidosPublicos::class)->revisar($data);
 
         $pedido = $this->pedidoService->crear($data);
 

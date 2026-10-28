@@ -1,6 +1,6 @@
 # API — Fragua Real Burger
 
-Referencia de los 204 endpoints de `backend/routes/api.php`, agrupados por módulo. Donde dice «Administrador» entra también el SuperAdmin (M09) y, solo para consultar, la cuenta de Soporte (M10): a ella el servidor le rechaza con 403 «La cuenta de Soporte solo puede consultar.» toda escritura (POST, PUT, PATCH o DELETE), salvo las de su propia cuenta (`/auth/*`, `/perfil`), `POST /reportes/exportar`, `POST /pedidos/cotizacion` y marcar sus notificaciones como leídas, y también `GET /comandas/{comanda}/ticket`, que marca la comanda como impresa. Las rutas del personal llevan además el permiso de menú de la cuenta (M09): si el SuperAdmin le quitó ese menú, responden 403 «Esta opción no está habilitada para tu cuenta…». Todas las rutas van bajo `/api` y responden JSON, salvo los PDF, tickets, fotos y archivos exportados.
+Referencia de los 208 endpoints de `backend/routes/api.php`, agrupados por módulo. Donde dice «Administrador» entra también el SuperAdmin (M09) y, solo para consultar, la cuenta de Soporte (M10): a ella el servidor le rechaza con 403 «La cuenta de Soporte solo puede consultar.» toda escritura (POST, PUT, PATCH o DELETE), salvo las de su propia cuenta (`/auth/*`, `/perfil`), `POST /reportes/exportar`, `POST /pedidos/cotizacion` y marcar sus notificaciones como leídas, y también `GET /comandas/{comanda}/ticket`, que marca la comanda como impresa. Las rutas del personal llevan además el permiso de menú de la cuenta (M09): si el SuperAdmin le quitó ese menú, responden 403 «Esta opción no está habilitada para tu cuenta…». Todas las rutas van bajo `/api` y responden JSON, salvo los PDF, tickets, fotos y archivos exportados.
 
 Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). Si cambia una ruta, actualiza esta tabla.
 
@@ -25,7 +25,7 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 - [Caja y pagos (M06)](#caja-y-pagos-m06) (26)
 - [Compras, gastos y cierre diario (M03)](#compras-gastos-y-cierre-diario-m03) (12)
 - [Reportes (M08)](#reportes-m08) (9)
-- [Notificaciones del personal (M11)](#notificaciones-del-personal-m11) (4)
+- [Notificaciones del personal (M11)](#notificaciones-del-personal-m11) (8)
 - [Impresoras (M12)](#impresoras-m12) (13)
 - [Configuración, sistema y tablero](#configuración-sistema-y-tablero) (13)
 
@@ -33,12 +33,12 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 
 | Método | Ruta | Quién | Para qué | Límite |
 |---|---|---|---|---|
-| `POST` | `/auth/login` | Pública | Inicia sesión con el correo o el nombre de usuario y devuelve el token. Tras 5 intentos fallidos seguidos de la misma cuenta, o 20 desde la misma IP en 15 minutos, responde 429 con `message` («Hiciste demasiados intentos fallidos…») y `bloqueado_minutos` durante 15 minutos, aun con la contraseña correcta. | 10/min |
+| `POST` | `/auth/login` | Pública | Inicia sesión con el correo o el nombre de usuario y devuelve el token. Tras 5 intentos fallidos seguidos de la misma cuenta, o 20 desde la misma IP en 15 minutos, responde 429 con `message` («Hiciste demasiados intentos fallidos…») y `bloqueado_minutos` durante 15 minutos, aun con la contraseña correcta. 28/10/2026: devuelve `equipo_confianza` (llave de este navegador para la cuenta); enviada en `equipos_confianza` en los próximos inicios de sesión, ni el bloqueo de la cuenta ni el de la IP detienen a esa persona (sus fallos bloquean solo ese equipo). | 10/min por cuenta e IP, 40/min por IP |
 | `POST` | `/auth/logout` | Con sesión (cualquier rol) | Cierra la sesión actual. |  |
 | `POST` | `/auth/logout-todos` | Con sesión (cualquier rol) | Cierra todas las sesiones de la cuenta. |  |
 | `GET` | `/auth/me` | Con sesión (cualquier rol) | Datos de la cuenta con sesión (rol, permisos). |  |
-| `POST` | `/auth/recuperar` | Pública | Envía el correo para recuperar la contraseña. No revela si el correo existe. | 10/min |
-| `POST` | `/auth/register` | Pública | Crea la cuenta de un Cliente (autorregistro). Solo crea Clientes. 27/10/2026: `documento` obligatorio y único entre clientes; el celular, si se da, también único. La contraseña debe ser segura: 8 caracteres como mínimo, con al menos una mayúscula, una minúscula y un número (en producción, además, no filtrada). | 10/min |
+| `POST` | `/auth/recuperar` | Pública | Envía el correo para recuperar la contraseña. No revela si el correo existe. | 10/min por IP, 5/hora por correo |
+| `POST` | `/auth/register` | Pública | Crea la cuenta de un Cliente (autorregistro). Solo crea Clientes. 27/10/2026: `documento` obligatorio y único entre clientes; el celular, si se da, también único. La contraseña debe ser segura: 8 caracteres como mínimo, con al menos una mayúscula, una minúscula y un número (en producción, además, no filtrada). | 10/min y 20/hora por IP |
 | `POST` | `/auth/restablecer` | Pública | Cambia la contraseña con el enlace del correo (contraseña segura), cierra todas las sesiones y quita el bloqueo por intentos de la cuenta. | 10/min |
 | `GET` | `/auth/sesiones` | Con sesión (cualquier rol) | Sesiones abiertas de la cuenta: dispositivo, IP, último uso y vencimiento. |  |
 | `POST` | `/auth/sesiones/cerrar-otras` | Con sesión (cualquier rol) | Cierra todas las sesiones menos la actual. |  |
@@ -117,8 +117,8 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 
 | Método | Ruta | Quién | Para qué | Límite |
 |---|---|---|---|---|
-| `POST` | `/pedidos` | Pública | Crea un pedido: Cliente o invitado (domicilio o recogida), QR de mesa, o el personal (local o por teléfono). Devuelve el enlace de seguimiento al invitado. 26/10/2026: `cuenta` (local: una cuenta de la mesa o la siguiente), `ubicacion_lat`/`ubicacion_lng` y `paga_con` (domicilio contra entrega; 422 si no alcanza para el total). 27/10/2026: el que crea el personal (`origen` = `mesero`) sale ya `confirmado`, con su comanda en `comandas` (salvo pago en línea); el del QR y el de la web quedan `pendiente`. | 30/min |
-| `GET` | `/pedidos` | Administrador, Mesero, Cliente | Pedidos con filtros (tipo, estado, mesa, activos). El Cliente ve solo los suyos. |  |
+| `POST` | `/pedidos` | Pública | Crea un pedido: Cliente o invitado (domicilio o recogida), QR de mesa, o el personal (local o por teléfono). Devuelve el enlace de seguimiento al invitado. 26/10/2026: `cuenta` (local: una cuenta de la mesa o la siguiente), `ubicacion_lat`/`ubicacion_lng` y `paga_con` (domicilio contra entrega; 422 si no alcanza para el total). 27/10/2026: el que crea el personal (`origen` = `mesero`) sale ya `confirmado`, con su comanda en `comandas` (salvo pago en línea); el del QR y el de la web quedan `pendiente`. 28/10/2026 (web y QR): hasta 3 pedidos esperando confirmación por comprador y 4 por mesa (422), 30 líneas y 20 unidades por línea. | Web y QR: 10/min y 60/hora por IP, 10/hora por comprador; personal: 120/min |
+| `GET` | `/pedidos` | Administrador, Mesero, Cliente | Pedidos con filtros (tipo, estado, mesa, activos). El Cliente ve solo los suyos. 28/10/2026: `desde` y `hasta` (AAAA-MM-DD, días de Colombia). |  |
 | `POST` | `/pedidos/cotizacion` | Pública | Calcula el total con promociones antes de crear el pedido. | 60/min |
 | `GET` | `/pedidos/seguimiento/{token}` | Pública | Pedido del invitado por su enlace (sin datos de contacto ni del personal). | 30/min |
 | `POST` | `/pedidos/seguimiento/{token}/cancelar` | Pública | El invitado cancela su pedido pendiente con su enlace. | 30/min |
@@ -262,6 +262,10 @@ La campana del Mesero y del Administrador (también del SuperAdmin y de Soporte)
 | `GET` | `/notificaciones` | Administrador, Mesero | Las 30 más recientes de la cuenta (`tipo`, `categoria`: pedidos, reservas, caja, operacion o sistema; `titulo`, `texto`, `enlace` a la pantalla del panel, `leida_at`, `created_at`) y `no_leidas`. |  |
 | `GET` | `/notificaciones/contador` | Administrador, Mesero | `no_leidas` y `ultima_id`; la campana lo pide cada 20 segundos. Si la cuenta recibe los avisos del sistema y el programador de tareas dejó de latir, crea ese aviso (una vez al día). |  |
 | `POST` | `/notificaciones/{notificacion}/leida` | Administrador, Mesero | Marca una como leída; 404 si no es de la cuenta. Devuelve `no_leidas`. |  |
+| `POST` | `/push/estado` | Administrador, Mesero | 28/10/2026: si el servidor tiene avisos push (`disponible`, `llave_publica` VAPID) y si el equipo (`endpoint`) ya los tiene activos con esta cuenta (`activa`). |  |
+| `POST` | `/push/suscripciones` | Administrador, Mesero | Activa los avisos push en este equipo: la suscripción del navegador (`endpoint`, `keys.p256dh`, `keys.auth`), unida a esta sesión. Solo servicios push de los navegadores; 422 si no hay llaves en el servidor. | 20/min |
+| `DELETE` | `/push/suscripciones` | Administrador, Mesero | Los apaga en este equipo (`endpoint`). |  |
+| `POST` | `/push/prueba` | Administrador, Mesero | Manda un aviso de prueba solo a este equipo; 404 si no tiene los avisos activos con esta cuenta. | 6/min |
 | `POST` | `/notificaciones/leidas` | Administrador, Mesero | Marca todas las de la cuenta como leídas. |  |
 
 ## Impresoras (M12)

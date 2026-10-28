@@ -23,7 +23,7 @@ armado el backend hoy y guarda el historial de los 60 cambios técnicos que lo l
 
 Cada petición pasa por las mismas capas:
 
-1. **Ruta** (`routes/api.php`): 204 endpoints bajo `/api`, agrupados por nivel de acceso con los
+1. **Ruta** (`routes/api.php`): 208 endpoints bajo `/api`, agrupados por nivel de acceso con los
    middleware `auth:sanctum`, `activo` y `role:...`, y límites de peticiones en las rutas públicas.
 2. **Form Request** (`app/Http/Requests/Api`, 38 clases): valida los datos y devuelve los mensajes
    en español (`lang/es/validation.php`).
@@ -134,6 +134,11 @@ Además de las variables estándar de Laravel (`APP_*`, `DB_*`, `MAIL_*`, `QUEUE
 | `FRAGUA_REAL_DURACION_RESERVA_MINUTOS` | 120 | Cuánto ocupa una reserva su mesa: dos reservas de la misma mesa no se cruzan |
 | `FRAGUA_REAL_VALOR_DOMICILIO`, `FRAGUA_REAL_DEPOSITO_RESERVA` | 2000 y 20000 | Respaldo si la tabla `configuraciones` no tiene el valor |
 | `FRAGUA_REAL_RESERVA_TOLERANCIA_MINUTOS`, `_RECORDATORIO_MINUTOS`, `_VENTANA_MINUTOS` | 15, 120 y 60 | Respaldo de los tiempos de reserva (se editan en Configuración) |
+| `FRAGUA_REAL_LIMITE_LOGIN_CUENTA`, `FRAGUA_REAL_LIMITE_LOGIN_IP` | 10 y 40 por minuto | Peticiones al inicio de sesión: por cuenta desde una IP, y por IP en total |
+| `FRAGUA_REAL_LIMITE_PEDIDOS_IP_MINUTO`, `FRAGUA_REAL_LIMITE_PEDIDOS_IP_HORA`, `FRAGUA_REAL_LIMITE_PEDIDOS_COMPRADOR_HORA` | 10, 60 y 10 | Pedidos de la web y del QR por IP (minuto y hora) y por comprador (hora) |
+| `FRAGUA_REAL_PEDIDOS_PENDIENTES_COMPRADOR`, `FRAGUA_REAL_PEDIDOS_PENDIENTES_MESA` | 3 y 4 | Pedidos esperando confirmación por comprador y por mesa (QR) |
+| `FRAGUA_REAL_PUSH_PUBLICA`, `FRAGUA_REAL_PUSH_PRIVADA` | vacías | Llaves VAPID de los avisos push del personal (`php artisan push:generar-llaves`); sin ellas solo funciona la campana |
+| `FRAGUA_REAL_PUSH_ASUNTO` | `mailto:` + `MAIL_FROM_ADDRESS` | Contacto que los servicios push usan si hay un problema con los envíos |
 | `FRAGUA_REAL_CAJA_HORA_CIERRE`, `FRAGUA_REAL_CAJA_TOLERANCIA_MINUTOS` | `23:30` y 60 | Respaldo de la hora de cierre de la caja y la tolerancia antes de que se cierre sola (se editan en Configuración) |
 | `PASARELA_PROVEEDOR` | `manual` | `wompi` activa la confirmación automática; `manual` deja la aprobación a mano |
 | `PASARELA_MINUTOS_CHECKOUT` | 30 | Tiempo para terminar un pago en Wompi |
@@ -162,8 +167,8 @@ partir de la copia guardada en la base, así una reimpresión dice exactamente l
 
 ## Pruebas automáticas
 
-`backend/tests/Feature` tiene 66 archivos y 458 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
-En total son 459.
+`backend/tests/Feature` tiene 68 archivos y 479 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
+En total son 480.
 
 ```bash
 php artisan test                    # SQLite en memoria (4 pruebas se saltan: usan funciones de PostgreSQL)
@@ -172,7 +177,7 @@ php artisan test --filter=Caja      # solo las que coinciden
 
 Para correrlas contra PostgreSQL, como en producción, se apunta a una base de prueba con las variables
 `DB_CONNECTION=pgsql`, `DB_DATABASE`, `DB_USERNAME` y `DB_PASSWORD` al lanzar `php artisan test`; ahí
-pasan las 459. Cada prueba cita el requisito que cubre. `DiaCompletoTest` recorre un día completo de
+pasan las 480. Cada prueba cita el requisito que cubre. `DiaCompletoTest` recorre un día completo de
 operación por la API con los tres roles.
 
 ## Qué falta a propósito
@@ -2052,4 +2057,55 @@ inconsistencias con lo que existía o era correcto en Laravel:
       un pedido del local.
     - `FidelizacionClienteTest` (8 pruebas); `CrearPedidoSeguridadTest` y las pruebas de registro ajustadas
       (dos clientes de prueba compartían celular; el registro ahora envía el documento).
+
+83. **Avisos push del personal (28/10/2026; M11: RF-M11-013, RN-M11-09, RNF-M11-006, HU-M11-008).**
+    Migración `2026_11_07_000001_suscripciones_push` (tabla `push_suscripciones`).
+    - Los mismos avisos de la campana llegan por Web Push al teléfono, la tableta o el computador donde cada
+      persona del personal los activó, aunque tenga la app cerrada o el teléfono bloqueado. El Cliente no
+      tiene push (sigue con correos).
+    - `App\Support\Push\WebPush`: el protocolo sin librerías externas (la de PHP más usada,
+      `minishlink/web-push`, exige Guzzle 7 y Laravel 13 trae Guzzle 8): llaves P-256, cifrado
+      «aes128gcm» (RFC 8291, probado contra el ejemplo del RFC) y firma VAPID ES256 (RFC 8292), con
+      `openssl` y `hash_hkdf`. En Windows (Laragon) usa un `openssl.cnf` mínimo si PHP no encuentra el suyo.
+    - `PushService`: solo envía a los servicios push de los navegadores (Google, Mozilla, Apple, Microsoft),
+      nunca a otra dirección; un equipo que el servicio ya no reconoce (404/410) se borra. Cada suscripción va
+      unida a la sesión (`token_id`, se borra con ella): al cerrar sesión el equipo deja de recibir avisos de
+      esa cuenta; un equipo compartido recibe solo los de la última cuenta que los activó.
+    - `NotificacionService::notificar()` encola `EnviarAvisosPush` para quienes reciben el aviso por primera
+      vez (misma regla de «no se repite»), solo si alguno tiene equipos con avisos activos. Un intento, con
+      vigencia de una hora en el servicio push.
+    - Rutas (Administrador, Mesero, SuperAdmin y Soporte): `POST /push/estado`, `POST /push/suscripciones`,
+      `DELETE /push/suscripciones` y `POST /push/prueba`. Soporte puede activarlos en su equipo.
+    - `php artisan push:generar-llaves` da las llaves para el `.env`; la revisión antes de producción avisa
+      si faltan.
+    - Frontend: `public/sw.js` (v3) muestra el aviso y al tocarlo abre su pantalla (o la lleva a la app ya
+      abierta); `AvisosPushEquipo.vue` en el panel de la campana: activar, probar y apagar, y qué hacer si el
+      permiso está bloqueado o en iPhone sin la app instalada.
+    - `AvisosPushTest` (11 pruebas).
+
+84. **Correcciones y protección contra peticiones masivas (28/10/2026; RF-M02-T-018, RF-M06-041/042,
+    RF-M01-036, RN-USR-27, RN-PED-36, RNF-TRANS-045).** Sin migraciones.
+    - Límites de peticiones con nombre (`App\Support\Seguridad\LimitesDePeticiones`). Antes cada ruta usaba
+      `throttle:N,1` sin nombre, y Laravel cuenta esas peticiones con una sola clave por IP para todas: el
+      inicio de sesión, crear un pedido y seguir un pedido gastaban el mismo contador, y unos intentos
+      fallidos dejaban sin poder entrar a todo el que usara la misma red. Ahora: `inicio-sesion` (10 por
+      minuto por cuenta e IP, 40 por IP), `registro`, `recuperacion` (también por correo) y `pedido-publico`
+      (por IP, por minuto y por hora, y por comprador; el personal, 120 por minuto por cuenta). Las demás
+      llevan su propio nombre: `throttle:N,1,<nombre>`.
+    - Equipo de confianza (`BloqueoInicioSesionService`): al entrar bien, el login devuelve
+      `equipo_confianza`, una llave de ese navegador para esa cuenta (60 días, guardada con hash en la
+      caché). Con ella (`equipos_confianza` en el login) ni el bloqueo de la cuenta ni el de la IP detienen a
+      esa persona; sus fallos desde ese equipo se cuentan aparte y lo bloquean solo a él.
+    - Topes de los pedidos de la web y del QR (`LimitePedidosPublicos`, `StorePedidoRequest`): hasta 3
+      pedidos esperando confirmación por comprador (cuenta o celular del invitado), 4 por mesa en el QR,
+      30 líneas y 20 unidades por línea (el personal: 60 y 99). Antes no había tope de unidades.
+    - `GET /pedidos` acepta `desde` y `hasta` (fechas de Colombia). Pedidos del Mesero y del Administrador
+      muestran hoy por defecto (Hoy, Ayer, Últimos 7 días, Otra fecha) y avisan si quedaron pedidos sin
+      terminar de días anteriores.
+    - Frontend: los pagos de cada pedido con «Ver foto» del comprobante (`PagosDelPedido.vue`); la Caja del
+      Administrador y su lista de Pedidos se actualizan solas (`useActualizacionAutomatica`); mensaje cuando
+      no hay mesas; espacio bajo la última tarjeta del Mesero; menú del Cliente a dos columnas en el teléfono;
+      «Inicio» y «Contacto» ya no salen marcados a la vez; al agregar al carrito en el computador, un punto
+      vuela hasta «Mi pedido», el botón salta y aparece un aviso.
+    - `ProteccionPeticionesTest` (10 pruebas).
 

@@ -15,6 +15,7 @@ import ResumenTurno from '@/components/caja/ResumenTurno.vue'
 import { cajaService } from '@/services/caja.service'
 import { pagoService } from '@/services/pago.service'
 import { mensajeDeError } from '@/services/errors'
+import { useActualizacionAutomatica } from '@/composables/useActualizacionAutomatica'
 import { ESTADO_REEMBOLSO, ESTADO_TRANSACCION, metodoPasarela, nombreMedio } from '@/utils/pasarela'
 import type { CajaTurno, Pago } from '@/types/models'
 
@@ -101,6 +102,23 @@ async function actualizarResumen() {
     actualizando.value = false
   }
 }
+
+// Mejora (28/10/2026): el resumen se actualiza solo cada 15 s mientras la Caja está a la vista: un cobro
+// que registra el Mesero en su teléfono aparece sin recargar la página. Se detiene con una ventana abierta
+// (abrir o cerrar el turno, contar, anular un pago) para no cambiar las cifras en medio de la acción.
+async function actualizarEnSilencio() {
+  if (cargandoActual.value || actualizando.value) return
+  try {
+    const { data } = await cajaService.turnoActual()
+    turnoActual.value = data
+  } catch {
+    // Un corte de red no interrumpe: se reintenta en la siguiente vuelta.
+  }
+}
+useActualizacionAutomatica(actualizarEnSilencio, {
+  pausada: () =>
+    modalAbrirOpen.value || modalCerrarOpen.value || !!turnoAContar.value || !!pagoAAnular.value || abriendo.value || cerrando.value,
+})
 
 function horaCorta(valor: string) {
   return new Date(valor).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' })

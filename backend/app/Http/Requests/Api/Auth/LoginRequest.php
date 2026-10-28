@@ -23,6 +23,9 @@ class LoginRequest extends FormRequest
             'login' => ['required_without:email', 'nullable', 'string', 'max:255'],
             'email' => ['required_without:login', 'nullable', 'string', 'max:255'],
             'password' => ['required', 'string'],
+            // Seguridad (28/10/2026, RF-M01-036): las llaves de equipo de confianza que guarda este navegador.
+            'equipos_confianza' => ['nullable', 'array', 'max:10'],
+            'equipos_confianza.*' => ['nullable', 'string', 'max:100'],
         ];
     }
 

@@ -174,6 +174,15 @@ onMounted(cargar)
 
     <div v-if="cargando" class="loading-state">Cargando mesas…</div>
 
+    <!-- Mejora (28/10/2026): sin mesas creadas la pantalla quedaba en blanco. -->
+    <div v-else-if="!mesas.length && !error" class="mt-8 empty-state">
+      <Armchair :size="32" class="mx-auto text-gray-300" />
+      <p class="mt-3 text-sm font-medium text-ink">Todavía no hay mesas creadas</p>
+      <p class="mt-1 text-xs text-gray-500">
+        Las crea el Administrador en «Mesas y Reservas». Mientras tanto puedes tomar pedidos de domicilio o recogida.
+      </p>
+    </div>
+
     <div v-else class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
       <div
         v-for="mesa in mesas"

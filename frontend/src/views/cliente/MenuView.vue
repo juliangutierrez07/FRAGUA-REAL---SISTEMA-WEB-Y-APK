@@ -9,11 +9,12 @@
 // que hoy se pueden pedir). Antes el Cliente no podía pedir combos ni en la web ni por QR.
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { X } from 'lucide-vue-next'
+import { Plus, X } from 'lucide-vue-next'
 import CarritoFlotante from '@/components/common/CarritoFlotante.vue'
+import { volarAlCarrito } from '@/utils/volarAlCarrito'
 import { catalogoService } from '@/services/catalogo.service'
 import { extrasDe } from '@/utils/extras'
-import { useCarritoStore } from '@/stores/carrito'
+import { MAX_UNIDADES_POR_LINEA, useCarritoStore } from '@/stores/carrito'
 import { iconoPorNombre as iconoPara } from '@/utils/iconoCategoria'
 import { etiquetaPromocion, precioConPromocion } from '@/utils/promociones'
 import { componentesCombo } from '@/utils/combos'
@@ -177,7 +178,7 @@ const precioSeleccion = computed(() => {
 // Mejora (16/10/2026): al elegir una presentación con foto propia ("Familiar"), se ve esa foto.
 const fotoSeleccion = computed(() => varianteSeleccionada.value?.imagen_url || productoSeleccionado.value?.imagen_url || '')
 
-function agregarAlPedido() {
+function agregarAlPedido(evento?: MouseEvent) {
   if (comboSeleccionado.value) {
     carrito.agregar({
       producto: null,
@@ -201,14 +202,14 @@ function agregarAlPedido() {
   // Mejora de diseño (16/10/2026): aviso breve de lo que se agregó (lo muestra CarritoFlotante).
   const nombre = comboSeleccionado.value?.nombre ?? productoSeleccionado.value?.nombre ?? ''
   const presentacion = varianteSeleccionada.value && !comboSeleccionado.value ? ` (${varianteSeleccionada.value.nombre})` : ''
-  avisoAgregado.value = { id: Date.now(), texto: `Agregado: ${cantidad.value > 1 ? `${cantidad.value} × ` : ''}${nombre}${presentacion}` }
+  carrito.avisarAgregado(`Agregado: ${cantidad.value > 1 ? `${cantidad.value} × ` : ''}${nombre}${presentacion}`)
+  volarAlCarrito(evento?.currentTarget instanceof Element ? evento.currentTarget : null)
   cantidad.value = 1
   extrasSeleccionados.value = []
   notas.value = ''
   mostrarConfiguradorMovil.value = false
 }
 
-const avisoAgregado = ref<{ id: number; texto: string } | null>(null)
 
 function formatoPrecio(valor: number) {
   return valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
@@ -236,8 +237,8 @@ function formatoPrecio(valor: number) {
       <div class="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]" aria-hidden="true">
         <div>
           <span class="mb-4 block h-7 w-40 animate-pulse rounded-lg bg-[#ece5d9]" />
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div v-for="n in 4" :key="n" class="rounded-2xl border border-[#e9e3d8] bg-white p-4">
+          <div class="grid grid-cols-2 gap-3 sm:gap-4">
+            <div v-for="n in 4" :key="n" class="rounded-2xl border border-[#e9e3d8] bg-white p-2.5 sm:p-4">
               <span class="block aspect-[4/3] animate-pulse rounded-xl bg-[#efe8db]" />
               <span class="mt-4 block h-5 w-2/3 animate-pulse rounded bg-[#ece5d9]" />
               <span class="mt-2 block h-3 w-full animate-pulse rounded bg-[#f1ece3]" />
@@ -291,12 +292,13 @@ function formatoPrecio(valor: number) {
             </span>
           </div>
 
-          <div v-if="enCombos" class="grid gap-4 sm:grid-cols-2">
+          <!-- Mejora (28/10/2026): dos tarjetas por fila también en el teléfono (una sola se veía muy grande). -->
+          <div v-if="enCombos" class="grid grid-cols-2 gap-3 sm:gap-4">
             <button
               v-for="combo in combos"
               :key="combo.id"
               type="button"
-              class="rounded-2xl border bg-white p-4 text-left transition"
+              class="flex flex-col rounded-2xl border bg-white p-2.5 text-left transition sm:p-4"
               :class="
                 comboSeleccionado?.id === combo.id
                   ? 'border-brand-500 shadow-[0_0_0_2px_rgba(214,164,58,0.14)]'
@@ -305,17 +307,18 @@ function formatoPrecio(valor: number) {
               @click="elegirCombo(combo)"
             >
               <div
-                class="mb-3 flex aspect-[4/3] items-center justify-center rounded-xl bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
+                class="mb-2.5 flex aspect-[4/3] items-center justify-center rounded-xl bg-gradient-to-br sm:mb-3 from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
               >
-                <component :is="iconoPara(combo.nombre)" :size="36" :stroke-width="1.5" />
+                <component :is="iconoPara(combo.nombre)" :size="30" :stroke-width="1.5" />
               </div>
-              <p class="font-display text-lg text-ink">{{ combo.nombre }}</p>
-              <p v-if="componentesCombo(combo)" class="mt-1 line-clamp-2 text-xs text-[#6f685f]">
+              <p class="font-display text-[15px] leading-snug text-ink sm:text-lg">{{ combo.nombre }}</p>
+              <p v-if="componentesCombo(combo)" class="mt-1 line-clamp-2 text-[11px] text-[#6f685f] sm:text-xs">
                 Incluye {{ componentesCombo(combo) }}
               </p>
-              <div class="mt-3 flex items-baseline justify-between">
-                <p class="text-base text-ink">{{ formatoPrecio(Number(combo.precio)) }}</p>
-                <span class="border-b border-brand-700 pb-0.5 text-xs font-medium text-brand-700">Elegir</span>
+              <div class="mt-auto flex flex-wrap items-baseline justify-between gap-x-2 pt-2.5 sm:pt-3">
+                <p class="text-sm text-ink sm:text-base">{{ formatoPrecio(Number(combo.precio)) }}</p>
+                <span class="hidden border-b border-brand-700 pb-0.5 text-xs font-medium text-brand-700 sm:inline">Elegir</span>
+                <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-ink sm:hidden" aria-hidden="true"><Plus :size="15" /></span>
               </div>
             </button>
           </div>
@@ -324,12 +327,12 @@ function formatoPrecio(valor: number) {
             No hay productos disponibles en esta categoría por ahora.
           </p>
 
-          <div v-if="!enCombos" class="grid gap-4 sm:grid-cols-2">
+          <div v-if="!enCombos" class="grid grid-cols-2 gap-3 sm:gap-4">
             <button
               v-for="producto in productosDeCategoria"
               :key="producto.id"
               type="button"
-              class="rounded-2xl border bg-white p-4 text-left transition"
+              class="flex flex-col rounded-2xl border bg-white p-2.5 text-left transition sm:p-4"
               :class="
                 productoSeleccionado?.id === producto.id
                   ? 'border-brand-500 shadow-[0_0_0_2px_rgba(214,164,58,0.14)]'
@@ -338,31 +341,32 @@ function formatoPrecio(valor: number) {
               @click="elegirProducto(producto)"
             >
               <div
-                class="mb-3 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
+                class="mb-2.5 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl sm:mb-3 bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
               >
                 <!-- Fase 7, tarea 3 (RF-M04-004): la foto del producto si la tiene. -->
                 <img v-if="producto.imagen_url" :src="producto.imagen_url" :alt="producto.nombre" loading="lazy" class="size-full object-cover" />
-                <component :is="iconoPara(producto.nombre)" v-else :size="36" :stroke-width="1.5" />
+                <component :is="iconoPara(producto.nombre)" v-else :size="30" :stroke-width="1.5" />
               </div>
-              <p class="font-display text-lg text-ink">
+              <p class="font-display text-[15px] leading-snug text-ink sm:text-lg">
                 {{ producto.nombre }}
                 <!-- Fase 2, tarea 1 (RF-M04-035): promoción vigente del producto o su categoría. -->
                 <span v-if="etiquetaPromocion(producto)" class="ml-1 align-middle rounded-full bg-emerald-50 px-2 py-0.5 font-sans text-[11px] font-semibold text-emerald-700">{{ etiquetaPromocion(producto) }}</span>
               </p>
-              <p v-if="producto.descripcion" class="mt-1 line-clamp-2 text-xs text-[#6f685f]">
+              <p v-if="producto.descripcion" class="mt-1 line-clamp-2 text-[11px] text-[#6f685f] sm:text-xs">
                 {{ producto.descripcion }}
               </p>
-              <div class="mt-3 flex items-baseline justify-between">
-                <div>
+              <div class="mt-auto flex items-end justify-between gap-2 pt-2.5 sm:pt-3">
+                <div class="min-w-0">
                   <p class="text-[10px] text-[#8a8379]">Desde</p>
-                  <p class="text-base text-ink">
+                  <p class="text-sm text-ink sm:text-base">
                     <template v-if="precioConPromocion(producto, Number(producto.precio_base)) < Number(producto.precio_base)">
                       <span class="mr-1 text-xs text-[#a59d90] line-through">{{ formatoPrecio(Number(producto.precio_base)) }}</span>{{ formatoPrecio(precioConPromocion(producto, Number(producto.precio_base))) }}
                     </template>
                     <template v-else>{{ formatoPrecio(Number(producto.precio_base)) }}</template>
                   </p>
                 </div>
-                <span class="border-b border-brand-700 pb-0.5 text-xs font-medium text-brand-700">Elegir</span>
+                <span class="hidden border-b border-brand-700 pb-0.5 text-xs font-medium text-brand-700 sm:inline">Elegir</span>
+                <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-ink sm:hidden" aria-hidden="true"><Plus :size="15" /></span>
               </div>
             </button>
           </div>
@@ -515,7 +519,7 @@ function formatoPrecio(valor: number) {
                 −
               </button>
               <span class="w-4 text-center text-sm">{{ cantidad }}</span>
-              <button type="button" class="text-lg text-ink" @click="cantidad++">+</button>
+              <button type="button" class="text-lg text-ink disabled:opacity-30" :disabled="cantidad >= MAX_UNIDADES_POR_LINEA" @click="cantidad++">+</button>
             </div>
             <button
               type="button"
@@ -533,7 +537,7 @@ function formatoPrecio(valor: number) {
     <!-- Mejora de diseño (16/10/2026): botón flotante del pedido (antes, una barra fija a todo lo ancho). -->
     <CarritoFlotante
       :cantidad="carrito.totalProductos"
-      :aviso="avisoAgregado"
+      :aviso="carrito.ultimoAgregado"
       :oculto="haySeleccion && mostrarConfiguradorMovil"
       solo-movil
       @abrir="router.push('/carrito')"

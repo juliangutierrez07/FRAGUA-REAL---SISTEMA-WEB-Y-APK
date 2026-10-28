@@ -97,5 +97,5 @@ export const useNotificacionesStore = defineStore('notificaciones', () => {
     }
   }
 
-  return { lista, noLeidas, abierto, cargando, error, iniciar, detener, alternar, cargarLista, marcarLeida, marcarTodas }
+  return { lista, noLeidas, abierto, cargando, error, iniciar, detener, alternar, cargarLista, marcarLeida, marcarTodas, refrescar }
 })

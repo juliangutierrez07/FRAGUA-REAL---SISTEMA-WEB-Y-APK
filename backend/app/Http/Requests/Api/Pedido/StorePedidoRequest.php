@@ -91,6 +91,11 @@ class StorePedidoRequest extends FormRequest
             && ! $this->filled('cliente_invitado_telefono')
             && blank(\App\Models\User::whereKey($this->input('cliente_id'))->value('telefono'));
         $telefono = ['nullable', 'string', 'regex:'.self::FORMATO_TELEFONO];
+        // Seguridad (28/10/2026, RN-PED-36): un pedido de la web o del QR tiene un tope de líneas y de unidades por
+        // línea (antes no había ninguno y se podía crear un pedido de millones). El personal tiene más margen.
+        $personal = $this->esPersonal();
+        $maxLineas = $personal ? 60 : (int) config('fragua_real.limites.lineas_por_pedido', 30);
+        $maxCantidad = $personal ? 99 : (int) config('fragua_real.limites.unidades_por_linea', 20);
 
         return [
             'tipo' => ['required', 'in:local,domicilio,recogida'],
@@ -128,11 +133,11 @@ class StorePedidoRequest extends FormRequest
             // vigente de config('fragua_real.valor_domicilio_default') — ver PedidoController.
             // Aceptarlo del body permitiría a cualquiera fijar su propio costo de domicilio.
 
-            'lineas' => ['required', 'array', 'min:1'],
+            'lineas' => ['required', 'array', 'min:1', 'max:'.$maxLineas],
             'lineas.*.producto_id' => ['required_without:lineas.*.combo_id', 'nullable', 'exists:productos,id'],
             'lineas.*.combo_id' => ['required_without:lineas.*.producto_id', 'nullable', 'exists:combos,id'],
             'lineas.*.variante_id' => ['nullable', 'exists:variantes,id'],
-            'lineas.*.cantidad' => ['required', 'integer', 'min:1'],
+            'lineas.*.cantidad' => ['required', 'integer', 'min:1', 'max:'.$maxCantidad],
             'lineas.*.extras_ids' => ['nullable', 'array'],
             'lineas.*.extras_ids.*' => ['exists:extras,id'],
             'lineas.*.observaciones' => ['nullable', 'string', 'max:500'],
@@ -143,6 +148,8 @@ class StorePedidoRequest extends FormRequest
     {
         return [
             'cliente_invitado_telefono.regex' => \App\Support\Validacion\Formatos::MENSAJE_CELULAR,
+            'lineas.max' => 'El pedido tiene demasiados productos distintos. Si es un pedido grande, llámanos.',
+            'lineas.*.cantidad.max' => 'Puedes pedir hasta :max unidades de cada producto. Si necesitas más, llámanos.',
             'telefono_contacto.regex' => \App\Support\Validacion\Formatos::MENSAJE_CELULAR,
             'cliente_invitado_nombre.regex' => \App\Support\Validacion\Formatos::MENSAJE_PERSONA,
             'telefono_contacto.required' => 'Escribe un teléfono de contacto para este pedido.',

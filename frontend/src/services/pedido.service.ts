@@ -117,7 +117,8 @@ export const pedidoService = {
   // Con filtros (Administrador > Pedidos): tipo, estado y página — PedidoController::index
   // los acepta como query params y pagina de a 20 (per_page hasta 100); `activos` trae solo
   // pendiente/confirmado/preparando.
-  index(params?: { tipo?: TipoPedido; estado?: Pedido['estado']; activos?: boolean; page?: number; per_page?: number }) {
+  // Mejora (28/10/2026, RF-M02-T-018): `desde`/`hasta` (YYYY-MM-DD, hora de Colombia) limitan a esos días.
+  index(params?: { tipo?: TipoPedido; estado?: Pedido['estado']; activos?: boolean; page?: number; per_page?: number; desde?: string; hasta?: string }) {
     return api.get<PedidosPaginados>('/pedidos', { params })
   },
   show(id: number) {

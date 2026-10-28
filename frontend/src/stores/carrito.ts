@@ -65,6 +65,10 @@ function leerGuardado(): CarritoGuardado | null {
   }
 }
 
+// Seguridad (28/10/2026, RN-PED-36): el servidor acepta hasta 20 unidades de cada producto en un pedido de la
+// web o del QR (un pedido grande se hace por teléfono). El carrito no deja pasar de ahí.
+export const MAX_UNIDADES_POR_LINEA = 20
+
 export const useCarritoStore = defineStore('carrito', () => {
   const guardado = leerGuardado()
   const lineas = ref<LineaCarrito[]>(guardado?.lineas ?? [])
@@ -169,16 +173,23 @@ export const useCarritoStore = defineStore('carrito', () => {
     const clave = claveSeleccion(linea)
     const existente = lineas.value.find((l) => claveSeleccion(l) === clave)
     if (existente) {
-      existente.cantidad += linea.cantidad
+      existente.cantidad = Math.min(MAX_UNIDADES_POR_LINEA, existente.cantidad + linea.cantidad)
       return
     }
-    lineas.value.push({ ...linea, id: crypto.randomUUID() })
+    lineas.value.push({ ...linea, cantidad: Math.min(MAX_UNIDADES_POR_LINEA, linea.cantidad), id: crypto.randomUUID() })
+  }
+
+  // Mejora (28/10/2026): el último producto agregado, para el aviso del botón flotante (teléfono) y del
+  // encabezado (computador). Cada aviso trae un id nuevo para volver a mostrarse.
+  const ultimoAgregado = ref<{ id: number; texto: string } | null>(null)
+  function avisarAgregado(texto: string) {
+    ultimoAgregado.value = { id: Date.now(), texto }
   }
 
   function actualizarCantidad(id: string, cantidad: number) {
     const linea = lineas.value.find((l) => l.id === id)
     if (linea) {
-      linea.cantidad = Math.max(1, cantidad)
+      linea.cantidad = Math.min(MAX_UNIDADES_POR_LINEA, Math.max(1, cantidad))
     }
   }
 
@@ -218,6 +229,8 @@ export const useCarritoStore = defineStore('carrito', () => {
     totalProductos,
     total,
     agregar,
+    ultimoAgregado,
+    avisarAgregado,
     actualizarCantidad,
     quitar,
     vaciar,

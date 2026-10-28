@@ -29,7 +29,10 @@ import RevisarComprobanteModal from '@/components/pagos/RevisarComprobanteModal.
 import { pagoService } from '@/services/pago.service'
 import { nombreMedio } from '@/utils/pasarela'
 import TotalesPedido from '@/components/pedidos/TotalesPedido.vue'
-import { TIPOS_PEDIDO_UI, formatoHoraPedido, titularPedido } from '@/utils/pedidoUi'
+import PagosDelPedido from '@/components/pedidos/PagosDelPedido.vue'
+import { TIPOS_PEDIDO_UI, formatoHoraPedido, rangoDelDia, titularPedido } from '@/utils/pedidoUi'
+import FiltroDiaPedidos, { type RangoDia } from '@/components/pedidos/FiltroDiaPedidos.vue'
+import { useActualizacionAutomatica } from '@/composables/useActualizacionAutomatica'
 import { pedidoService } from '@/services/pedido.service'
 import { mensajeDeError } from '@/services/errors'
 import { comandaService } from '@/services/comanda.service'
@@ -49,6 +52,11 @@ const total = ref(0)
 
 const filtroEstado = ref<'todos' | Pedido['estado']>('todos')
 const filtroTipo = ref<'todos' | Pedido['tipo']>('todos')
+// Mejora (28/10/2026, RF-M02-T-018): los pedidos de hoy por defecto (antes salían los de todas las semanas).
+const filtroDia = ref<RangoDia>({ opcion: 'hoy', fecha: '' })
+// Pedidos sin terminar de días anteriores: se avisa cuántos hay y se pueden ver.
+const activosAnteriores = ref(0)
+const verAnteriores = ref(false)
 
 const OPCIONES_ESTADO: { v: typeof filtroEstado.value; t: string }[] = [
   { v: 'todos', t: 'Todos' },
@@ -92,32 +100,70 @@ function pagado(pedido: Pedido) {
 
 const hayFiltros = computed(() => filtroEstado.value !== 'todos' || filtroTipo.value !== 'todos')
 
-async function cargar() {
-  cargando.value = true
-  error.value = ''
+async function cargar(opciones: { silencioso?: boolean } = {}) {
+  const silencioso = opciones.silencioso === true
+  if (!silencioso) {
+    cargando.value = true
+    error.value = ''
+  }
   try {
+    const dias = verAnteriores.value
+      ? { hasta: rangoDelDia('ayer', '').hasta }
+      : rangoDelDia(filtroDia.value.opcion, filtroDia.value.fecha)
     const { data } = await pedidoService.index({
       estado: filtroEstado.value === 'todos' ? undefined : filtroEstado.value,
       tipo: filtroTipo.value === 'todos' ? undefined : filtroTipo.value,
+      activos: verAnteriores.value || undefined,
       page: pagina.value,
+      ...dias,
     })
     pedidos.value = data.data
     ultimaPagina.value = data.last_page
     total.value = data.total
+    void contarActivosAnteriores()
   } catch (e) {
-    error.value = mensajeDeError(e, 'No pudimos cargar los pedidos.')
+    if (!silencioso) error.value = mensajeDeError(e, 'No pudimos cargar los pedidos.')
   } finally {
-    cargando.value = false
+    if (!silencioso) cargando.value = false
   }
 }
 
-// Cambiar un filtro vuelve a la página 1; cambiar de página recarga sin tocar los filtros.
-watch([filtroEstado, filtroTipo], () => {
+async function contarActivosAnteriores() {
+  if (filtroDia.value.opcion !== 'hoy') {
+    activosAnteriores.value = 0
+    return
+  }
+  try {
+    const { data } = await pedidoService.index({ activos: true, per_page: 1, hasta: rangoDelDia('ayer', '').hasta })
+    activosAnteriores.value = data.total
+  } catch {
+    // Solo es un aviso: si falla, no se muestra.
+  }
+}
+
+// Mejora (28/10/2026): viendo los pedidos de hoy, la lista se actualiza sola cada 20 s (pedidos nuevos de
+// la web o del QR, cobros del Mesero). Se detiene con una ventana abierta o mientras se procesa algo.
+useActualizacionAutomatica(() => cargar({ silencioso: true }), {
+  ms: 20000,
+  pausada: () =>
+    cargando.value || filtroDia.value.opcion !== 'hoy' || verAnteriores.value || pagina.value !== 1 || procesando.value !== null || hayVentanaAbierta(),
+})
+
+function mostrarAnteriores(valor: boolean) {
+  verAnteriores.value = valor
   abierto.value = null
   if (pagina.value !== 1) pagina.value = 1
   else cargar()
+}
+
+// Cambiar un filtro vuelve a la página 1; cambiar de página recarga sin tocar los filtros.
+watch([filtroEstado, filtroTipo, filtroDia], () => {
+  abierto.value = null
+  verAnteriores.value = false
+  if (pagina.value !== 1) pagina.value = 1
+  else cargar()
 })
-watch(pagina, cargar)
+watch(pagina, () => cargar())
 
 function alternar(pedido: Pedido) {
   abierto.value = abierto.value === pedido.id ? null : pedido.id
@@ -242,6 +288,10 @@ const descuentoId = ref<number | null>(null)
 const pedidoEnDescuento = computed(() => pedidos.value.find((p) => p.id === descuentoId.value) ?? null)
 
 const pedidoACancelar = ref<Pedido | null>(null)
+
+function hayVentanaAbierta() {
+  return Boolean(revision.value || editandoId.value || historialId.value || comprobantesId.value || descuentoId.value || pedidoACancelar.value)
+}
 const motivoCancelar = ref('')
 const errorCancelar = ref('')
 const cancelando = ref(false)
@@ -271,7 +321,7 @@ async function confirmarCancelar() {
   }
 }
 
-onMounted(cargar)
+onMounted(() => cargar())
 </script>
 
 <template>
@@ -284,7 +334,7 @@ onMounted(cargar)
       descripcion="Supervisa los pedidos de local, domicilio y recogida. El cobro lo registra el Mesero."
     >
       <template #actions>
-        <BaseButton variant="ghost" :disabled="cargando" @click="cargar">
+        <BaseButton variant="ghost" :disabled="cargando" @click="cargar()">
           <RefreshCw :size="16" class="mr-1.5" />
           Actualizar
         </BaseButton>
@@ -316,18 +366,33 @@ onMounted(cargar)
           {{ opcion.t }}
         </button>
       </div>
+      <FiltroDiaPedidos v-model="filtroDia" con-semana />
     </div>
 
     <p v-if="error" class="mt-4 alert-error">{{ error }}</p>
+    <p v-if="verAnteriores" class="mt-4 alert-info flex items-center justify-between gap-3" role="status">
+      <span>Estás viendo los pedidos sin terminar de días anteriores.</span>
+      <button type="button" class="shrink-0 text-xs font-semibold underline" @click="mostrarAnteriores(false)">Volver a hoy</button>
+    </p>
+    <p
+      v-else-if="activosAnteriores && filtroDia.opcion === 'hoy'"
+      class="mt-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-600/15"
+      role="status"
+    >
+      <span>
+        {{ activosAnteriores === 1 ? 'Quedó 1 pedido sin terminar' : `Quedaron ${activosAnteriores} pedidos sin terminar` }} de días anteriores.
+      </span>
+      <button type="button" class="shrink-0 text-xs font-semibold underline" @click="mostrarAnteriores(true)">Ver</button>
+    </p>
 
     <div v-if="cargando" class="loading-state">Cargando pedidos…</div>
 
     <div v-else-if="pedidos.length === 0" class="mt-8 empty-state">
       <ShoppingBasket :size="32" class="mx-auto text-gray-300" />
       <p class="mt-3 text-sm font-medium text-ink">
-        {{ hayFiltros ? 'No hay pedidos con estos filtros' : 'Todavía no hay pedidos' }}
+        {{ hayFiltros ? 'No hay pedidos con estos filtros' : filtroDia.opcion === 'hoy' ? 'Todavía no hay pedidos hoy' : 'No hay pedidos en esos días' }}
       </p>
-      <p class="mt-1 text-xs text-gray-500">Cuando entre uno nuevo aparecerá aquí.</p>
+      <p class="mt-1 text-xs text-gray-500">{{ filtroDia.opcion === 'hoy' ? 'Cuando entre uno nuevo aparecerá aquí.' : 'Prueba con otro día.' }}</p>
     </div>
 
     <template v-else>
@@ -411,6 +476,8 @@ onMounted(cargar)
                 </span>
               </div>
             </div>
+            <!-- Mejora (28/10/2026, RF-M06-041): los pagos y la foto del comprobante de cada uno. -->
+            <PagosDelPedido :pedido="pedido" />
 
             <!-- Pago directo: el pago en línea que espera revisión (con o sin captura). -->
             <div

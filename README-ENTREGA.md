@@ -6,7 +6,7 @@ sistema y dónde está cada documento, empieza por [`README.md`](README.md); la 
 backend está en [`README-BACKEND.md`](README-BACKEND.md), la base de datos en
 [`BASE-DE-DATOS.md`](BASE-DE-DATOS.md) y los endpoints en [`API.md`](API.md).
 
-**Estado al 27/10/2026**: plan de implementación completo (Fases 0 a 7), mejoras del 16/10/2026, correcciones y datos del negocio del 19/10/2026 el rol SuperAdmin con permisos de menú (M09), el rol Soporte de solo consulta (M10) las notificaciones del personal (M11) la contraseña segura con bloqueo por intentos (21/10/2026) el pago en línea por transferencia con captura mientras no haya Wompi y el formato de todos los campos (22/10/2026), eliminar mesas, productos y usuarios y el menú Impresoras (M12, 24/10/2026), las mejoras de operación del 26/10/2026 (cuentas separadas, cerrar caja con todo finalizado, foto del comprobante, ubicación y billete del domicilio, pagar la reserva desde «Mis reservas» y el cambio al cobrar en efectivo), eliminar categorías, combos, extras y promociones, la comanda automática del pedido del Mesero, el cierre automático de la caja y el pedido en el historial del cliente al cobrar (27/10/2026), 459 pruebas automáticas que
+**Estado al 27/10/2026**: plan de implementación completo (Fases 0 a 7), mejoras del 16/10/2026, correcciones y datos del negocio del 19/10/2026 el rol SuperAdmin con permisos de menú (M09), el rol Soporte de solo consulta (M10) las notificaciones del personal (M11) la contraseña segura con bloqueo por intentos (21/10/2026) el pago en línea por transferencia con captura mientras no haya Wompi y el formato de todos los campos (22/10/2026), eliminar mesas, productos y usuarios y el menú Impresoras (M12, 24/10/2026), las mejoras de operación del 26/10/2026 (cuentas separadas, cerrar caja con todo finalizado, foto del comprobante, ubicación y billete del domicilio, pagar la reserva desde «Mis reservas» y el cambio al cobrar en efectivo), eliminar categorías, combos, extras y promociones, la comanda automática del pedido del Mesero, el cierre automático de la caja y el pedido en el historial del cliente al cobrar (27/10/2026), los avisos push del personal y la protección contra peticiones masivas (28/10/2026), 480 pruebas automáticas que
 pasan en SQLite y PostgreSQL. Falta solo lo que no es código: la cuenta comercial de Wompi, el
 proveedor de SMS y el agente local de impresión (ver «Qué falta a propósito»).
 
@@ -193,6 +193,9 @@ En el `.env` poner:
 - correo real: `MAIL_MAILER=smtp` con su servidor, usuario y contraseña, y `MAIL_FROM_ADDRESS`;
 - `CORS_ORIGENES` vacío (sitio y API en el mismo dominio);
 - `FRAGUA_REAL_NIT` cuando lo tengan, para que salga en el comprobante;
+- las llaves de los avisos push del personal: correr `php artisan push:generar-llaves` **una sola vez** y
+  copiar las dos líneas que da (`FRAGUA_REAL_PUSH_PUBLICA` y `FRAGUA_REAL_PUSH_PRIVADA`). Si después se
+  cambian, cada equipo tiene que volver a activar los avisos;
 - Wompi, cuando esté la cuenta (paso 9).
 
 Ninguna contraseña ni llave de este `.env` se copia de otro archivo ni se sube al repositorio.
@@ -848,6 +851,17 @@ Al escribir `QA-CLIENTE.md` y `QA-MESERO.md` se cruzó cada pantalla con el cód
   no hace falta configurar nada nuevo en nginx. En el servidor: `php artisan migrate --force`; las
   tareas `notificaciones:revisar` (cada minuto) y `notificaciones:limpiar` (cada noche) ya entran con
   el cron de siempre. Las horas se cambian con `FRAGUA_REAL_NOTIF_*` en el `.env`.
+- **Protección contra peticiones masivas (28/10/2026).** Cada formulario público tiene su propio límite
+  (antes compartían uno solo por IP y unos intentos fallidos dejaban sin entrar a todo el local). Quien ya
+  entró bien desde un teléfono o computador sigue entrando desde ahí aunque alguien bloquee su cuenta
+  probando contraseñas. Los pedidos de la web y del QR tienen topes: 3 esperando confirmación por cliente,
+  4 por mesa y 20 unidades por producto. No hay que configurar nada; los números se cambian en el `.env`.
+- **Avisos push del personal (28/10/2026).** Los mismos avisos de la campana llegan al teléfono aunque la
+  app esté cerrada. Cada quien los activa en su equipo desde la campana («Activar avisos») y puede mandarse
+  una prueba. En Android y en el computador funcionan en Chrome, Edge o Firefox; en iPhone, solo con la app
+  instalada en la pantalla de inicio (iOS 16.4 o más nuevo). Al cerrar sesión, ese equipo deja de
+  recibirlos. En el servidor: las llaves de `php artisan push:generar-llaves` en el `.env` y la cola de
+  trabajos funcionando (los avisos salen por la cola).
 
 ## Datos de prueba en la base de desarrollo
 

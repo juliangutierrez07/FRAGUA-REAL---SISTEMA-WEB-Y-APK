@@ -52,3 +52,21 @@ export function faltaParaFinalizar(pedido: Pedido): string | null {
   if (pedido.tipo === 'recogida' && !pedido.recogido_at) return 'Falta confirmar que el cliente lo recogió.'
   return null
 }
+
+// Mejora (28/10/2026, RF-M02-T-018): el rango que pide el servidor (`desde`/`hasta`, fechas de Colombia) para
+// la opción del filtro por día de Pedidos.
+export function rangoDelDia(opcion: 'hoy' | 'ayer' | 'semana' | 'fecha', fecha: string): { desde: string; hasta: string } {
+  const dia = (dias: number) => fechaNegocioMenos(dias)
+  if (opcion === 'ayer') return { desde: dia(1), hasta: dia(1) }
+  if (opcion === 'semana') return { desde: dia(6), hasta: dia(0) }
+  if (opcion === 'fecha' && fecha) return { desde: fecha, hasta: fecha }
+  return { desde: dia(0), hasta: dia(0) }
+}
+
+// Fecha de Colombia de hace `dias` días (YYYY-MM-DD). Al mediodía para no cruzar de día por el horario.
+function fechaNegocioMenos(dias: number): string {
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  const fecha = new Date(`${hoy}T12:00:00Z`)
+  fecha.setUTCDate(fecha.getUTCDate() - dias)
+  return fecha.toISOString().slice(0, 10)
+}

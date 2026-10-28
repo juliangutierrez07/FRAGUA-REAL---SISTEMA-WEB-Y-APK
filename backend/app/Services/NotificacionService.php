@@ -353,7 +353,11 @@ class NotificacionService
         DB::afterCommit(function () use ($tipo, $titulo, $texto, $clave, $enlaces, $actor) {
             try {
                 $ahora = now();
-                $filas = $this->destinatarios($tipo, $actor)->map(fn (User $u) => [
+                $destinatarios = $this->destinatarios($tipo, $actor);
+                // Quien ya tiene este aviso (misma clave) no lo vuelve a recibir, tampoco por push.
+                $yaLoTienen = Notificacion::where('clave', mb_substr($clave, 0, 120))
+                    ->whereIn('user_id', $destinatarios->pluck('id'))->pluck('user_id')->all();
+                $filas = $destinatarios->map(fn (User $u) => [
                     'user_id' => $u->id,
                     'tipo' => $tipo,
                     'categoria' => self::TIPOS[$tipo][0],
@@ -365,11 +369,32 @@ class NotificacionService
                 ])->all();
                 if ($filas) {
                     Notificacion::insertOrIgnore($filas);
+                    $this->enviarPush(array_values(array_filter($filas, fn (array $f) => ! in_array($f['user_id'], $yaLoTienen, true))));
                 }
             } catch (Throwable $e) {
                 report($e);
             }
         });
+    }
+
+    /**
+     * M11 (28/10/2026, RF-M11-013): el mismo aviso, por push, a los equipos donde cada quien lo activó. Va por la
+     * cola; si nadie tiene equipos con avisos activos, no se encola nada.
+     *
+     * @param  list<array{user_id: int, titulo: string, texto: string, enlace: ?string, clave: string}>  $filas
+     */
+    private function enviarPush(array $filas): void
+    {
+        if (! $filas || ! app(PushService::class)->disponible()) {
+            return;
+        }
+        $avisos = [];
+        foreach ($filas as $f) {
+            $avisos[$f['user_id']] = ['titulo' => $f['titulo'], 'texto' => $f['texto'], 'enlace' => $f['enlace'], 'etiqueta' => $f['clave']];
+        }
+        if (\App\Models\PushSuscripcion::whereIn('user_id', array_keys($avisos))->exists()) {
+            \App\Jobs\EnviarAvisosPush::dispatch($avisos);
+        }
     }
 
     /** ¿Esta cuenta recibe ese tipo de aviso? (rol, cuenta activa y menús). */

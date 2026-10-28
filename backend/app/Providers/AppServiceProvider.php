@@ -55,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
             return ($c['clave_filtradas'] ?? false) ? $regla->uncompromised() : $regla;
         });
 
+        // Seguridad (28/10/2026, RNF-TRANS-045): límites de peticiones con nombre (cada ruta con su contador).
+        \App\Support\Seguridad\LimitesDePeticiones::registrar();
+
         Sanctum::authenticateAccessTokensUsing(
             fn (PersonalAccessToken $token, bool $esValida) => $esValida && app(SesionService::class)->sigueVigente($token)
         );

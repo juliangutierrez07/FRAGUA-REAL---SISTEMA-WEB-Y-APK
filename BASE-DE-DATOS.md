@@ -1,6 +1,6 @@
 # Base de datos — Fragua Real Burger
 
-PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 41 tablas (35 del sistema y 6 de Laravel para la cola, la caché y las sesiones) más la de control de migraciones, creadas por 72 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
+PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 42 tablas (36 del sistema y 6 de Laravel para la cola, la caché y las sesiones) más la de control de migraciones, creadas por 73 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
 
 ## Contenido
 
@@ -99,6 +99,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
 | `notificaciones` | 10 | La campana del personal: una fila por persona que debe enterarse (`user_id`), con `tipo`, `categoria` (pedidos, reservas, caja, operacion o sistema), `titulo`, `texto`, `enlace` a la pantalla del panel, `leida_at` y `created_at`. `clave` es única por persona (`user_id` + `clave`) para que el mismo aviso no se repita. Se borran solas a los 30 días (`notificaciones:limpiar`). |
+| `push_suscripciones` | 10 | Avisos push del personal (28/10/2026): cada equipo donde alguien activó los avisos, con su `endpoint` (único por su huella `endpoint_hash`), las llaves `p256dh` y `auth` del navegador, `navegador`, `ultimo_envio_at` y la sesión con que se activó (`token_id` → `personal_access_tokens`, se borra con ella). |
 
 ### Impresoras (M12)
 
@@ -112,7 +113,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 ## Relaciones
 
-Cada diagrama muestra las tablas de un módulo y las llaves foráneas que salen de ellas (generado desde el esquema real). Las referencias a `users` que solo dicen quién hizo una acción (`*_por`, `user_id`) se omiten para que el diagrama se lea; están en las tablas de arriba. El diagrama completo, con las 41 tablas y todas sus columnas, tipos, llaves y valores permitidos, está en la carpeta «Documentacion Fragua Real» como `er_diagram.png` y `er_diagram.pdf` (el PDF se puede ampliar sin perder nitidez).
+Cada diagrama muestra las tablas de un módulo y las llaves foráneas que salen de ellas (generado desde el esquema real). Las referencias a `users` que solo dicen quién hizo una acción (`*_por`, `user_id`) se omiten para que el diagrama se lea; están en las tablas de arriba. El diagrama completo, con las 42 tablas y todas sus columnas, tipos, llaves y valores permitidos, está en la carpeta «Documentacion Fragua Real» como `er_diagram.png` y `er_diagram.pdf` (el PDF se puede ampliar sin perder nitidez).
 
 `}o--||` = muchas a una obligatoria; `}o--o|` = muchas a una opcional (la columna puede quedar vacía).
 
@@ -227,6 +228,7 @@ Además, `transacciones_pasarela` se enlaza con un pago o con una reserva por `p
 | `2026_10_23_000002` | 16/10/2026 | `variantes.descripcion`, `imagen_url` e `imagen_path`. | — |
 | `2026_10_23_000003` | 16/10/2026 | `promociones.variante_id` y `promociones.es_oferta`. | — |
 | `2026_10_26_000001` | 19/10/2026 | `reservas.descripcion`: nota opcional del cliente en su reserva. | — |
+| `2026_11_07_000001` | 28/10/2026 | Avisos push del personal: `push_suscripciones` (cada equipo con avisos activos, unido a la sesión con que se activó). | — |
 | `2026_11_06_000001` | 27/10/2026 | Fidelización: `users.documento` y los índices únicos parciales del documento y del celular entre clientes (`WHERE role = 'cliente' AND eliminado_at IS NULL`). Se detiene sin cambiar nada si hay clientes con el mismo celular. | — |
 | `2026_11_05_000001` | 27/10/2026 | Cierre automático de la caja: `caja_turnos.cierre_automatico` (booleano, falso por defecto). | — |
 | `2026_11_04_000001` | 27/10/2026 | Eliminar definitivo: los índices únicos de `productos.nombre`, `categorias.nombre`, `mesas.nombre`, `users.email` y `users.username` pasan a contar solo lo vigente (`WHERE eliminado_at IS NULL`), para reutilizar el nombre o el correo de lo eliminado. | — |

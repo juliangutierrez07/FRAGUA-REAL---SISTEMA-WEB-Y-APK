@@ -20,8 +20,10 @@ import DescuentoPedidoModal from '@/components/pedidos/DescuentoPedidoModal.vue'
 import EditarPedidoModal from '@/components/pedidos/EditarPedidoModal.vue'
 import HistorialPedidoModal from '@/components/pedidos/HistorialPedidoModal.vue'
 import ListoParaRecoger from '@/components/pedidos/ListoParaRecoger.vue'
+import PagosDelPedido from '@/components/pedidos/PagosDelPedido.vue'
 import TotalesPedido from '@/components/pedidos/TotalesPedido.vue'
-import { TIPOS_PEDIDO_UI, faltaParaFinalizar, formatoHoraPedido, saldoPendiente, titularPedido } from '@/utils/pedidoUi'
+import { TIPOS_PEDIDO_UI, faltaParaFinalizar, formatoHoraPedido, rangoDelDia, saldoPendiente, titularPedido } from '@/utils/pedidoUi'
+import FiltroDiaPedidos, { type RangoDia } from '@/components/pedidos/FiltroDiaPedidos.vue'
 import { pedidoService } from '@/services/pedido.service'
 import { mensajeDeError } from '@/services/errors'
 import { comandaService } from '@/services/comanda.service'
@@ -37,6 +39,11 @@ const procesando = ref<number | null>(null)
 
 const filtroEstado = ref<'activos' | 'finalizados' | 'cancelados'>('activos')
 const filtroTipo = ref<'todos' | Pedido['tipo']>('todos')
+// Mejora (28/10/2026, RF-M02-T-018): los pedidos de hoy por defecto (antes salían los de todas las semanas).
+const filtroDia = ref<RangoDia>({ opcion: 'hoy', fecha: '' })
+// Pedidos sin terminar de días anteriores: no se esconden del todo, se avisa cuántos hay y se pueden ver.
+const activosAnteriores = ref(0)
+const verAnteriores = ref(false)
 
 const OPCIONES_ESTADO: { v: typeof filtroEstado.value; t: string }[] = [
   { v: 'activos', t: 'Activos' },
@@ -97,13 +104,17 @@ async function cargar(opciones: { silencioso?: boolean } = {}) {
   try {
     // Cada pestaña pide al servidor lo suyo: antes se traían solo los 20 pedidos más recientes
     // y los activos más viejos podían quedar fuera de la lista.
+    const rango = rangoDelDia(filtroDia.value.opcion, filtroDia.value.fecha)
+    const anteriores = filtroEstado.value === 'activos' && verAnteriores.value
+    const dias = anteriores ? { hasta: rangoDelDia('ayer', '').hasta } : rango
     const params =
       filtroEstado.value === 'activos'
-        ? { activos: true, per_page: 100 }
-        : { estado: filtroEstado.value === 'finalizados' ? ('finalizado' as const) : ('cancelado' as const), per_page: 50 }
+        ? { activos: true, per_page: 100, ...dias }
+        : { estado: filtroEstado.value === 'finalizados' ? ('finalizado' as const) : ('cancelado' as const), per_page: 100, ...dias }
     const { data } = await pedidoService.index(params)
     pedidos.value = data.data
-    if (filtroEstado.value === 'activos') conteoActivos.value = data.total
+    if (filtroEstado.value === 'activos' && !anteriores) conteoActivos.value = data.total
+    void contarActivosAnteriores()
     if (silencioso) {
       const nuevos = data.data.filter((p) => p.estado === 'pendiente' && !pendientesAntes.has(p.id)).length
       if (nuevos) avisoNuevos.value = nuevos === 1 ? 'Llegó 1 pedido nuevo.' : `Llegaron ${nuevos} pedidos nuevos.`
@@ -115,6 +126,20 @@ async function cargar(opciones: { silencioso?: boolean } = {}) {
     if (!silencioso) error.value = mensajeDeError(e, 'No pudimos cargar los pedidos.')
   } finally {
     if (!silencioso) cargando.value = false
+  }
+}
+
+// Cuántos pedidos activos quedaron de días anteriores (se muestran aparte, con un aviso, viendo «Hoy»).
+async function contarActivosAnteriores() {
+  if (filtroEstado.value !== 'activos' || filtroDia.value.opcion !== 'hoy') {
+    activosAnteriores.value = 0
+    return
+  }
+  try {
+    const { data } = await pedidoService.index({ activos: true, per_page: 1, hasta: rangoDelDia('ayer', '').hasta })
+    activosAnteriores.value = data.total
+  } catch {
+    // Solo es un aviso: si falla, no se muestra.
   }
 }
 
@@ -136,7 +161,7 @@ function hayAccionEnCurso() {
 }
 
 function refrescarEnSilencio() {
-  if (document.hidden || cargando.value || filtroEstado.value !== 'activos' || hayAccionEnCurso()) return
+  if (document.hidden || cargando.value || filtroEstado.value !== 'activos' || filtroDia.value.opcion !== 'hoy' || hayAccionEnCurso()) return
   void cargar({ silencioso: true })
 }
 
@@ -144,10 +169,16 @@ function alVolverALaPestana() {
   if (!document.hidden) refrescarEnSilencio()
 }
 
-watch(filtroEstado, () => {
+watch([filtroEstado, filtroDia], () => {
   abierto.value = null
+  verAnteriores.value = false
   cargar()
 })
+function mostrarAnteriores(valor: boolean) {
+  verAnteriores.value = valor
+  abierto.value = null
+  cargar()
+}
 
 function alternar(pedido: Pedido) {
   abierto.value = abierto.value === pedido.id ? null : pedido.id
@@ -372,9 +403,24 @@ onBeforeUnmount(() => {
           {{ opcion.t }}
         </button>
       </div>
+      <FiltroDiaPedidos v-model="filtroDia" />
     </div>
 
     <p v-if="error" class="mt-4 alert-error">{{ error }}</p>
+    <p v-if="verAnteriores && filtroEstado === 'activos'" class="mt-4 alert-info flex items-center justify-between gap-3" role="status">
+      <span>Estás viendo los pedidos sin terminar de días anteriores.</span>
+      <button type="button" class="shrink-0 text-xs font-semibold underline" @click="mostrarAnteriores(false)">Volver a hoy</button>
+    </p>
+    <p
+      v-else-if="activosAnteriores && filtroEstado === 'activos' && filtroDia.opcion === 'hoy'"
+      class="mt-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-600/15"
+      role="status"
+    >
+      <span>
+        {{ activosAnteriores === 1 ? 'Quedó 1 pedido sin terminar' : `Quedaron ${activosAnteriores} pedidos sin terminar` }} de días anteriores.
+      </span>
+      <button type="button" class="shrink-0 text-xs font-semibold underline" @click="mostrarAnteriores(true)">Ver</button>
+    </p>
     <p v-if="avisoCreado" class="mt-4 alert-success flex items-center justify-between gap-3" role="status">
       <span>{{ avisoCreado }}</span>
       <button type="button" class="text-xs font-semibold underline" @click="avisoCreado = ''">Entendido</button>
@@ -388,8 +434,12 @@ onBeforeUnmount(() => {
 
     <div v-else-if="pedidosFiltrados.length === 0" class="mt-8 empty-state">
       <ShoppingBasket :size="32" class="mx-auto text-gray-300" />
-      <p class="mt-3 text-sm font-medium text-ink">No hay pedidos en este filtro</p>
-      <p class="mt-1 text-xs text-gray-500">Cuando entre uno nuevo aparecerá aquí.</p>
+      <p class="mt-3 text-sm font-medium text-ink">
+        {{ filtroDia.opcion === 'hoy' && !verAnteriores ? 'No hay pedidos de hoy en este filtro' : 'No hay pedidos en este filtro' }}
+      </p>
+      <p class="mt-1 text-xs text-gray-500">
+        {{ filtroDia.opcion === 'hoy' ? 'Cuando entre uno nuevo aparecerá aquí.' : 'Prueba con otro día.' }}
+      </p>
     </div>
 
     <ul v-else class="mt-6 space-y-3">
@@ -484,6 +534,8 @@ onBeforeUnmount(() => {
           <div class="mt-4 border-t border-gray-200 pt-3">
             <TotalesPedido :pedido="pedido" />
           </div>
+          <!-- Mejora (28/10/2026, RF-M06-041): los pagos y la foto del comprobante de cada uno. -->
+          <PagosDelPedido :pedido="pedido" />
 
           <p
             v-if="pedido.estado === 'preparando' && pendientesDe(pedido).length"

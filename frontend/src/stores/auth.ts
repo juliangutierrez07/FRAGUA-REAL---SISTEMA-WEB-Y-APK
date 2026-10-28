@@ -8,6 +8,7 @@ import {
   type LoginPayload,
   type RegistroPayload,
 } from '@/services/auth.service'
+import { guardarLlaveDeConfianza, llavesDeConfianza } from '@/utils/equipoConfianza'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('fragua_real_token'))
@@ -46,7 +47,8 @@ export const useAuthStore = defineStore('auth', () => {
   const rolDeZona = computed(() => (rol.value === 'superadmin' || rol.value === 'soporte' ? 'administrador' : rol.value))
 
   async function login(payload: LoginPayload) {
-    const { data } = await authService.login(payload)
+    const { data } = await authService.login({ ...payload, equipos_confianza: llavesDeConfianza() })
+    guardarLlaveDeConfianza(data.equipo_confianza)
     token.value = data.token
     usuario.value = data.user
     localStorage.setItem('fragua_real_token', data.token)

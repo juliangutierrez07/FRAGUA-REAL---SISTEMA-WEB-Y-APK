@@ -9,7 +9,10 @@
 //  - Las páginas (index.html): primero la red, para tener siempre la última versión; sin conexión se
 //    muestra /offline.html.
 // Al publicar una versión nueva del service worker, VERSION cambia y se borran las copias anteriores.
-const VERSION = 'fragua-real-v2'
+//
+// M11 (28/10/2026, RF-M11-013): también recibe los avisos push del personal (los mismos de la campana) y,
+// al tocarlos, abre su pantalla.
+const VERSION = 'fragua-real-v3'
 const CACHE_APP = `${VERSION}-app`
 const CACHE_FOTOS = `${VERSION}-fotos`
 const MAX_FOTOS = 150
@@ -56,6 +59,55 @@ self.addEventListener('fetch', (evento) => {
   if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/iconos/')) {
     evento.respondWith(desdeCache(CACHE_APP, peticion, 300))
   }
+})
+
+// ---- Avisos push del personal (M11, 28/10/2026) ----
+
+// Solo rutas de la propia app («/admin/caja»), nunca otra dirección.
+function rutaSegura(enlace) {
+  return typeof enlace === 'string' && enlace.startsWith('/') && !enlace.startsWith('//') ? enlace : '/'
+}
+
+self.addEventListener('push', (evento) => {
+  let aviso = {}
+  try {
+    aviso = evento.data ? evento.data.json() : {}
+  } catch {
+    aviso = { texto: evento.data ? evento.data.text() : '' }
+  }
+  evento.waitUntil(
+    (async () => {
+      await self.registration.showNotification(aviso.titulo || 'Fragua Real', {
+        body: aviso.texto || '',
+        icon: '/iconos/icono-192.png',
+        // El mismo aviso (misma clave) reemplaza al anterior en vez de apilarse.
+        tag: aviso.etiqueta || undefined,
+        renotify: Boolean(aviso.etiqueta),
+        lang: 'es',
+        data: { enlace: rutaSegura(aviso.enlace) },
+      })
+      // Si la app está abierta, la campana se actualiza de una vez.
+      const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      ventanas.forEach((v) => v.postMessage({ tipo: 'aviso-push' }))
+    })(),
+  )
+})
+
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close()
+  const enlace = rutaSegura(evento.notification.data && evento.notification.data.enlace)
+  evento.waitUntil(
+    (async () => {
+      const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      const abierta = ventanas.find((v) => new URL(v.url).origin === self.location.origin)
+      if (abierta) {
+        await abierta.focus()
+        abierta.postMessage({ tipo: 'abrir', enlace })
+        return
+      }
+      await self.clients.openWindow(enlace)
+    })(),
+  )
 })
 
 async function desdeCache(nombre, peticion, maximo) {

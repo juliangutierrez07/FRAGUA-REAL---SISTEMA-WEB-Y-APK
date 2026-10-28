@@ -20,7 +20,7 @@ import { extrasDe } from '@/utils/extras'
 import { mesaService } from '@/services/mesa.service'
 import { catalogoService } from '@/services/catalogo.service'
 import { pedidoService } from '@/services/pedido.service'
-import { useCarritoStore } from '@/stores/carrito'
+import { MAX_UNIDADES_POR_LINEA, useCarritoStore } from '@/stores/carrito'
 import { componentesCombo } from '@/utils/combos'
 import { useCotizacion } from '@/composables/useCotizacion'
 import { mensajeDeError } from '@/services/errors'
@@ -563,7 +563,7 @@ onMounted(async () => {
               −
             </button>
             <span class="w-4 text-center text-sm">{{ cantidadSeleccionada }}</span>
-            <button type="button" class="text-lg text-ink" @click="cantidadSeleccionada++">+</button>
+            <button type="button" class="text-lg text-ink disabled:opacity-30" :disabled="cantidadSeleccionada >= MAX_UNIDADES_POR_LINEA" @click="cantidadSeleccionada++">+</button>
           </div>
           <button
             type="button"

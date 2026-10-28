@@ -35,24 +35,25 @@ use Illuminate\Support\Facades\Route;
 */
 
 // ---- Público (sin autenticar) ----
-// Fase 0, tarea 6 (09/10/2026): límite de intentos por IP para que no se pueda probar
-// contraseñas ni tokens de recuperación a fuerza bruta (RNF-M01, M00 seguridad).
-Route::middleware('throttle:10,1')->group(function () {
-    Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/login', [AuthController::class, 'login']);
-    // RF-M01-012/013: recuperación de contraseña.
-    Route::post('/auth/recuperar', [AuthController::class, 'solicitarRecuperacion']);
-    Route::post('/auth/restablecer', [AuthController::class, 'restablecerContrasena']);
-});
+// Fase 0, tarea 6 (09/10/2026): límite de intentos para que no se pueda probar contraseñas ni tokens de
+// recuperación a fuerza bruta (RNF-M01, M00 seguridad).
+// Seguridad (28/10/2026, RNF-TRANS-045): cada formulario con su propio contador
+// (App\Support\Seguridad\LimitesDePeticiones). Antes compartían uno solo por IP con las demás rutas
+// públicas, y unos intentos fallidos dejaban sin poder entrar a todos los que usaban la misma red.
+Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:registro');
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:inicio-sesion');
+// RF-M01-012/013: recuperación de contraseña.
+Route::post('/auth/recuperar', [AuthController::class, 'solicitarRecuperacion'])->middleware('throttle:recuperacion');
+Route::post('/auth/restablecer', [AuthController::class, 'restablecerContrasena'])->middleware('throttle:10,1,restablecer');
 
 // Catálogo público (Cliente web, incluido invitado)
 Route::get('/categorias', [CatalogoController::class, 'categorias']);
 Route::get('/productos', [CatalogoController::class, 'productos']);
 Route::get('/productos/{producto}/promociones', [CatalogoController::class, 'promocionesDeProducto']);
 // Fase 7, tarea 3 (RF-M04-004): la foto del producto, pública (la ve el menú sin sesión).
-Route::get('/productos/{producto}/foto', [CatalogoController::class, 'verFoto'])->middleware('throttle:600,1')->name('productos.foto');
+Route::get('/productos/{producto}/foto', [CatalogoController::class, 'verFoto'])->middleware('throttle:600,1,fotos')->name('productos.foto');
 // Mejora (16/10/2026): la foto propia de una presentación ("Familiar"), pública como la del producto.
-Route::get('/variantes/{variante}/foto', [CatalogoController::class, 'verFotoVariante'])->middleware('throttle:600,1')->name('variantes.foto');
+Route::get('/variantes/{variante}/foto', [CatalogoController::class, 'verFotoVariante'])->middleware('throttle:600,1,fotos')->name('variantes.foto');
 Route::get('/combos', [CatalogoController::class, 'combos']);
 Route::get('/mesas', [MesaController::class, 'index']);
 // RF-M02-L-025: resolver la mesa de un QR escaneado (pedido por QR, sin cuenta).
@@ -62,18 +63,19 @@ Route::get('/mesas/qr/{qr_code}', [MesaController::class, 'porQrCode']);
 // necesita mostrar antes de crear el Pedido/la Reserva — ver CatalogoController::configuracion().
 Route::get('/configuracion', [CatalogoController::class, 'configuracion']);
 // Mejora (19/10/2026): el logo del negocio que sube el Administrador (público: lo ve el sitio sin sesión).
-Route::get('/negocio/logo', [NegocioController::class, 'logo'])->middleware('throttle:600,1');
+Route::get('/negocio/logo', [NegocioController::class, 'logo'])->middleware('throttle:600,1,logo');
 
 // Pedido de invitado (domicilio/recogida sin cuenta) y pago en línea de invitado.
 // El Controller distingue "cliente_id" (autenticado) de "cliente_invitado_*" — StorePedidoRequest
 // exige uno de los dos.
-Route::post('/pedidos', [PedidoController::class, 'store'])->middleware('throttle:30,1');
+// Seguridad (28/10/2026, RN-PED-36): por IP, por minuto y por hora, y por comprador (LimitesDePeticiones).
+Route::post('/pedidos', [PedidoController::class, 'store'])->middleware('throttle:pedido-publico');
 // Fase 2, tarea 1 (RF-M04-035): total con promociones antes de confirmar; no guarda nada.
-Route::post('/pedidos/cotizacion', [PedidoController::class, 'cotizar'])->middleware('throttle:60,1');
+Route::post('/pedidos/cotizacion', [PedidoController::class, 'cotizar'])->middleware('throttle:60,1,cotizacion');
 
 // RF-M06-005, HU-M07-002/011 (Fase 0, tarea 4): el invitado consulta y paga su pedido con el
 // token secreto que recibió al crearlo. Con límite de intentos para que no se puedan adivinar.
-Route::middleware('throttle:30,1')->group(function () {
+Route::middleware('throttle:30,1,seguimiento')->group(function () {
     Route::get('/pedidos/seguimiento/{token}', [PedidoController::class, 'seguimiento']);
     // Fase 5, tarea 1 (RF-M06-010): el invitado descarga el comprobante con su enlace.
     Route::get('/pedidos/seguimiento/{token}/comprobante', [ComprobanteController::class, 'porEnlace']);
@@ -84,19 +86,19 @@ Route::middleware('throttle:30,1')->group(function () {
 
 // Fase 6, tarea 1 (RF-M06-006, D4: Wompi): eventos firmados de la pasarela (los manda Wompi, sin
 // sesión; la firma con el secreto de eventos es la autenticación) y la página de retorno del Cliente.
-Route::post('/pasarela/wompi/eventos', [PasarelaController::class, 'evento'])->middleware('throttle:240,1');
+Route::post('/pasarela/wompi/eventos', [PasarelaController::class, 'evento'])->middleware('throttle:240,1,wompi');
 Route::get('/pasarela/transacciones/{referencia}', [PasarelaController::class, 'retorno'])
     ->where('referencia', 'FR[PR]-[0-9]+-[A-Z0-9]{20}')
-    ->middleware('throttle:60,1');
+    ->middleware('throttle:60,1,retorno-pago');
 
 // Reserva pública (Cliente web) — StoreReservaRequest exige los datos de contacto (RN-M05-12).
 // RN-M05-14: depósito obligatorio; el Cliente lo paga en línea por Nequi/Bancolombia.
-Route::post('/reservas', [ReservaController::class, 'store'])->middleware('throttle:30,1');
+Route::post('/reservas', [ReservaController::class, 'store'])->middleware('throttle:30,1,reserva');
 // Fase 1, tarea 4 (RN-M05-07): mesas libres de reservas a una fecha y hora.
-Route::get('/mesas/disponibles', [ReservaController::class, 'mesasDisponibles'])->middleware('throttle:60,1');
-Route::post('/reservas/{reserva}/deposito/en-linea', [ReservaController::class, 'registrarDepositoEnLinea'])->middleware('throttle:30,1');
+Route::get('/mesas/disponibles', [ReservaController::class, 'mesasDisponibles'])->middleware('throttle:60,1,mesas-libres');
+Route::post('/reservas/{reserva}/deposito/en-linea', [ReservaController::class, 'registrarDepositoEnLinea'])->middleware('throttle:30,1,deposito');
 // Fase 4, tarea 4 (RF-M05-018, RN-M05-09): ver y cancelar una reserva con el enlace del correo, sin cuenta.
-Route::middleware('throttle:30,1')->group(function () {
+Route::middleware('throttle:30,1,enlace-reserva')->group(function () {
     Route::get('/reservas/enlace/{token}', [ReservaPublicaController::class, 'ver']);
     Route::post('/reservas/enlace/{token}/cancelar', [ReservaPublicaController::class, 'cancelar']);
     // Fase 6, tarea 1 (RF-M05-030): pagar o reintentar el depósito con el mismo enlace.
@@ -142,6 +144,11 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         Route::get('/notificaciones/contador', [NotificacionController::class, 'contador']);
         Route::post('/notificaciones/leidas', [NotificacionController::class, 'marcarTodas']);
         Route::post('/notificaciones/{notificacion}/leida', [NotificacionController::class, 'marcarLeida'])->whereNumber('notificacion');
+        // Avisos push del personal (28/10/2026, RF-M11-013): activarlos, apagarlos y probarlos en este equipo.
+        Route::post('/push/estado', [\App\Http\Controllers\Api\PushController::class, 'estado']);
+        Route::post('/push/suscripciones', [\App\Http\Controllers\Api\PushController::class, 'suscribir'])->middleware('throttle:20,1,push-suscribir');
+        Route::delete('/push/suscripciones', [\App\Http\Controllers\Api\PushController::class, 'desuscribir']);
+        Route::post('/push/prueba', [\App\Http\Controllers\Api\PushController::class, 'probar'])->middleware('throttle:6,1,push-prueba');
 
         // Fase 7, tarea 4 (RF-M06-023, HU-M06-009): estado de la caja de hoy para Cobrar.
         Route::get('/caja/estado', [CajaController::class, 'estado']);
@@ -182,7 +189,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         // Administrador, pero la Policy lo rechaza — autorización fina en profundidad).
         Route::post('/pedidos/{pedido}/cobrar', [PagoController::class, 'cobrar'])->middleware('menu:cobrar,caja');
         // Fidelización (27/10/2026, RF-M06-040): al cobrar, buscar al Cliente y dejarle el pedido en su historial.
-        Route::get('/clientes/buscar', [PedidoController::class, 'buscarCliente'])->middleware(['menu:cobrar,mesas', 'throttle:30,1']);
+        Route::get('/clientes/buscar', [PedidoController::class, 'buscarCliente'])->middleware(['menu:cobrar,mesas', 'throttle:30,1,buscar-cliente']);
         Route::post('/pedidos/asignar-cliente', [PedidoController::class, 'asignarCliente'])->middleware('menu:cobrar,mesas');
 
         // Fase 6, tarea 2 (RN-PED-06/09/17 a 19, D5): comandas de cocina impresas desde el navegador.
@@ -193,7 +200,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
 
         // M12 — Impresoras (24/10/2026): lo que hace cada equipo del local que imprime, con su clave en
         // la cabecera X-Equipo-Impresion (también con la sesión de un Mesero).
-        Route::post('/impresion/equipos/vincular', [ImpresionController::class, 'vincular'])->middleware('throttle:10,1');
+        Route::post('/impresion/equipos/vincular', [ImpresionController::class, 'vincular'])->middleware('throttle:10,1,vincular-equipo');
         Route::post('/impresion/equipos/senal', [ImpresionController::class, 'senal']);
         Route::get('/impresion/prueba', [ImpresionController::class, 'prueba']);
         Route::post('/impresion/equipos/prueba', [ImpresionController::class, 'resultadoPrueba']);
@@ -252,7 +259,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     Route::middleware('role:cliente')->group(function () {
         Route::get('/mis-reservas', [ReservaController::class, 'misReservas']);
         // Mejora (26/10/2026, RF-M05-044): pagar el depósito pendiente desde «Mis pedidos y reservas».
-        Route::post('/mis-reservas/{reserva}/deposito', [ReservaController::class, 'pagarMiDeposito'])->middleware('throttle:30,1');
+        Route::post('/mis-reservas/{reserva}/deposito', [ReservaController::class, 'pagarMiDeposito'])->middleware('throttle:30,1,mi-deposito');
     });
 
     // ---- Exclusivo Administrador ----
@@ -373,7 +380,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         // Mejora (19/10/2026): dirección, teléfono y logo del negocio (Inicio, pie de página y PDF).
         Route::put('/negocio', [NegocioController::class, 'actualizar'])->middleware('menu:configuracion');
         // M09 (20/10/2026): leer las coordenadas de un enlace de Google Maps (solo SuperAdmin; limitado).
-        Route::post('/negocio/ubicacion-desde-enlace', [NegocioController::class, 'ubicacionDesdeEnlace'])->middleware(['menu:configuracion', 'throttle:20,1']);
+        Route::post('/negocio/ubicacion-desde-enlace', [NegocioController::class, 'ubicacionDesdeEnlace'])->middleware(['menu:configuracion', 'throttle:20,1,ubicacion']);
         Route::post('/negocio/logo', [NegocioController::class, 'subirLogo'])->middleware('menu:configuracion');
         Route::delete('/negocio/logo', [NegocioController::class, 'quitarLogo'])->middleware('menu:configuracion');
         // Pago directo (22/10/2026): las cuentas de Nequi, Bancolombia y Bre-B (las cambia solo el SuperAdmin).

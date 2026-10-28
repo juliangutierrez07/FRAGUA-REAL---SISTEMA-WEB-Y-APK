@@ -106,7 +106,7 @@ class SeguridadClavesTest extends TestCase
         foreach (range(1, 4) as $i) {
             $this->entrar('mario', 'mala')->assertStatus(422);
         }
-        $this->travel(61)->seconds(); // aparte, la ruta deja 10 intentos por minuto por IP
+        $this->travel(61)->seconds(); // aparte, la ruta deja 10 intentos por minuto por cuenta e IP
 
         // El quinto seguido bloquea; ni la contraseña correcta entra.
         $this->entrar('mario', 'mala')->assertStatus(429)

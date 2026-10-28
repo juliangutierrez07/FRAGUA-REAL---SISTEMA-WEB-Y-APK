@@ -7,6 +7,8 @@ import type { ListaSesiones, Usuario } from '@/types/models'
 export interface LoginPayload {
   login: string
   password: string
+  // Seguridad (28/10/2026, RF-M01-036): las llaves de equipo de confianza de este navegador.
+  equipos_confianza?: string[]
 }
 
 export interface RegistroPayload {
@@ -24,6 +26,8 @@ export interface RegistroPayload {
 export interface AuthResponse {
   user: Usuario
   token: string
+  // Solo al iniciar sesión (28/10/2026): la llave de equipo de confianza para guardar.
+  equipo_confianza?: string
 }
 
 export interface ActualizarPerfilPayload {

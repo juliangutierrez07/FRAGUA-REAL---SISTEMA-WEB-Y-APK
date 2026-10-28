@@ -87,6 +87,12 @@ class RevisionProduccionService
         $r[] = $this->item('fotos', $gd ? 'ok' : 'aviso', 'Fotos de productos livianas',
             $gd ? 'La extensión GD de PHP está instalada: las fotos se reducen al subirlas.' : 'Falta la extensión GD de PHP (php-gd): las fotos se guardan tal como se suben. Instálala con apt install php-gd.');
 
+        // M11 (28/10/2026, RF-M11-013): sin llaves VAPID la campana funciona, pero no llegan avisos al teléfono.
+        $push = app(PushService::class)->disponible();
+        $r[] = $this->item('push', $push ? 'ok' : 'aviso', 'Avisos push del personal',
+            $push ? 'Las llaves VAPID están puestas: el personal puede activar los avisos en su teléfono.'
+                : 'Faltan FRAGUA_REAL_PUSH_PUBLICA y FRAGUA_REAL_PUSH_PRIVADA: corre php artisan push:generar-llaves y cópialas en el .env.');
+
         $origenes = (array) config('cors.allowed_origins', []);
         $abierto = in_array('*', $origenes, true);
         $r[] = $this->item('cors', $abierto ? 'error' : 'ok', 'Orígenes permitidos para la API',

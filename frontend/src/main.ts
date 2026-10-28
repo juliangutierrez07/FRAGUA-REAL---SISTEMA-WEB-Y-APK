@@ -6,6 +6,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
+import { useNotificacionesStore } from './stores/notificaciones'
 import { EVENTO_SESION_INVALIDA } from './services/api'
 import { vEscritura } from './directives/escritura'
 import { vFormato } from './directives/formato'
@@ -44,6 +45,15 @@ window.addEventListener(EVENTO_SESION_INVALIDA, () => {
 })
 
 app.mount('#app')
+
+// M11 (28/10/2026, RF-M11-013): el service worker avisa cuando llega un aviso push (la campana se actualiza) y
+// cuando se toca uno con la app abierta (se va a su pantalla sin recargar).
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (evento: MessageEvent<{ tipo?: string; enlace?: string }>) => {
+    if (evento.data?.tipo === 'abrir' && evento.data.enlace?.startsWith('/')) router.push(evento.data.enlace)
+    if (evento.data?.tipo === 'aviso-push') void useNotificacionesStore().refrescar()
+  })
+}
 
 // Mejora (16/10/2026): app instalable (PWA). El service worker (public/sw.js) solo se registra en la
 // versión compilada: en desarrollo guardaría archivos de Vite que cambian a cada rato.

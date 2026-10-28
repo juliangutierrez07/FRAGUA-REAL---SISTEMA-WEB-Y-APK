@@ -32,6 +32,8 @@ class SoporteSoloConsulta
         'api/reportes/exportar',
         'api/pedidos/cotizacion',
         'api/notificaciones/*',
+        // M11 (28/10/2026): activar los avisos push en su propio equipo.
+        'api/push/*',
         // M12: la vista previa del ticket no guarda nada.
         'api/impresion/vista-previa',
     ];
