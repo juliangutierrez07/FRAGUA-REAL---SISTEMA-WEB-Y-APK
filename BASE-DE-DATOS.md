@@ -1,6 +1,6 @@
 # Base de datos — Fragua Real Burger
 
-PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 42 tablas (36 del sistema y 6 de Laravel para la cola, la caché y las sesiones) más la de control de migraciones, creadas por 73 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
+PostgreSQL en producción; SQLite en memoria para las pruebas automáticas. 42 tablas (36 del sistema y 6 de Laravel para la cola, la caché y las sesiones) más la de control de migraciones, creadas por 74 migraciones de Laravel en `backend/database/migrations`. Este documento describe cómo está hoy la base; la lógica que la usa está en [`README-BACKEND.md`](README-BACKEND.md) y los endpoints en [`API.md`](API.md).
 
 ## Contenido
 
@@ -30,7 +30,7 @@ La fecha del nombre de cada migración solo fija el orden en que corren; no es l
 
 | Tabla | Columnas | Qué guarda |
 |---|---|---|
-| `users` | 17 | Cuentas de los roles (`role`: superadmin, administrador, soporte, mesero, cliente; superadmin desde el 19/10/2026, M09, y soporte desde el 20/10/2026, M10), `menus_permitidos` (json, los menús que el SuperAdmin le habilitó; vacío = todos los de su rol), con `username` opcional y único y el permiso `puede_registrar_gastos` del Mesero autorizado. `documento` (27/10/2026): número de documento del Cliente; el documento y el celular no se repiten entre clientes vigentes. Eliminar (definitivo desde el 27/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (con historial: fuera de todas las listas, sin restaurar; su nombre o correo queda libre). |
+| `users` | 17 | Cuentas de los roles (`role`: superadmin, administrador, soporte, mesero, cliente; superadmin desde el 19/10/2026, M09, y soporte desde el 20/10/2026, M10), `menus_permitidos` (json, los menús que el SuperAdmin le habilitó; vacío = todos los de su rol), con `username` opcional y único y el permiso `puede_registrar_gastos` del Mesero autorizado. `documento` (27/10/2026): número de documento del Cliente; el documento y el celular no se repiten entre clientes vigentes. `correo_verificado_at` (28/10/2026): cuándo el Cliente confirmó su correo con el código (nulo = sin confirmar). Eliminar (definitivo desde el 27/10/2026): `eliminado_at`, `eliminado_por` y `eliminado_motivo` (con historial: fuera de todas las listas, sin restaurar; su nombre o correo queda libre). |
 | `personal_access_tokens` | 12 | Sesiones (tokens de Sanctum) con IP y dispositivo; vencen por inactividad o duración máxima. |
 | `password_reset_tokens` | 3 | Enlaces de recuperación de contraseña (guardados con hash, vencen a la hora). |
 | `auditorias` | 9 | Historial de acciones críticas: quién, qué, sobre qué registro, antes y después, IP y navegador. Triggers de PostgreSQL impiden cambiarlo o borrarlo. |
@@ -228,6 +228,7 @@ Además, `transacciones_pasarela` se enlaza con un pago o con una reserva por `p
 | `2026_10_23_000002` | 16/10/2026 | `variantes.descripcion`, `imagen_url` e `imagen_path`. | — |
 | `2026_10_23_000003` | 16/10/2026 | `promociones.variante_id` y `promociones.es_oferta`. | — |
 | `2026_10_26_000001` | 19/10/2026 | `reservas.descripcion`: nota opcional del cliente en su reserva. | — |
+| `2026_11_08_000001` | 28/10/2026 | Correo confirmado del Cliente: `users.correo_verificado_at`. | — |
 | `2026_11_07_000001` | 28/10/2026 | Avisos push del personal: `push_suscripciones` (cada equipo con avisos activos, unido a la sesión con que se activó). | — |
 | `2026_11_06_000001` | 27/10/2026 | Fidelización: `users.documento` y los índices únicos parciales del documento y del celular entre clientes (`WHERE role = 'cliente' AND eliminado_at IS NULL`). Se detiene sin cambiar nada si hay clientes con el mismo celular. | — |
 | `2026_11_05_000001` | 27/10/2026 | Cierre automático de la caja: `caja_turnos.cierre_automatico` (booleano, falso por defecto). | — |

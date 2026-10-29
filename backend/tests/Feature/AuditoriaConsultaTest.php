@@ -91,7 +91,7 @@ class AuditoriaConsultaTest extends TestCase
         $acciones = Auditoria::where('entidad', 'User')->where('entidad_id', $cliente->id)->orderBy('id')->pluck('accion')->all();
         $this->assertSame([
             'registro_cliente', 'cambiar_contrasena', 'cierre_sesion', 'solicitar_recuperacion',
-            'restablecer_contrasena_fallido', 'restablecer_contrasena',
+            'restablecer_contrasena_fallido', 'restablecer_contrasena', 'correo_verificado',
         ], $acciones);
         $this->assertSame('token_invalido', Auditoria::where('accion', 'restablecer_contrasena_fallido')->sole()->detalles['motivo']);
 

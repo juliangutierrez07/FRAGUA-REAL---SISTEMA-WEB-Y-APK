@@ -321,6 +321,11 @@ Usuarios.
 - [ ] En el teléfono, el menú del Cliente muestra dos productos por fila, y en el menú lateral solo queda
       marcada la sección donde se está.
 
+## 8b-undecies. Buscar al cliente por correo (28/10/2026)
+
+- [ ] Al cobrar, un cliente que no ha confirmado su correo no aparece por correo («Prueba con su documento o su
+      celular»); por documento sí.
+
 ## 8c. Correcciones del 19/10/2026
 
 - [ ] Con una mesa dada de baja por el Administrador: no aparece en Mesas, ni en Nuevo pedido, ni en

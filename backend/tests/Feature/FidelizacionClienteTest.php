@@ -34,6 +34,7 @@ class FidelizacionClienteTest extends TestCase
         $this->mesero = User::create(['role' => 'mesero', 'nombre' => 'Mesero', 'email' => 'mesero@test.co', 'telefono' => '3001112233', 'password' => bcrypt('secreto123'), 'activo' => true]);
         $this->admin = User::create(['role' => 'administrador', 'nombre' => 'Admin', 'email' => 'admin@test.co', 'password' => bcrypt('secreto123'), 'activo' => true]);
         $this->cliente = User::create(['role' => 'cliente', 'nombre' => 'Juan Pérez', 'email' => 'Juan@Test.co', 'telefono' => '3105556677', 'documento' => '1020304050', 'password' => bcrypt('secreto123'), 'activo' => true]);
+        $this->cliente->forceFill(['correo_verificado_at' => now()])->save(); // RN-USR-28: lo encuentra por correo
         $categoria = Categoria::create(['nombre' => 'Hamburguesas']);
         $this->producto = Producto::create(['categoria_id' => $categoria->id, 'nombre' => 'Clásica', 'precio_base' => 20000, 'tipo_venta' => 'alimento']);
         $this->mesa = Mesa::create(['nombre' => 'Mesa 3', 'qr_code' => 'qr-3', 'estado' => 'libre']);

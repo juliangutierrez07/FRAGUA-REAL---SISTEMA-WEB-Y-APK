@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Pedido;
+use App\Notifications\Concerns\CorreoDeMarca;
 use App\Services\ComprobanteService;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -15,6 +16,8 @@ use RuntimeException;
  */
 class ComprobantePagoNotification extends Notification
 {
+    use CorreoDeMarca;
+
     public function __construct(public readonly Pedido $pedido)
     {
     }
@@ -38,10 +41,17 @@ class ComprobantePagoNotification extends Notification
         $mensaje = (new MailMessage)
             ->subject("Tu comprobante de pago {$comprobante->numero} — Fragua Real Burger")
             ->greeting($nombre ? "Hola {$nombre}," : 'Hola,')
-            ->line("Recibimos el pago de tu pedido #{$p->id} por $".number_format((float) $p->total, 0, ',', '.').'. Te enviamos el comprobante en PDF.')
-            ->line('Gracias por pedir en Fragua Real Burger.')
+            ->line("Recibimos el pago de tu pedido #{$p->id}. Te enviamos el comprobante en PDF, adjunto a este correo.")
             ->attachData($servicio->contenido($comprobante), $servicio->nombreArchivo($comprobante), ['mime' => 'application/pdf']);
+        $this->conResumen($mensaje, [
+            'Comprobante' => $comprobante->numero,
+            'Pedido' => "#{$p->id}",
+            'Total pagado' => $this->pesos($p->total),
+        ]);
+        if ($p->token_publico) {
+            $mensaje->action('Ver mi pedido', $p->enlaceSeguimiento());
+        }
 
-        return $p->token_publico ? $mensaje->action('Ver mi pedido', $p->enlaceSeguimiento()) : $mensaje;
+        return $this->alFinal($mensaje, '¡Gracias por pedir en Fragua Real Burger!');
     }
 }

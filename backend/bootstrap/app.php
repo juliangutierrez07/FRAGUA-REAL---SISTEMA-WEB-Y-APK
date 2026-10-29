@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'activo' => \App\Http\Middleware\EnsureUserIsActive::class,
             // M09 (20/10/2026): permisos de menú por cuenta.
             'menu' => \App\Http\Middleware\EnsureMenuPermitido::class,
+            // 28/10/2026 (RF-M01-038): un token que ya no sirve no se toma como invitado en una ruta pública.
+            'sesion.vigente' => \App\Http\Middleware\SesionVencidaEnRutaPublica::class,
         ]);
         // M10 (20/10/2026): la cuenta de Soporte solo consulta. En toda la API, porque las rutas
         // públicas (crear un pedido, reservar) también reconocen la sesión si llega el token.

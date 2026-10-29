@@ -69,7 +69,8 @@ Route::get('/negocio/logo', [NegocioController::class, 'logo'])->middleware('thr
 // El Controller distingue "cliente_id" (autenticado) de "cliente_invitado_*" — StorePedidoRequest
 // exige uno de los dos.
 // Seguridad (28/10/2026, RN-PED-36): por IP, por minuto y por hora, y por comprador (LimitesDePeticiones).
-Route::post('/pedidos', [PedidoController::class, 'store'])->middleware('throttle:pedido-publico');
+// Corrección (28/10/2026, RF-M01-038): con un token cerrado o vencido responde 401 en vez de tomarlo como invitado.
+Route::post('/pedidos', [PedidoController::class, 'store'])->middleware(['throttle:pedido-publico', 'sesion.vigente']);
 // Fase 2, tarea 1 (RF-M04-035): total con promociones antes de confirmar; no guarda nada.
 Route::post('/pedidos/cotizacion', [PedidoController::class, 'cotizar'])->middleware('throttle:60,1,cotizacion');
 
@@ -257,6 +258,9 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     // correo de contacto, ya que Reserva no tiene cliente_id (RN-M05-12). Ver
     // ReservaController::misReservas().
     Route::middleware('role:cliente')->group(function () {
+        // Seguridad (28/10/2026, RF-M01-037): confirmar el correo de la cuenta con un código.
+        Route::post('/auth/correo/codigo', [AuthController::class, 'enviarCodigoCorreo'])->middleware('throttle:5,10,codigo-correo');
+        Route::post('/auth/correo/verificar', [AuthController::class, 'verificarCorreo'])->middleware('throttle:15,10,verificar-correo');
         Route::get('/mis-reservas', [ReservaController::class, 'misReservas']);
         // Mejora (26/10/2026, RF-M05-044): pagar el depósito pendiente desde «Mis pedidos y reservas».
         Route::post('/mis-reservas/{reserva}/deposito', [ReservaController::class, 'pagarMiDeposito'])->middleware('throttle:30,1,mi-deposito');

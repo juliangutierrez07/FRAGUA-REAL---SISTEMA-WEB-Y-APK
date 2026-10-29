@@ -79,7 +79,11 @@ class ListoParaRecogerTest extends TestCase
         $correo = (new ListoParaRecogerNotification($pedido->fresh()))->toMail(new AnonymousNotifiable);
         $this->assertStringContainsString("#{$pedido->id} está listo para recoger", $correo->subject);
         $this->assertStringContainsString('/seguimiento/'.$token, $correo->actionUrl);
-        $this->assertStringContainsString('pagas $40.000', implode(' ', $correo->introLines));
+        // 28/10/2026: el saldo va en la tarjeta de resumen del correo con la marca.
+        $this->assertSame('Pagas $40.000 al recoger', $correo->viewData['resumen']['Pago']);
+        $html = (string) $correo->render();
+        $this->assertStringContainsString('Pagas $40.000 al recoger', $html);
+        $this->assertStringContainsString('El equipo de Fragua Real Burger', $html);
 
         // El seguimiento del invitado lo muestra.
         $this->app['auth']->forgetGuards();

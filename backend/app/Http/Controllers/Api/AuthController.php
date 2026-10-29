@@ -14,6 +14,7 @@ use App\Notifications\RecuperarPasswordNotification;
 use App\Services\AuditoriaService;
 use App\Services\BloqueoInicioSesionService;
 use App\Services\SesionService;
+use App\Services\VerificacionCorreoService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,8 +45,39 @@ class AuthController extends Controller
         // Fase 3, tarea 4: la sesión guarda IP, navegador y su vencimiento máximo.
         ['token' => $token, 'sesion' => $sesion] = app(SesionService::class)->abrir($user, $request, 'cliente');
         $this->auditar('registro_cliente', $user, ['sesion_id' => $sesion->id], $user);
+        // Seguridad (28/10/2026, RF-M01-037): el código para confirmar el correo sale de una vez. Si el correo
+        // falla, la cuenta queda creada igual y el Cliente pide otro código desde su Perfil.
+        try {
+            app(VerificacionCorreoService::class)->enviarCodigo($user);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json(['user' => $user, 'token' => $token], 201);
+    }
+
+    // Seguridad (28/10/2026, RF-M01-037, RN-USR-28): el Cliente pide el código para confirmar su correo y lo
+    // escribe. Con el correo confirmado ve sus reservas y el Mesero lo encuentra por correo al cobrar.
+    public function enviarCodigoCorreo(Request $request, VerificacionCorreoService $verificacion)
+    {
+        $usuario = $request->user();
+        if ($usuario->correo_verificado_at) {
+            return response()->json(['message' => 'Tu correo ya está confirmado.', 'user' => $usuario]);
+        }
+        $verificacion->enviarCodigo($usuario);
+
+        return response()->json(['message' => "Te enviamos un código a {$usuario->email}."]);
+    }
+
+    public function verificarCorreo(Request $request, VerificacionCorreoService $verificacion)
+    {
+        $datos = $request->validate(['codigo' => ['required', 'string', 'regex:/^\s*\d{6}\s*$/']], [
+            'codigo.required' => 'Escribe el código de 6 dígitos que te llegó al correo.',
+            'codigo.regex' => 'El código tiene 6 dígitos.',
+        ]);
+        $verificacion->verificar($request->user(), $datos['codigo']);
+
+        return response()->json(['message' => 'Listo: tu correo quedó confirmado.', 'user' => $request->user()->fresh()]);
     }
 
     // RF-M01-007 (Fase 3, tarea 3): con el correo o con el nombre de usuario. Si lo escrito lleva
@@ -264,6 +296,8 @@ class AuthController extends Controller
         // Seguridad (21/10/2026): con la contraseña nueva, la cuenta deja de estar bloqueada.
         app(BloqueoInicioSesionService::class)->limpiarCuenta($user);
         $this->auditar('restablecer_contrasena', $user, ['sesiones_revocadas' => true], $user);
+        // Seguridad (28/10/2026, RN-USR-28): el enlace llegó a ese correo, así que el correo es suyo.
+        app(VerificacionCorreoService::class)->marcar($user, 'recuperacion');
 
         return response()->json(['message' => 'Contraseña actualizada.']);
     }

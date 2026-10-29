@@ -42,6 +42,7 @@ final class CatalogoAuditoria
         'cambiar_contrasena' => ['Cambio de contraseña', 'seguridad'],
         'solicitar_recuperacion' => ['Solicitud de recuperación de contraseña', 'seguridad'],
         'restablecer_contrasena' => ['Restablecimiento de contraseña', 'seguridad'],
+        'correo_verificado' => ['Correo confirmado', 'seguridad'],
         'restablecer_contrasena_fallido' => ['Intento fallido de restablecer la contraseña', 'seguridad'],
         'revocar_sesiones' => ['Revocación de sesiones de un usuario', 'seguridad'],
         'revocar_sesion' => ['Cierre de una sesión de un usuario por el Administrador', 'seguridad'],

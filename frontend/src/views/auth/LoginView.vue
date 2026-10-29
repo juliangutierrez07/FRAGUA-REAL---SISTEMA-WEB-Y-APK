@@ -57,6 +57,10 @@ async function onSubmit() {
     <p v-if="route.query.restablecida" class="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
       Tu contraseña quedó actualizada. Ingresa con la nueva.
     </p>
+    <!-- 28/10/2026 (RF-M01-038): llega aquí cuando su sesión se cerró mientras usaba la app. -->
+    <p v-else-if="route.query.sesion === 'cerrada'" class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      Tu sesión se cerró (desde otro dispositivo o porque pasó mucho tiempo sin usarla). Vuelve a entrar.
+    </p>
     <BaseInput formato="correo"
       v-model="identificador"
       type="text"

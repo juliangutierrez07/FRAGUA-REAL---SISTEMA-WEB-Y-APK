@@ -1,6 +1,6 @@
 # API — Fragua Real Burger
 
-Referencia de los 208 endpoints de `backend/routes/api.php`, agrupados por módulo. Donde dice «Administrador» entra también el SuperAdmin (M09) y, solo para consultar, la cuenta de Soporte (M10): a ella el servidor le rechaza con 403 «La cuenta de Soporte solo puede consultar.» toda escritura (POST, PUT, PATCH o DELETE), salvo las de su propia cuenta (`/auth/*`, `/perfil`), `POST /reportes/exportar`, `POST /pedidos/cotizacion` y marcar sus notificaciones como leídas, y también `GET /comandas/{comanda}/ticket`, que marca la comanda como impresa. Las rutas del personal llevan además el permiso de menú de la cuenta (M09): si el SuperAdmin le quitó ese menú, responden 403 «Esta opción no está habilitada para tu cuenta…». Todas las rutas van bajo `/api` y responden JSON, salvo los PDF, tickets, fotos y archivos exportados.
+Referencia de los 210 endpoints de `backend/routes/api.php`, agrupados por módulo. Donde dice «Administrador» entra también el SuperAdmin (M09) y, solo para consultar, la cuenta de Soporte (M10): a ella el servidor le rechaza con 403 «La cuenta de Soporte solo puede consultar.» toda escritura (POST, PUT, PATCH o DELETE), salvo las de su propia cuenta (`/auth/*`, `/perfil`), `POST /reportes/exportar`, `POST /pedidos/cotizacion` y marcar sus notificaciones como leídas, y también `GET /comandas/{comanda}/ticket`, que marca la comanda como impresa. Las rutas del personal llevan además el permiso de menú de la cuenta (M09): si el SuperAdmin le quitó ese menú, responden 403 «Esta opción no está habilitada para tu cuenta…». Todas las rutas van bajo `/api` y responden JSON, salvo los PDF, tickets, fotos y archivos exportados.
 
 Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). Si cambia una ruta, actualiza esta tabla.
 
@@ -15,7 +15,7 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 
 ## Índice
 
-- [Cuenta y sesión (M01)](#cuenta-y-sesión-m01) (12)
+- [Cuenta y sesión (M01)](#cuenta-y-sesión-m01) (14)
 - [Usuarios y auditoría (M01)](#usuarios-y-auditoría-m01) (14)
 - [Catálogo (M04)](#catálogo-m04) (43)
 - [Pedidos (M02 y M07)](#pedidos-m02-y-m07) (21)
@@ -117,7 +117,7 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 
 | Método | Ruta | Quién | Para qué | Límite |
 |---|---|---|---|---|
-| `POST` | `/pedidos` | Pública | Crea un pedido: Cliente o invitado (domicilio o recogida), QR de mesa, o el personal (local o por teléfono). Devuelve el enlace de seguimiento al invitado. 26/10/2026: `cuenta` (local: una cuenta de la mesa o la siguiente), `ubicacion_lat`/`ubicacion_lng` y `paga_con` (domicilio contra entrega; 422 si no alcanza para el total). 27/10/2026: el que crea el personal (`origen` = `mesero`) sale ya `confirmado`, con su comanda en `comandas` (salvo pago en línea); el del QR y el de la web quedan `pendiente`. 28/10/2026 (web y QR): hasta 3 pedidos esperando confirmación por comprador y 4 por mesa (422), 30 líneas y 20 unidades por línea. | Web y QR: 10/min y 60/hora por IP, 10/hora por comprador; personal: 120/min |
+| `POST` | `/pedidos` | Pública | Crea un pedido: Cliente o invitado (domicilio o recogida), QR de mesa, o el personal (local o por teléfono). Devuelve el enlace de seguimiento al invitado. 26/10/2026: `cuenta` (local: una cuenta de la mesa o la siguiente), `ubicacion_lat`/`ubicacion_lng` y `paga_con` (domicilio contra entrega; 422 si no alcanza para el total). 27/10/2026: el que crea el personal (`origen` = `mesero`) sale ya `confirmado`, con su comanda en `comandas` (salvo pago en línea); el del QR y el de la web quedan `pendiente`. 28/10/2026 (web y QR): hasta 3 pedidos esperando confirmación por comprador y 4 por mesa (422), 30 líneas y 20 unidades por línea. Si llega un token cerrado o vencido responde 401 con `sesion_cerrada` (antes lo tomaba como invitado). | Web y QR: 10/min y 60/hora por IP, 10/hora por comprador; personal: 120/min |
 | `GET` | `/pedidos` | Administrador, Mesero, Cliente | Pedidos con filtros (tipo, estado, mesa, activos). El Cliente ve solo los suyos. 28/10/2026: `desde` y `hasta` (AAAA-MM-DD, días de Colombia). |  |
 | `POST` | `/pedidos/cotizacion` | Pública | Calcula el total con promociones antes de crear el pedido. | 60/min |
 | `GET` | `/pedidos/seguimiento/{token}` | Pública | Pedido del invitado por su enlace (sin datos de contacto ni del personal). | 30/min |
@@ -173,8 +173,10 @@ Generada desde el código el 13/10/2026 (`php artisan route:list --path=api`). S
 | Método | Ruta | Quién | Para qué | Límite |
 |---|---|---|---|---|
 | `GET` | `/mesas/disponibles` | Pública | Mesas libres a una fecha y hora (sin datos de nadie). | 60/min |
-| `GET` | `/mis-reservas` | Cliente | Reservas del Cliente (por su correo), con `puede_pagar`. |  |
-| `POST` | `/mis-reservas/{reserva}/deposito` | Cliente | Paga el depósito pendiente de su reserva (`pasarela`, `comprobante`, `referencia`), como con el enlace del correo. 404 si no es suya. | 30/min |
+| `POST` | `/auth/correo/codigo` | Cliente | 28/10/2026: envía al correo de la cuenta un código de 6 dígitos para confirmarlo (vence en 30 minutos; uno nuevo anula el anterior). El registro ya envía el primero. | 5 cada 10 min |
+| `POST` | `/auth/correo/verificar` | Cliente | Confirma el correo con `codigo`; 422 si no es correcto (a los 5 intentos hay que pedir otro). Devuelve `user` con `correo_verificado_at`. | 15 cada 10 min |
+| `GET` | `/mis-reservas` | Cliente | Reservas del Cliente (por su correo), con `puede_pagar`. 28/10/2026: 403 con `correo_sin_confirmar` si no ha confirmado su correo. |  |
+| `POST` | `/mis-reservas/{reserva}/deposito` | Cliente | Paga el depósito pendiente de su reserva (`pasarela`, `comprobante`, `referencia`), como con el enlace del correo. 404 si no es suya; 403 sin el correo confirmado. | 30/min |
 | `POST` | `/reservas` | Pública | Crea una reserva (web o del personal) con `descripcion` opcional (hasta 500 caracteres); solo de 4:00 p. m. a 11:00 p. m. y con al menos 3 horas de anticipación (422 si no). Devuelve el enlace secreto. | 30/min |
 | `GET` | `/reservas` | Administrador, Mesero | Reservas con filtros, sus avisos y su depósito. |  |
 | `GET` | `/reservas/depositos-retenidos` | Administrador | Depósitos retenidos por no-show. |  |

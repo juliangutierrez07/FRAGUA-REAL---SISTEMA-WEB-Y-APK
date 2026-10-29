@@ -182,8 +182,20 @@ class ReservaController extends Controller
     // "Mis reservas" del Cliente (HU-M05, pantalla "Mis pedidos y reservas"): Reserva no
     // tiene cliente_id (RN-M05-12), así que se identifican por el correo de contacto —
     // mismo criterio que ReservaPolicy::cancelar().
+    private function exigirCorreoConfirmado(Request $request): void
+    {
+        if (! $request->user()->correo_verificado_at) {
+            throw new \Illuminate\Http\Exceptions\HttpResponseException(response()->json([
+                'message' => 'Confirma tu correo para ver tus reservas.',
+                'correo_sin_confirmar' => true,
+            ], 403));
+        }
+    }
+
     public function misReservas(Request $request)
     {
+        // Seguridad (28/10/2026, RN-USR-28): las reservas se buscan por correo, así que solo con el correo confirmado.
+        $this->exigirCorreoConfirmado($request);
         $reservas = Reserva::with('mesa')
             ->where('cliente_correo', $request->user()->email)
             ->latest('fecha_hora')
@@ -200,6 +212,7 @@ class ReservaController extends Controller
     // Solo sus reservas (mismo correo); las de otros responden 404.
     public function pagarMiDeposito(Request $request, Reserva $reserva, \App\Services\PagoDirectoService $pagosDirectos)
     {
+        $this->exigirCorreoConfirmado($request);
         abort_unless($reserva->cliente_correo === $request->user()->email, 404, 'No encontramos esa reserva.');
 
         $datos = $request->validate(['pasarela' => ['required', 'in:nequi,bancolombia,breb'], ...$pagosDirectos::reglasComprobante()],

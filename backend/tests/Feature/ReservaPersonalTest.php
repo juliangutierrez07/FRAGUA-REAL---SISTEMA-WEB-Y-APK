@@ -193,6 +193,7 @@ class ReservaPersonalTest extends TestCase
     {
         $reserva = $this->reservaConfirmada();
         $cliente = User::create(['role' => 'cliente', 'nombre' => 'Laura Pérez', 'email' => 'laura@correo.co', 'password' => 'secreto123', 'activo' => true]);
+        $cliente->forceFill(['correo_verificado_at' => now()])->save(); // RN-USR-28: ve sus reservas
 
         Sanctum::actingAs($cliente);
         $this->assertSame([$reserva->id], collect($this->getJson('/api/mis-reservas')->assertOk()->json('data'))->pluck('id')->all());

@@ -7,6 +7,7 @@ import { AtSign, CheckCircle2, IdCard, KeyRound, Lock, Mail, Phone, User } from 
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import SesionesLista from '@/components/common/SesionesLista.vue'
+import ConfirmarCorreo from '@/components/common/ConfirmarCorreo.vue'
 import RequisitosContrasena from '@/components/common/RequisitosContrasena.vue'
 import { authService } from '@/services/auth.service'
 import type { PoliticaSesiones, SesionAbierta } from '@/types/models'
@@ -171,6 +172,8 @@ onMounted(cargarSesiones)
     <h1 class="font-display text-4xl font-medium tracking-tight text-ink">Tu perfil</h1>
 
     <div v-if="auth.usuario" class="mt-8 space-y-8">
+      <!-- Seguridad (28/10/2026, RF-M01-037): el Cliente confirma su correo con el código que le llegó. -->
+      <ConfirmarCorreo v-if="esCliente && !auth.usuario.correo_verificado_at" />
       <!-- Datos -->
       <section class="rounded-2xl border border-[#e2dbcf] bg-white p-6">
         <div class="flex items-center justify-between">

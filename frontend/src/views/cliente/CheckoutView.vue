@@ -13,7 +13,7 @@
 // el Cliente ve las cuentas del negocio, transfiere el total exacto y sube la captura.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Banknote, Bike, Check, CheckCircle2, Landmark, LocateFixed, Map as IconoMapa, MapPin, ShoppingBag, Smartphone, X, Zap } from 'lucide-vue-next'
+import { Banknote, Bike, Check, CheckCircle2, Landmark, LocateFixed, Map as IconoMapa, MapPin, Radar, ShoppingBag, Smartphone, X, Zap } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseInput from '@/components/common/BaseInput.vue'
 import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
@@ -22,6 +22,7 @@ import MapaUbicacion from '@/components/common/MapaUbicacion.vue'
 import { useNegocioStore } from '@/stores/negocio'
 import { MENSAJE_ERROR_UBICACION, obtenerUbicacion, type ErrorUbicacion, type Ubicacion } from '@/utils/ubicacion'
 import PagoEnLinea from '@/components/pagos/PagoEnLinea.vue'
+import EnlaceSeguimiento from '@/components/pedidos/EnlaceSeguimiento.vue'
 import { usePagosEnLinea } from '@/composables/usePagosEnLinea'
 import { useAuthStore } from '@/stores/auth'
 import { useCarritoStore } from '@/stores/carrito'
@@ -117,9 +118,6 @@ function formatoPrecio(valor: number) {
 }
 
 const subtotal = computed(() => carrito.total)
-const enlaceSeguimiento = computed(() =>
-  pedidoCreado.value?.token_publico ? `${window.location.origin}/seguimiento/${pedidoCreado.value.token_publico}` : '',
-)
 const costoDomicilio = computed(() => (tipo.value === 'domicilio' ? valorDomicilio.value : 0))
 // Fase 2, tarea 1 (RF-M04-035): el backend dice cuánto rebajan las promociones vigentes.
 const { cotizacion } = useCotizacion(() => tipo.value, () => carrito.aLineasPedido())
@@ -317,17 +315,9 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
           listo.
         </template>
       </p>
-      <!-- Fase 1 (RF-M07-027): el invitado sigue su pedido con este enlace privado. -->
-      <div v-if="!esCliente && pedidoCreado.token_publico" class="mt-5 rounded-xl bg-[#fbfaf7] px-4 py-3 text-left text-sm">
-        <p class="font-medium text-ink">Sigue tu pedido aquí</p>
-        <router-link
-          :to="{ name: 'seguimiento-pedido', params: { token: pedidoCreado.token_publico } }"
-          class="mt-1 block break-all text-brand-700 underline"
-        >
-          {{ enlaceSeguimiento }}
-        </router-link>
-        <AvisoDestacado tono="atencion" class="mt-3">Guárdalo: sin cuenta, es la única forma de ver el estado o cancelarlo mientras esté pendiente.</AvisoDestacado>
-      </div>
+      <!-- Fase 1 (RF-M07-027): el invitado sigue su pedido con este enlace privado. 28/10/2026: con botones en vez de
+           la dirección completa. -->
+      <EnlaceSeguimiento v-if="!esCliente && pedidoCreado.token_publico" class="mt-5" :token="pedidoCreado.token_publico" :pedido-id="pedidoCreado.id" />
       <!-- Pagar (sin Wompi) o reintentar solo el pago, sobre el mismo pedido (RF-M06-008). -->
       <div v-if="metodoPago === 'en_linea' && !pagoRegistrado && !redirigiendo" class="mt-6 text-left">
         <PagoEnLinea
@@ -341,12 +331,14 @@ async function pagarEnLinea(datosPago: PagoEnLineaPayload) {
       </div>
 
       <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <!-- 28/10/2026 (RF-M07-037): abre el pedido en «Mis pedidos», con su seguimiento. -->
         <router-link
           v-if="esCliente"
-          :to="{ name: 'cliente-pedidos' }"
-          class="inline-flex items-center justify-center rounded-xl bg-brand-500 px-6 py-3 text-sm font-medium text-ink shadow-[0_8px_20px_rgba(214,164,58,0.35)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-brand-400"
+          :to="{ name: 'cliente-pedidos', query: { pedido: pedidoCreado.id } }"
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3 text-sm font-medium text-ink shadow-[0_8px_20px_rgba(214,164,58,0.35)] transition-all duration-150 hover:-translate-y-0.5 hover:bg-brand-400"
         >
-          Ver mis pedidos
+          <Radar :size="16" />
+          Seguir mi pedido
         </router-link>
         <router-link
           :to="{ name: 'home' }"

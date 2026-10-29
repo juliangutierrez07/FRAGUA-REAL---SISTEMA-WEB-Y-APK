@@ -35,9 +35,14 @@ class RecordatorioReservaNotification extends Notification
 
         $mensaje = $this->mensajeBase($this->reserva, 'Te esperamos a las '.$hora->format('g:i a'))
             ->line('Te recordamos tu reserva en Fragua Real Burger para el '.$this->fechaTexto($this->reserva).($mesa ? " ({$mesa})." : '.'))
-            ->line("Te guardamos la mesa hasta {$tolerancia} minutos después de esa hora. Si no alcanzas a llegar, la reserva se libera y el depósito no se devuelve.")
-            ->line('Si necesitas cancelar, hazlo antes de la hora y te devolvemos el depósito completo.');
+            ->line("Te guardamos la mesa hasta {$tolerancia} minutos después de esa hora. Si no alcanzas a llegar, la reserva se libera y el depósito no se devuelve.");
+        $this->conResumen($mensaje, [
+            'Reserva' => '#'.$this->reserva->id,
+            'Hora' => $hora->format('g:i a'),
+            'Mesa' => $mesa,
+            'Te guardamos la mesa hasta' => $hora->copy()->addMinutes($tolerancia)->format('g:i a'),
+        ]);
 
-        return $this->conEnlace($mensaje, $this->reserva);
+        return $this->alFinal($this->conEnlace($mensaje, $this->reserva), 'Si necesitas cancelar, hazlo antes de la hora y te devolvemos el depósito completo.');
     }
 }

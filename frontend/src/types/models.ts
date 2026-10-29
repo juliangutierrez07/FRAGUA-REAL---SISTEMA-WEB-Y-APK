@@ -19,6 +19,8 @@ export interface Usuario {
   telefono: string | null
   // 27/10/2026 (RF-M01-035): número de documento del Cliente (cédula, CE o pasaporte); único entre clientes.
   documento?: string | null
+  // Seguridad (28/10/2026, RF-M01-037): cuándo el Cliente confirmó su correo con el código (null = sin confirmar).
+  correo_verificado_at?: string | null
   role: Rol
   activo: boolean
   // Fase 7, tarea 2 (RF-M03-32): Mesero autorizado para registrar compras y gastos.

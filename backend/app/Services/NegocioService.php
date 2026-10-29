@@ -61,6 +61,20 @@ class NegocioService
         ];
     }
 
+    /** Mejora (28/10/2026): el pie de los correos (nombre, dirección y WhatsApp), sin cargar el logo. */
+    public function contacto(): array
+    {
+        $base = config('fragua_real.negocio');
+        $telefono = Configuracion::obtener(self::TELEFONO) ?? ($base['telefono'] ?? '');
+
+        return [
+            'nombre' => Configuracion::obtener(self::NOMBRE) ?? ($base['nombre'] ?? 'Fragua Real Burger'),
+            'direccion' => Configuracion::obtener(self::DIRECCION) ?? ($base['direccion'] ?? ''),
+            'telefono' => $telefono,
+            'whatsapp_url' => $this->whatsapp($telefono),
+        ];
+    }
+
     /** Lo que ve cualquiera en el sitio (GET /configuracion). */
     public function publico(): array
     {

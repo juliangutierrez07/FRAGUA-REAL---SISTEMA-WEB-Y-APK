@@ -8,9 +8,10 @@
 // mientras se revisa lo dice, y si se rechaza ve el motivo y puede enviarla de nuevo.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bike, CheckCircle2, ShoppingBag, XCircle, CircleX } from 'lucide-vue-next'
+import { Bike, ShoppingBag, XCircle, CircleX } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
 import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
+import AvancePedido from '@/components/pedidos/AvancePedido.vue'
 import BotonComprobante from '@/components/pedidos/BotonComprobante.vue'
 import PagoEnLinea from '@/components/pagos/PagoEnLinea.vue'
 import { usePagosEnLinea } from '@/composables/usePagosEnLinea'
@@ -67,41 +68,6 @@ onBeforeUnmount(() => {
 function formatoPrecio(valor: number) {
   return Number(valor).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 }
-
-// Pasos que ve el cliente; el último depende del canal.
-const pasos = computed(() => {
-  const p = pedido.value
-  if (!p) return []
-  return [
-    { clave: 'pendiente', texto: 'Recibido' },
-    { clave: 'confirmado', texto: 'Confirmado' },
-    // Fase 4, tarea 5 (RF-M07-R-012): la recogida lista sigue en preparación, pero el cliente lo ve así.
-    { clave: 'preparando', texto: p.tipo === 'recogida' && p.listo_at ? 'Listo para recoger' : 'En preparación' },
-    { clave: 'finalizado', texto: p.tipo === 'domicilio' ? 'Entregado' : 'Recogido' },
-  ]
-})
-const indiceActual = computed(() => pasos.value.findIndex((s) => s.clave === pedido.value?.estado))
-
-const mensajeEstado = computed(() => {
-  const p = pedido.value
-  if (!p) return ''
-  switch (p.estado) {
-    case 'pendiente':
-      return 'Recibimos tu pedido. En cuanto lo revisemos lo confirmamos y empezamos a prepararlo.'
-    case 'confirmado':
-      return 'Tu pedido está confirmado y entra a cocina.'
-    case 'preparando':
-      if (p.tipo === 'domicilio') return p.entregado_at ? 'Tu pedido fue entregado.' : 'Estamos preparando tu pedido; te lo llevamos pronto.'
-      if (p.recogido_at) return 'Ya recogiste tu pedido.'
-      return p.listo_at
-        ? '¡Tu pedido está listo! Pasa a recogerlo en el local.'
-        : 'Estamos preparando tu pedido. Te avisamos cuando esté listo para recoger.'
-    case 'finalizado':
-      return '¡Gracias! Tu pedido está completo.'
-    default:
-      return `Este pedido fue cancelado${p.cancelado_motivo ? `: ${p.cancelado_motivo}` : ''}.`
-  }
-})
 
 const pagado = computed(() =>
   (pedido.value?.pagos ?? []).filter((x) => x.estado === 'aprobado' && !x.anulado).reduce((a, x) => a + Number(x.monto), 0),
@@ -202,21 +168,7 @@ async function cancelar() {
 
       <!-- Estado -->
       <section class="mt-6 rounded-2xl border border-[#e2dbcf] bg-white p-5">
-        <ol v-if="pedido.estado !== 'cancelado'" class="grid grid-cols-4 gap-2" aria-label="Avance del pedido">
-          <li v-for="(paso, i) in pasos" :key="paso.clave" class="text-center">
-            <span
-              class="mx-auto flex size-8 items-center justify-center rounded-full border-2 text-xs font-semibold"
-              :class="i <= indiceActual ? 'border-brand-500 bg-brand-500 text-ink' : 'border-[#e3ded4] text-[#a59d90]'"
-            >
-              <CheckCircle2 v-if="i < indiceActual" :size="16" />
-              <template v-else>{{ i + 1 }}</template>
-            </span>
-            <span class="mt-1.5 block text-[11px] leading-tight" :class="i <= indiceActual ? 'text-ink' : 'text-[#a59d90]'">
-              {{ paso.texto }}
-            </span>
-          </li>
-        </ol>
-        <p class="text-sm text-ink" :class="{ 'mt-4': pedido.estado !== 'cancelado' }" role="status">{{ mensajeEstado }}</p>
+        <AvancePedido :pedido="pedido" />
       </section>
 
       <!-- Productos y total -->

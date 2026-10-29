@@ -36,6 +36,8 @@ class NoShowReservaNotification extends Notification
             $mensaje->line('Como indican las condiciones de la reserva, el depósito de '.$this->pesos($r->deposito_valor).' no se devuelve.');
         }
 
-        return $mensaje->line('Si crees que es un error, comunícate con el restaurante.');
+        $this->resumenReserva($mensaje, $r, $r->deposito_pagado ? $this->pesos($r->deposito_valor).' (no se devuelve)' : null);
+
+        return $this->alFinal($mensaje, 'Si crees que es un error, comunícate con el restaurante.');
     }
 }

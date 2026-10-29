@@ -42,7 +42,26 @@ const auth = useAuthStore()
 window.addEventListener(EVENTO_SESION_INVALIDA, () => {
   auth.token = null
   auth.usuario = null
+  // Corrección (28/10/2026, RF-M01-038): en una pantalla que pide sesión (Mis pedidos, el panel), se va al
+  // inicio de sesión diciendo por qué; en una pública (menú, carrito) se queda y solo deja de verse la cuenta.
+  const actual = router.currentRoute.value
+  if (actual.meta.requiereAuth) {
+    void router.replace({ name: 'login', query: { redirect: actual.fullPath, sesion: 'cerrada' } })
+  }
 })
+
+// Corrección (28/10/2026, RF-M01-038): si el Administrador cierra esta sesión desde otro equipo (o se vence), la
+// app se entera al volver a la pestaña o en menos de un minuto, sin esperar a que la persona haga algo. Antes
+// seguía viéndose con la cuenta abierta y el pedido que hacía llegaba como de un invitado.
+let ultimaRevisionSesion = Date.now()
+function revisarSesion() {
+  if (!auth.token || document.hidden || Date.now() - ultimaRevisionSesion < 30_000) return
+  ultimaRevisionSesion = Date.now()
+  void auth.cargarUsuarioActual()
+}
+document.addEventListener('visibilitychange', revisarSesion)
+window.addEventListener('focus', revisarSesion)
+setInterval(revisarSesion, 60_000)
 
 app.mount('#app')
 

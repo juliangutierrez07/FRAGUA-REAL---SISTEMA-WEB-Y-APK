@@ -56,6 +56,13 @@ export const authService = {
   cerrarOtrasSesiones() {
     return api.post<{ message: string; cerradas: number }>('/auth/sesiones/cerrar-otras')
   },
+  // Seguridad (28/10/2026, RF-M01-037): confirmar el correo del Cliente con un código de 6 dígitos.
+  enviarCodigoCorreo() {
+    return api.post<{ message: string }>('/auth/correo/codigo')
+  },
+  verificarCorreo(codigo: string) {
+    return api.post<{ message: string; user: Usuario }>('/auth/correo/verificar', { codigo })
+  },
   login(payload: LoginPayload) {
     return api.post<AuthResponse>('/auth/login', payload)
   },

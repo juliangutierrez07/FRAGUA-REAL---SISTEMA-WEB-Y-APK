@@ -23,7 +23,7 @@ armado el backend hoy y guarda el historial de los 60 cambios técnicos que lo l
 
 Cada petición pasa por las mismas capas:
 
-1. **Ruta** (`routes/api.php`): 208 endpoints bajo `/api`, agrupados por nivel de acceso con los
+1. **Ruta** (`routes/api.php`): 210 endpoints bajo `/api`, agrupados por nivel de acceso con los
    middleware `auth:sanctum`, `activo` y `role:...`, y límites de peticiones en las rutas públicas.
 2. **Form Request** (`app/Http/Requests/Api`, 38 clases): valida los datos y devuelve los mensajes
    en español (`lang/es/validation.php`).
@@ -167,8 +167,8 @@ partir de la copia guardada en la base, así una reimpresión dice exactamente l
 
 ## Pruebas automáticas
 
-`backend/tests/Feature` tiene 68 archivos y 479 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
-En total son 480.
+`backend/tests/Feature` tiene 70 archivos y 486 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
+En total son 487.
 
 ```bash
 php artisan test                    # SQLite en memoria (4 pruebas se saltan: usan funciones de PostgreSQL)
@@ -177,7 +177,7 @@ php artisan test --filter=Caja      # solo las que coinciden
 
 Para correrlas contra PostgreSQL, como en producción, se apunta a una base de prueba con las variables
 `DB_CONNECTION=pgsql`, `DB_DATABASE`, `DB_USERNAME` y `DB_PASSWORD` al lanzar `php artisan test`; ahí
-pasan las 480. Cada prueba cita el requisito que cubre. `DiaCompletoTest` recorre un día completo de
+pasan las 487. Cada prueba cita el requisito que cubre. `DiaCompletoTest` recorre un día completo de
 operación por la API con los tres roles.
 
 ## Qué falta a propósito
@@ -2108,4 +2108,42 @@ inconsistencias con lo que existía o era correcto en Laravel:
       «Inicio» y «Contacto» ya no salen marcados a la vez; al agregar al carrito en el computador, un punto
       vuela hasta «Mi pedido», el botón salta y aparece un aviso.
     - `ProteccionPeticionesTest` (10 pruebas).
+
+85. **Correo confirmado del Cliente (28/10/2026; M01: RF-M01-037, RN-USR-28, HU-M01-028).** Migración
+    `2026_11_08_000001_correo_verificado` (`users.correo_verificado_at`).
+    - Antes cualquiera podía registrarse con el correo de otra persona (nadie lo comprobaba) y ver en «Mis
+      pedidos y reservas» las reservas hechas con ese correo, que se buscan por él; y el Mesero podía
+      encontrarlo por ese correo al cobrar.
+    - `VerificacionCorreoService`: código de 6 dígitos al correo (`CodigoCorreoNotification`), solo su hash
+      en la caché, vence a los 30 minutos, 5 intentos, uno nuevo anula el anterior. El registro envía el
+      primero; si el correo falla, la cuenta se crea igual. Recuperar la contraseña también confirma el
+      correo. Si el Administrador cambia el correo de un cliente, el nuevo queda sin confirmar.
+    - Sin el correo confirmado, `GET /mis-reservas` y `POST /mis-reservas/{reserva}/deposito` responden
+      403 con `correo_sin_confirmar`, y `GET /clientes/buscar` no lo encuentra por correo (sí por documento o
+      celular). Los clientes de antes lo confirman desde su Perfil; sus pedidos no cambian.
+    - Frontend: `ConfirmarCorreo.vue` en Perfil y en «Mis reservas».
+    - `composer update symfony/mime` (7.4.19 → 7.4.22, aviso CVE-2026-45070); `composer audit` sin alertas.
+    - `CorreoVerificadoTest` (5 pruebas).
+
+86. **Seguimiento, sesiones, inicio y correos (28/10/2026; M01: RF-M01-038; M07: RF-M07-037, HU-M07-018).**
+    - Sesión cerrada (RF-M01-038): cuando el Administrador cerraba la sesión de un Cliente, la app de ese
+      Cliente seguía mostrando su cuenta hasta recargar, y el pedido que hacía llegaba como de invitado (crear
+      un pedido es una ruta pública: el token que ya no servía se ignoraba). El servidor sí registraba la sesión
+      nueva al volver a entrar, pero Usuarios no se actualizaba sin recargar la página.
+      - `SesionVencidaEnRutaPublica` (alias `sesion.vigente`, en `POST /pedidos`): con un token cerrado o
+        vencido responde 401 con `sesion_cerrada`.
+      - Frontend (`main.ts`): revisa la sesión al volver a la pestaña y cada minuto; si se cerró, en una
+        pantalla con sesión lleva a «Inicia sesión» con el aviso «Tu sesión se cerró». En Usuarios, la ventana
+        de sesiones y el número de cada cuenta se actualizan solos cada 10 segundos.
+      - `SesionCerradaPedidoTest` (2 pruebas).
+    - Seguimiento (RF-M07-037, HU-M07-018): el avance del pedido (`AvancePedido.vue`) también en «Mis pedidos»;
+      la confirmación del Cliente con cuenta lleva a su pedido abierto (`/pedidos?pedido=<id>`). Al invitado, el
+      enlace ya no se muestra como dirección larga: botones «Seguir mi pedido» y «Copiar enlace» (en el celular,
+      «Guardar o compartir»), en `EnlaceSeguimiento.vue`.
+    - Inicio: los destacados son cuatro, dos por fila en el celular, del tamaño de las tarjetas del menú.
+    - Correos al cliente con la marca: plantilla propia (`resources/views/vendor/mail`, tema `fragua.css`, y
+      `resources/views/vendor/notifications/email.blade.php`), franja oscura con el monograma, botón dorado,
+      tarjeta de resumen (pedido, reserva, saldo), el código de 6 dígitos en grande y pie con la dirección y el
+      WhatsApp del negocio (`NegocioService::contacto()`). Antes salían con la plantilla gris de Laravel y
+      textos en inglés («Regards», «If you're having trouble…»). `config/mail.php`: `markdown.theme` = `fragua`.
 

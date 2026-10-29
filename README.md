@@ -15,7 +15,7 @@ backend (API en Laravel) y el frontend (aplicación web en Vue).
 
 - El plan de implementación está completo: Fases 0 a 7, más el endurecimiento de seguridad, la prueba
   de un día completo de operación y las listas de revisión manual por rol.
-- 480 pruebas automáticas, que pasan en SQLite y en PostgreSQL.
+- 487 pruebas automáticas, que pasan en SQLite y en PostgreSQL.
 - Comanda automática (27/10/2026): el pedido que toma el Mesero (o el Administrador) se confirma al
   crearlo y su comanda sale sola en la impresora de la cocina; los del QR y la web se siguen confirmando.
 - Pago en línea sin Wompi (22/10/2026): el Cliente transfiere a Nequi, a la cuenta Bancolombia o a la
@@ -88,7 +88,7 @@ FRAGUA-REAL---SISTEMA-WEB-Y-APK/
 ├── README-ENTREGA.md        Cómo correrlo, cómo ponerlo en el servidor y qué cambió por fase
 ├── README-BACKEND.md        Arquitectura del backend e historial técnico de cambios
 ├── BASE-DE-DATOS.md         Tablas, relaciones, migraciones y decisiones de diseño
-├── API.md                   Los 208 endpoints, por módulo, con quién puede usarlos
+├── API.md                   Los 210 endpoints, por módulo, con quién puede usarlos
 ├── PRUEBA-DIA-COMPLETO.md   Recorrido a mano de un día de operación, con las cifras esperadas
 └── QA-CLIENTE.md, QA-MESERO.md, QA-ADMINISTRADOR.md
                              Listas de revisión manual por rol
@@ -123,7 +123,7 @@ con la contraseña `password`. El detalle, la puesta en producción y la configu
 
 ```bash
 cd backend
-php artisan test              # 480 pruebas (SQLite en memoria)
+php artisan test              # 487 pruebas (SQLite en memoria)
 ```
 
 Cada prueba lleva en su nombre o en su comentario el requisito que cubre. `DiaCompletoTest` recorre un
@@ -138,8 +138,8 @@ QA por rol.
 |---|---|
 | [`README-ENTREGA.md`](README-ENTREGA.md) | Instalar, poner en producción en el VPS, decisiones del negocio y cambios de comportamiento por fase |
 | [`README-BACKEND.md`](README-BACKEND.md) | Cómo está armado el backend (capas, módulos, tareas programadas, configuración) y el historial de los 60 cambios |
-| [`BASE-DE-DATOS.md`](BASE-DE-DATOS.md) | Las 42 tablas, sus relaciones, las 73 migraciones y las decisiones de diseño (ADR) |
-| [`API.md`](API.md) | Los 208 endpoints con rol, uso y límite de peticiones |
+| [`BASE-DE-DATOS.md`](BASE-DE-DATOS.md) | Las 42 tablas, sus relaciones, las 74 migraciones y las decisiones de diseño (ADR) |
+| [`API.md`](API.md) | Los 210 endpoints con rol, uso y límite de peticiones |
 | [`PRUEBA-DIA-COMPLETO.md`](PRUEBA-DIA-COMPLETO.md) | Prueba manual de un día completo |
 | [`QA-CLIENTE.md`](QA-CLIENTE.md), [`QA-MESERO.md`](QA-MESERO.md), [`QA-ADMINISTRADOR.md`](QA-ADMINISTRADOR.md) | Revisión manual pantalla por pantalla |
 | [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md) | Notas de cada proyecto |
@@ -153,7 +153,7 @@ QA por rol.
 | Estructura técnica (docx) | Resumen técnico del proyecto para entregar |
 | Flujos por rol (PDF) | Diagramas de los flujos de cada rol y sus reglas (37 páginas, con la app instalable, las notificaciones, el SuperAdmin, Soporte, el carrito, las ofertas, la importación y la caja del turno) |
 | Cronograma (xlsx) | Tareas, fechas y estado de cada fase; la hoja «Mejoras en producción» tiene el despliegue y las mejoras del 15 y 16/10/2026 |
-| `er_diagram.png` y `er_diagram.pdf` | Diagrama completo de la base de datos (73 migraciones) |
+| `er_diagram.png` y `er_diagram.pdf` | Diagrama completo de la base de datos (74 migraciones) |
 
 El documento **«Plan de implementación — Fragua Real Burger»** (en Claude) tiene el plan por fases, las
 decisiones D1 a D7 y el estado de cada tarea.

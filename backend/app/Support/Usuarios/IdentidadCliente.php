@@ -66,7 +66,9 @@ final class IdentidadCliente
         $dato = trim($dato);
         $clientes = User::query()->where('role', 'cliente')->where('activo', true)->whereNull('eliminado_at');
         if (str_contains($dato, '@')) {
-            $cliente = (clone $clientes)->whereRaw('LOWER(email) = ?', [mb_strtolower($dato)])->first();
+            // Seguridad (28/10/2026, RN-USR-28): por correo, solo si el Cliente lo confirmó (si no, cualquiera
+            // podría registrarse con el correo de otro y quedarse con sus pedidos).
+            $cliente = (clone $clientes)->whereNotNull('correo_verificado_at')->whereRaw('LOWER(email) = ?', [mb_strtolower($dato)])->first();
 
             return $cliente ? ['cliente' => $cliente, 'coincide' => 'correo'] : null;
         }

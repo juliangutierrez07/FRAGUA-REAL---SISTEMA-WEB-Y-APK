@@ -36,6 +36,8 @@ class CancelacionReservaNotification extends Notification
                 : 'Tu depósito de '.$this->pesos($r->deposito_valor).' se devuelve completo por el mismo medio con que pagaste.');
         }
 
-        return $mensaje->line('Esperamos verte pronto en Fragua Real Burger.');
+        $this->resumenReserva($mensaje, $r, $r->deposito_pagado ? $this->pesos($r->deposito_valor).' (se devuelve)' : null);
+
+        return $this->alFinal($mensaje, 'Esperamos verte pronto en Fragua Real Burger.');
     }
 }

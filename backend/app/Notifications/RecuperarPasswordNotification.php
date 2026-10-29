@@ -41,8 +41,8 @@ class RecuperarPasswordNotification extends Notification
         return (new MailMessage)
             ->subject('Recupera tu contraseña — Fragua Real Burger')
             ->greeting('Hola '.$notifiable->nombre.',')
-            ->line('Recibimos una solicitud para restablecer tu contraseña en Fragua Real Burger.')
-            ->action('Restablecer contraseña', $url)
-            ->line('Este enlace es válido por una hora. Si no fuiste tú quien lo solicitó, puedes ignorar este correo: tu contraseña actual seguirá funcionando.');
+            ->line('Recibimos una solicitud para cambiar la contraseña de tu cuenta en Fragua Real Burger. Toca el botón para elegir una nueva.')
+            ->action('Elegir nueva contraseña', $url)
+            ->line('El enlace sirve durante una hora. Si no fuiste tú quien lo pidió, ignora este correo: tu contraseña actual sigue funcionando.');
     }
 }

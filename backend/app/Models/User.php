@@ -31,6 +31,8 @@ class User extends Authenticatable
         'activo' => 'boolean',
         'puede_registrar_gastos' => 'boolean',
         'eliminado_at' => 'datetime',
+        // Seguridad (28/10/2026, RF-M01-037): cuándo el Cliente confirmó su correo (null = sin confirmar).
+        'correo_verificado_at' => 'datetime',
         // M09 (20/10/2026): menús que el SuperAdmin le habilitó; null = todos los de su rol.
         'menus_permitidos' => 'array',
     ];

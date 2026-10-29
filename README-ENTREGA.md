@@ -6,7 +6,7 @@ sistema y dónde está cada documento, empieza por [`README.md`](README.md); la 
 backend está en [`README-BACKEND.md`](README-BACKEND.md), la base de datos en
 [`BASE-DE-DATOS.md`](BASE-DE-DATOS.md) y los endpoints en [`API.md`](API.md).
 
-**Estado al 27/10/2026**: plan de implementación completo (Fases 0 a 7), mejoras del 16/10/2026, correcciones y datos del negocio del 19/10/2026 el rol SuperAdmin con permisos de menú (M09), el rol Soporte de solo consulta (M10) las notificaciones del personal (M11) la contraseña segura con bloqueo por intentos (21/10/2026) el pago en línea por transferencia con captura mientras no haya Wompi y el formato de todos los campos (22/10/2026), eliminar mesas, productos y usuarios y el menú Impresoras (M12, 24/10/2026), las mejoras de operación del 26/10/2026 (cuentas separadas, cerrar caja con todo finalizado, foto del comprobante, ubicación y billete del domicilio, pagar la reserva desde «Mis reservas» y el cambio al cobrar en efectivo), eliminar categorías, combos, extras y promociones, la comanda automática del pedido del Mesero, el cierre automático de la caja y el pedido en el historial del cliente al cobrar (27/10/2026), los avisos push del personal y la protección contra peticiones masivas (28/10/2026), 480 pruebas automáticas que
+**Estado al 27/10/2026**: plan de implementación completo (Fases 0 a 7), mejoras del 16/10/2026, correcciones y datos del negocio del 19/10/2026 el rol SuperAdmin con permisos de menú (M09), el rol Soporte de solo consulta (M10) las notificaciones del personal (M11) la contraseña segura con bloqueo por intentos (21/10/2026) el pago en línea por transferencia con captura mientras no haya Wompi y el formato de todos los campos (22/10/2026), eliminar mesas, productos y usuarios y el menú Impresoras (M12, 24/10/2026), las mejoras de operación del 26/10/2026 (cuentas separadas, cerrar caja con todo finalizado, foto del comprobante, ubicación y billete del domicilio, pagar la reserva desde «Mis reservas» y el cambio al cobrar en efectivo), eliminar categorías, combos, extras y promociones, la comanda automática del pedido del Mesero, el cierre automático de la caja y el pedido en el historial del cliente al cobrar (27/10/2026), los avisos push del personal y la protección contra peticiones masivas, la confirmación del correo del Cliente, el seguimiento desde «Mis pedidos» y los correos con la marca (28/10/2026), 487 pruebas automáticas que
 pasan en SQLite y PostgreSQL. Falta solo lo que no es código: la cuenta comercial de Wompi, el
 proveedor de SMS y el agente local de impresión (ver «Qué falta a propósito»).
 
@@ -851,6 +851,15 @@ Al escribir `QA-CLIENTE.md` y `QA-MESERO.md` se cruzó cada pantalla con el cód
   no hace falta configurar nada nuevo en nginx. En el servidor: `php artisan migrate --force`; las
   tareas `notificaciones:revisar` (cada minuto) y `notificaciones:limpiar` (cada noche) ya entran con
   el cron de siempre. Las horas se cambian con `FRAGUA_REAL_NOTIF_*` en el `.env`.
+- **Seguimiento, sesiones y correos (28/10/2026).** El Cliente sigue su pedido también desde «Mis pedidos»; al
+  invitado, el enlace se muestra con botones («Seguir mi pedido», «Copiar enlace»). Si el Administrador cierra la
+  sesión de alguien, su app lo saca enseguida (antes el pedido que hacía llegaba como de invitado) y Usuarios
+  muestra la sesión nueva sin recargar. Los correos salen con la marca. En el servidor no hay pasos extra (no hay
+  migraciones nuevas): basta con desplegar el código.
+- **Correo confirmado del Cliente (28/10/2026).** Al registrarse le llega un código de 6 dígitos; con él
+  confirma que el correo es suyo. Hasta entonces no ve «Mis reservas» (se buscan por el correo) y el Mesero no
+  lo encuentra por correo al cobrar (sí por documento o celular). Los clientes de antes lo confirman desde su
+  Perfil. En el servidor: `php artisan migrate --force` y el correo configurado (el mismo de siempre).
 - **Protección contra peticiones masivas (28/10/2026).** Cada formulario público tiene su propio límite
   (antes compartían uno solo por IP y unos intentos fallidos dejaban sin entrar a todo el local). Quien ya
   entró bien desde un teléfono o computador sigue entrando desde ahí aunque alguien bloquee su cuenta

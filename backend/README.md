@@ -19,14 +19,14 @@ otras dos terminales.
 ## Pruebas
 
 ```bash
-php artisan test              # 480 pruebas, SQLite en memoria
+php artisan test              # 487 pruebas, SQLite en memoria
 ```
 
 ## Dónde está cada cosa
 
 | Carpeta | Contenido |
 |---|---|
-| `routes/api.php` | Los 208 endpoints, agrupados por rol |
+| `routes/api.php` | Los 210 endpoints, agrupados por rol |
 | `routes/console.php` | Comandos y tareas programadas |
 | `app/Http/Controllers/Api` | 18 controladores, uno por área |
 | `app/Http/Requests/Api` | Validación de cada petición (mensajes en español) |
@@ -36,7 +36,7 @@ php artisan test              # 480 pruebas, SQLite en memoria
 | `app/Support` | Pasarela Wompi, periodos de reportes, reimpresiones, política de reservas |
 | `app/Jobs`, `app/Notifications` | Correos que salen por la cola |
 | `resources/views` | Plantillas de PDF y tickets (comprobante, comanda, cierre, reportes) |
-| `database/migrations` | 73 migraciones |
+| `database/migrations` | 74 migraciones |
 | `database/seeders` | Cuentas, menú y mesas de prueba |
 | `deploy/` | Archivos para el VPS: Nginx, cron y Supervisor |
 | `tests/Feature` | Pruebas por requisito, incluida la de un día completo |

@@ -5,13 +5,17 @@
 // cliente_id (RN-M05-12 — ver ReservaController::misReservas()).
 // Mejora (26/10/2026, RF-M05-044): una reserva pendiente de pago se paga desde aquí (antes solo con el enlace
 // del correo); mientras el personal revisa el comprobante se ve «Pago en revisión».
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { CalendarClock, ChevronDown, PackageSearch, XCircle } from 'lucide-vue-next'
 import mascota from '@/assets/img/mascota-fragua-real.png'
+import AvancePedido from '@/components/pedidos/AvancePedido.vue'
 import BotonComprobante from '@/components/pedidos/BotonComprobante.vue'
 import TotalesPedido from '@/components/pedidos/TotalesPedido.vue'
 import PagoEnLinea from '@/components/pagos/PagoEnLinea.vue'
 import AvisoDestacado from '@/components/common/AvisoDestacado.vue'
+import ConfirmarCorreo from '@/components/common/ConfirmarCorreo.vue'
+import { AxiosError } from 'axios'
 import { usePagosEnLinea } from '@/composables/usePagosEnLinea'
 import { pedidoService, type PagoEnLineaPayload } from '@/services/pedido.service'
 import { reservaService } from '@/services/reserva.service'
@@ -211,6 +215,8 @@ const reservas = ref<Reserva[]>([])
 const cargandoReservas = ref(false)
 const reservasCargadas = ref(false)
 const errorReservas = ref('')
+// Seguridad (28/10/2026, RN-USR-28): las reservas se buscan por correo; sin confirmarlo, el servidor no las muestra.
+const correoSinConfirmar = ref(false)
 
 const reservaACancelar = ref<Reserva | null>(null)
 const cancelandoReserva = ref(false)
@@ -278,8 +284,10 @@ async function cargarReservas() {
   try {
     const { data } = await reservaService.misReservas()
     reservas.value = data.data
+    correoSinConfirmar.value = false
   } catch (e) {
-    errorReservas.value = mensajeDeError(e, 'No pudimos cargar tus reservas.')
+    correoSinConfirmar.value = e instanceof AxiosError && e.response?.data?.correo_sin_confirmar === true
+    if (!correoSinConfirmar.value) errorReservas.value = mensajeDeError(e, 'No pudimos cargar tus reservas.')
   } finally {
     cargandoReservas.value = false
     reservasCargadas.value = true
@@ -321,7 +329,18 @@ function seleccionarTab(nuevo: 'pedidos' | 'reservas') {
 
 const sinNada = computed(() => tab.value === 'pedidos' ? pedidos.value.length === 0 : reservas.value.length === 0)
 
-onMounted(() => cargarPedidos())
+// Mejora (28/10/2026, RF-M07-037): «Seguir mi pedido» de la confirmación llega aquí con ?pedido=<id> y lo abre.
+const route = useRoute()
+onMounted(async () => {
+  await cargarPedidos()
+  const id = Number(route.query.pedido)
+  const pedido = pedidos.value.find((p) => p.id === id)
+  if (pedido) {
+    await alternar(pedido)
+    await nextTick()
+    document.getElementById(`pedido-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+})
 </script>
 
 <template>
@@ -370,7 +389,7 @@ onMounted(() => cargarPedidos())
       </div>
 
       <ul v-else class="space-y-4">
-        <li v-for="pedido in pedidos" :key="pedido.id" class="rounded-2xl border border-[#e2dbcf] bg-white">
+        <li v-for="pedido in pedidos" :id="`pedido-${pedido.id}`" :key="pedido.id" class="scroll-mt-24 rounded-2xl border border-[#e2dbcf] bg-white">
           <button type="button" class="flex w-full items-center justify-between gap-4 p-5 text-left" @click="alternar(pedido)">
             <div class="flex items-center gap-3">
               <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/15 text-brand-700">
@@ -391,6 +410,11 @@ onMounted(() => cargarPedidos())
           </button>
 
           <div v-if="abierto === pedido.id" class="border-t border-[#e2dbcf] px-5 py-4">
+            <!-- Mejora (28/10/2026, RF-M07-037): el seguimiento del pedido también desde aquí (se actualiza solo). -->
+            <div class="mb-4 rounded-xl bg-[#fbfaf7] p-4">
+              <p class="mb-3 text-[11px] font-medium tracking-[2px] text-brand-700">SEGUIMIENTO</p>
+              <AvancePedido :pedido="pedido" compacto />
+            </div>
             <p v-if="cargandoDetalle === pedido.id" class="text-sm text-[#6c655c]">Cargando detalle…</p>
             <template v-else-if="detalleCache[pedido.id]">
               <ul class="space-y-2 text-sm">
@@ -477,6 +501,13 @@ onMounted(() => cargarPedidos())
     <!-- ---- Reservas ---- -->
     <div v-else class="mt-8">
       <div v-if="cargandoReservas" class="mt-8 text-center text-sm text-[#6c655c]">Cargando tus reservas…</div>
+
+      <ConfirmarCorreo
+        v-else-if="correoSinConfirmar"
+        class="mt-8"
+        motivo="Tus reservas se buscan por tu correo: confírmalo para verlas."
+        @confirmado="cargarReservas"
+      />
 
       <p v-else-if="errorReservas" class="mt-8 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{{ errorReservas }}</p>
 

@@ -31,14 +31,14 @@ class ConfirmacionReservaNotification extends Notification
         $mesa = $r->mesa?->nombre;
 
         $mensaje = $this->mensajeBase($r, 'Tu reserva está confirmada')
-            ->line('Tu reserva en Fragua Real Burger quedó confirmada para el '.$this->fechaTexto($r).($mesa ? " ({$mesa})." : '.'))
-            ->line('Recibimos tu depósito de '.$this->pesos($r->deposito_valor).'. Se descuenta de tu cuenta el día de tu visita.')
-            ->line('Te esperamos hasta '.PoliticaReservas::toleranciaMinutos().' minutos después de la hora; si no llegas, la reserva se libera y el depósito no se devuelve. Si cancelas antes de la hora, te lo devolvemos completo.');
+            ->line('¡Listo! Tu reserva en Fragua Real Burger quedó confirmada para el '.$this->fechaTexto($r).($mesa ? " ({$mesa})." : '.'))
+            ->line('Recibimos tu depósito de '.$this->pesos($r->deposito_valor).'. Se descuenta de tu cuenta el día de tu visita.');
         // Corrección (19/10/2026): la nota que dejó el cliente, para que vea que la recibimos.
         if (filled($r->descripcion)) {
             $mensaje->line('Tu nota para el restaurante: «'.$r->descripcion.'»');
         }
+        $this->resumenReserva($mensaje, $r, $this->pesos($r->deposito_valor).' (pagado)');
 
-        return $this->conEnlace($mensaje, $r);
+        return $this->alFinal($this->conEnlace($mensaje, $r), 'Te esperamos hasta '.PoliticaReservas::toleranciaMinutos().' minutos después de la hora; si no llegas, la reserva se libera y el depósito no se devuelve. Si cancelas antes de la hora, te lo devolvemos completo.');
     }
 }

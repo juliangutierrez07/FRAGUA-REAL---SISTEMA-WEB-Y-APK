@@ -37,6 +37,7 @@ class DepositoReservaMejorasTest extends TestCase
             'role' => $rol, 'nombre' => ucfirst($rol), 'email' => $correo, 'password' => 'Clave12345', 'activo' => true,
         ]);
         $this->cliente = $crear('cliente', 'laura@correo.co');
+        $this->cliente->forceFill(['correo_verificado_at' => now()])->save(); // RN-USR-28: ve sus reservas
         $this->mesero = $crear('mesero', 'mesero@test.co');
         $admin = $crear('administrador', 'admin@test.co');
         $this->mesa = Mesa::create(['nombre' => 'Mesa 1', 'qr_code' => 'qr-1', 'estado' => 'libre']);

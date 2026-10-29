@@ -11,7 +11,7 @@
 // tienen foto) y precios bien escritos (antes salía «Desde 5000.00»).
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bike, ChefHat, MapPin, MessageCircle, SlidersHorizontal } from 'lucide-vue-next'
+import { Bike, ChefHat, MapPin, MessageCircle, Plus, SlidersHorizontal } from 'lucide-vue-next'
 import mascota from '@/assets/img/mascota-fragua-real.png'
 import fotoLocal from '@/assets/img/hamburguesas-fragua-real.jpg'
 import fotoTerraza from '@/assets/img/platos/duo-hamburguesas-terraza.jpg'
@@ -64,7 +64,7 @@ const productosDestacados = computed(() =>
     .filter((p) => p.disponible !== false && !(p.promociones_vigentes ?? []).length)
     .map((p, i) => ({ p, i, puntos: (p.imagen_url ? 2 : 0) + (p.tipo_venta === 'bebida' ? 0 : 1) }))
     .sort((a, b) => b.puntos - a.puntos || a.i - b.i)
-    .slice(0, 3)
+    .slice(0, 4) // 28/10/2026: cuatro, para llenar dos filas de dos en el celular
     .map(({ p }) => p),
 )
 
@@ -250,32 +250,35 @@ const beneficios = [
           Ver menú completo →
         </router-link>
       </div>
-      <div class="grid gap-5 sm:grid-cols-3">
-        <div
+      <!-- Mejora (28/10/2026): en el celular, dos tarjetas por fila del mismo tamaño que las del menú (antes una
+           sola, muy grande). Toda la tarjeta lleva al producto en el menú. -->
+      <div class="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-4">
+        <router-link
           v-for="producto in productosDestacados"
           :key="producto.id"
-          class="flex flex-col rounded-2xl border border-[#e3ded4] bg-white p-5"
+          :to="{ name: 'menu', query: { categoria: producto.categoria?.nombre } }"
+          class="group flex flex-col rounded-2xl border border-[#e3ded4] bg-white p-2.5 transition hover:border-brand-300 sm:p-4"
         >
-          <div class="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-[#fbf0d9]">
+          <div class="mb-2.5 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-[#fbf0d9] sm:mb-3">
             <img
               v-if="producto.imagen_url"
               :src="producto.imagen_url"
               :alt="producto.nombre"
-              class="size-full object-cover"
+              class="size-full object-cover transition duration-300 group-hover:scale-[1.03]"
               loading="lazy"
             />
-            <component v-else :is="iconoPorNombre(producto.nombre)" :size="40" class="text-brand-500" />
+            <component v-else :is="iconoPorNombre(producto.nombre)" :size="30" :stroke-width="1.5" class="text-brand-500" />
           </div>
-          <p class="mt-4 font-display text-lg text-ink">{{ producto.nombre }}</p>
-          <p v-if="producto.descripcion" class="mt-1 line-clamp-2 text-sm text-[#6c655c]">{{ producto.descripcion }}</p>
-          <p class="mt-auto pt-3 text-sm font-semibold text-brand-700">{{ precioDestacado(producto) }}</p>
-          <router-link
-            :to="{ name: 'menu', query: { categoria: producto.categoria?.nombre } }"
-            class="mt-4 flex items-center justify-center rounded-xl border border-[#ddd7cd] px-4 py-2.5 text-sm font-medium text-ink transition hover:border-brand-500 hover:bg-[#fbfaf7]"
-          >
-            Ver en el menú
-          </router-link>
-        </div>
+          <p class="font-display text-[15px] leading-snug text-ink sm:text-lg">{{ producto.nombre }}</p>
+          <p v-if="producto.descripcion" class="mt-1 line-clamp-2 text-[11px] text-[#6c655c] sm:text-xs">{{ producto.descripcion }}</p>
+          <div class="mt-auto flex items-baseline justify-between gap-x-2 pt-2.5 sm:pt-3">
+            <p class="text-sm font-semibold text-brand-700 sm:text-base">{{ precioDestacado(producto) }}</p>
+            <span class="hidden border-b border-brand-700 pb-0.5 text-xs font-medium text-brand-700 sm:inline">Ver en el menú</span>
+            <span class="flex size-7 shrink-0 items-center justify-center self-center rounded-full bg-brand-500 text-ink sm:hidden" aria-hidden="true">
+              <Plus :size="15" />
+            </span>
+          </div>
+        </router-link>
       </div>
     </section>
 

@@ -342,6 +342,27 @@ Antes: el SuperAdmin puso al menos una cuenta en Configuración > «Cuentas para
 - [ ] Pagar en el local y darle al mesero el documento, el correo o el celular: el pedido aparece en «Mis
       pedidos» como «En el local · Mesa N», sin botones de cancelar ni de pagar en línea.
 
+## 13f. Confirmar el correo (28/10/2026)
+
+- [ ] Al registrarse llega un correo «Tu código es …». En Perfil aparece «Confirma tu correo»; con el código
+      correcto el aviso desaparece.
+- [ ] Antes de confirmar, «Mis reservas» muestra el mismo recuadro en vez de las reservas; después, las muestra.
+- [ ] Un código equivocado dice «El código no es correcto»; al quinto hay que pedir otro con «Enviar un código
+      nuevo».
+- [ ] Quien se registra con el correo de otra persona no ve las reservas de esa persona.
+
+## 13g. Seguimiento, sesión cerrada y correos (28/10/2026)
+
+- [ ] Como invitado, al confirmar el pedido aparece «Sigue tu pedido en vivo» con «Seguir mi pedido» y «Copiar
+      enlace» (en el celular, «Guardar o compartir»), sin la dirección larga.
+- [ ] Con cuenta, «Seguir mi pedido» abre «Mis pedidos» con ese pedido desplegado y su avance (Recibido →
+      Confirmado → En preparación → Entregado), que cambia solo al confirmarlo en el panel.
+- [ ] En el celular, los destacados del inicio salen dos por fila, del tamaño de las tarjetas del menú.
+- [ ] Si el Administrador cierra tu sesión, en menos de un minuto (o al volver a la pestaña) la app deja de
+      mostrar tu cuenta; en «Mis pedidos» te lleva a «Inicia sesión» con «Tu sesión se cerró».
+- [ ] Los correos (código, reserva confirmada, pedido listo, comprobante) llegan con el encabezado oscuro de
+      Fragua Real, el botón dorado, la tarjeta de resumen y el pie con la dirección y el WhatsApp.
+
 ## 14. Correcciones del 19/10/2026 (reservas)
 
 - [ ] Reservar: la hora es una lista de 4:00 p. m. a 11:00 p. m., cada 30 minutos; debajo dice «Las

@@ -12,6 +12,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import EliminarModal from '@/components/common/EliminarModal.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
+import { useActualizacionAutomatica } from '@/composables/useActualizacionAutomatica'
 import { useAuthStore } from '@/stores/auth'
 import { usuarioService, type MenusDeCuenta } from '@/services/usuario.service'
 import type { ResultadoEliminacion } from '@/services/eliminacion.service'
@@ -58,9 +59,9 @@ function iniciales(nombre: string) {
     .join('')
 }
 
-async function cargar() {
-  cargando.value = true
-  error.value = ''
+async function cargar(silencioso = false) {
+  if (!silencioso) cargando.value = true
+  if (!silencioso) error.value = ''
   try {
     const { data } = await usuarioService.index({
       rol: filtroRol.value === 'todos' ? undefined : filtroRol.value,
@@ -69,7 +70,7 @@ async function cargar() {
     usuarios.value = data.data
     total.value = data.total
   } catch (e) {
-    error.value = mensajeDeError(e, 'No pudimos cargar los usuarios.')
+    if (!silencioso) error.value = mensajeDeError(e, 'No pudimos cargar los usuarios.')
   } finally {
     cargando.value = false
   }
@@ -186,17 +187,30 @@ async function abrirSesiones(usuario: Usuario) {
   sesionesUsuario.value = []
   errorSesiones.value = ''
   cargandoSesiones.value = true
+  await cargarSesiones(usuario)
+}
+
+async function cargarSesiones(usuario: Usuario, silencioso = false) {
   try {
     const { data } = await usuarioService.sesiones(usuario.id)
+    if (usuarioSesiones.value?.id !== usuario.id) return // ya se cerró o se abrió otra cuenta
     sesionesUsuario.value = data.sesiones
     politicaSesiones.value = data.politica
     actualizarConteo(usuario, data.sesiones.length)
   } catch (e) {
-    errorSesiones.value = mensajeDeError(e, 'No pudimos cargar sus sesiones.')
+    if (!silencioso) errorSesiones.value = mensajeDeError(e, 'No pudimos cargar sus sesiones.')
   } finally {
     cargandoSesiones.value = false
   }
 }
+
+// Corrección (28/10/2026, RF-M01-038): la ventana de sesiones y el número de cada cuenta se ponen al día solos.
+// Antes, si se cerraba la sesión de alguien y esa persona volvía a entrar, aquí seguía saliendo sin sesiones
+// hasta recargar la página.
+useActualizacionAutomatica(
+  () => (usuarioSesiones.value ? cargarSesiones(usuarioSesiones.value, true) : cargar(true)),
+  { ms: 10000, pausada: () => cerrandoSesion.value !== null || procesando.value !== null },
+)
 
 async function cerrarSesionDe(sesion: SesionAbierta) {
   const usuario = usuarioSesiones.value
@@ -359,7 +373,7 @@ async function confirmarEditar() {
 
 const contadorTexto = computed(() => (total.value === 1 ? '1 usuario' : `${total.value} usuarios`))
 
-onMounted(cargar)
+onMounted(() => cargar())
 </script>
 
 <template>

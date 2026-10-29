@@ -785,6 +785,11 @@ Resumen; la lista completa del invitado está en `QA-CLIENTE.md` (secciones 4 a 
       número de documento ya lo tiene otro cliente». En la lista se ve «doc. …».
 - [ ] Auditoría registra «Pedido asignado a un cliente al cobrar» cuando el Mesero asigna un pedido.
 
+## 15l. Sesiones que se actualizan solas (28/10/2026)
+
+- [ ] En Usuarios, cerrar la sesión de un cliente: en su teléfono la app deja de mostrar su cuenta en menos de un
+      minuto. Cuando vuelve a entrar, «Sesiones (1)» y la ventana de sesiones lo muestran solos, sin recargar.
+
 ## 16. Contraseña segura y bloqueo por intentos (21/10/2026)
 
 - [ ] Usuarios › Nuevo usuario: debajo de la contraseña salen los requisitos y se marcan al cumplirse; con

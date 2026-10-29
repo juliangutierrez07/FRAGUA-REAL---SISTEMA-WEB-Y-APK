@@ -324,7 +324,10 @@ class PedidoController extends Controller
         abort_unless($request->user()->esMesero(), 403, 'Solo el Mesero asigna el pedido a un cliente al cobrar.');
         $dato = (string) $request->validate(['dato' => ['required', 'string', 'max:120']])['dato'];
         $hallado = \App\Support\Usuarios\IdentidadCliente::buscar($dato);
-        abort_if($hallado === null, 404, 'No hay un cliente registrado con ese documento, correo o celular.');
+        // Seguridad (28/10/2026, RN-USR-28): por correo solo aparece quien lo confirmó; el mensaje lo dice.
+        abort_if($hallado === null, 404, str_contains($dato, '@')
+            ? 'No hay un cliente con ese correo confirmado. Prueba con su documento o su celular.'
+            : 'No hay un cliente registrado con ese documento, correo o celular.');
 
         return response()->json([
             'id' => $hallado['cliente']->id,

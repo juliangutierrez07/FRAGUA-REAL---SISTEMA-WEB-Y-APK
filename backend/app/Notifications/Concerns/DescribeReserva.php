@@ -11,6 +11,9 @@ use Illuminate\Notifications\Messages\MailMessage;
  */
 trait DescribeReserva
 {
+    // 28/10/2026: la tarjeta de resumen y pesos() vienen de la plantilla de la marca.
+    use CorreoDeMarca;
+
     protected function fechaTexto(Reserva $reserva): string
     {
         return $reserva->fecha_hora->copy()->setTimezone('America/Bogota')->locale('es')
@@ -22,16 +25,25 @@ trait DescribeReserva
         return $reserva->fecha_hora->copy()->setTimezone('America/Bogota')->format('g:i a');
     }
 
-    protected function pesos(float|string|null $valor): string
-    {
-        return '$'.number_format((float) $valor, 0, ',', '.');
-    }
-
     protected function mensajeBase(Reserva $reserva, string $asunto): MailMessage
     {
         return (new MailMessage)
             ->subject($asunto.' — Fragua Real Burger')
             ->greeting('Hola '.$reserva->cliente_nombre.',');
+    }
+
+    /** Mejora (28/10/2026): la reserva de un vistazo (fecha, hora, mesa y depósito) en una tarjeta. */
+    protected function resumenReserva(MailMessage $mensaje, Reserva $reserva, ?string $deposito = null): MailMessage
+    {
+        $fecha = $reserva->fecha_hora->copy()->setTimezone('America/Bogota')->locale('es');
+
+        return $this->conResumen($mensaje, [
+            'Reserva' => '#'.$reserva->id,
+            'Fecha' => ucfirst($fecha->isoFormat('dddd D [de] MMMM')),
+            'Hora' => $fecha->format('g:i a'),
+            'Mesa' => $reserva->mesa?->nombre,
+            'Depósito' => $deposito,
+        ]);
     }
 
     /** Botón al enlace público de la reserva (ver o cancelar sin cuenta). */

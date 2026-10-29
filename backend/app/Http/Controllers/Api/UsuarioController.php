@@ -116,6 +116,10 @@ class UsuarioController extends Controller
         $antes = $usuario->only([...$campos, 'role']);
 
         DB::transaction(function () use ($usuario, $datos, $cambiaRol, $campos, $antes, $request, $permisoAntes, $permisoDespues) {
+            // Seguridad (28/10/2026, RN-USR-28): un correo nuevo no está confirmado.
+            if (isset($datos['email']) && mb_strtolower((string) $datos['email']) !== mb_strtolower((string) $usuario->email)) {
+                $usuario->correo_verificado_at = null;
+            }
             $usuario->update($datos);
 
             $cambios = collect($campos)
