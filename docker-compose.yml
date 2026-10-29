@@ -37,6 +37,11 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
       MAIL_FROM_NAME: "Fragua Real Burger"
+      # Avisos push del personal: llaves de php artisan push:generar-llaves, en Dokploy > Environment.
+      # Se generan una sola vez; si cambian, cada teléfono tiene que volver a activar los avisos.
+      FRAGUA_REAL_PUSH_PUBLICA: ${FRAGUA_REAL_PUSH_PUBLICA:-}
+      FRAGUA_REAL_PUSH_PRIVADA: ${FRAGUA_REAL_PUSH_PRIVADA:-}
+      FRAGUA_REAL_PUSH_ASUNTO: ${FRAGUA_REAL_PUSH_ASUNTO:-mailto:jjulian.gutierrez08@gmail.com}
       PASARELA_PROVEEDOR: manual
       CORS_ORIGENES: ""
     volumes:
