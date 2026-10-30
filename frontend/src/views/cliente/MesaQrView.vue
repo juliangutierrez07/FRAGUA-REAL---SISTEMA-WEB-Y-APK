@@ -10,6 +10,7 @@
 // explícito del Administrador: "trata que la página sea más intuitiva porque el cliente
 // no sabe mucho" — un solo flujo vertical (menú → carrito → confirmación), sin pasos de
 // pago (el Mesero cobra después, igual que Recogida) ni campos que no sean necesarios.
+import FotoCompleta from '@/components/common/FotoCompleta.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { AlertTriangle, ArrowLeft, CheckCircle2, Minus, Plus, Trash2 } from 'lucide-vue-next'
@@ -424,7 +425,7 @@ onMounted(async () => {
                 class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
               >
                 <!-- Fase 7, tarea 3 (RF-M04-004): la foto del producto si la tiene. -->
-                <img v-if="producto.imagen_url" :src="producto.imagen_url" :alt="producto.nombre" loading="lazy" class="size-full object-cover" />
+                <FotoCompleta v-if="producto.imagen_url" :src="producto.imagen_url" :alt="producto.nombre" />
                 <component :is="iconoPara(producto.nombre)" v-else :size="28" :stroke-width="1.5" />
               </div>
               <div class="min-w-0 flex-1">
@@ -474,13 +475,14 @@ onMounted(async () => {
     >
       <div v-if="modalAbierto" class="space-y-5">
         <!-- Mejora (16/10/2026): con presentación elegida, su foto propia si la tiene. -->
-        <img
-          v-if="productoAbierto && fotoSeleccion"
-          :key="fotoSeleccion"
-          :src="fotoSeleccion"
-          :alt="varianteSeleccionada ? `${productoAbierto.nombre} ${varianteSeleccionada.nombre}` : productoAbierto.nombre"
-          class="aspect-[4/3] w-full rounded-xl object-cover"
-        />
+        <div v-if="productoAbierto && fotoSeleccion" class="aspect-[4/3] w-full overflow-hidden rounded-xl">
+          <FotoCompleta
+            :key="fotoSeleccion"
+            :src="fotoSeleccion"
+            :alt="varianteSeleccionada ? `${productoAbierto.nombre} ${varianteSeleccionada.nombre}` : productoAbierto.nombre"
+            carga="eager"
+          />
+        </div>
         <p v-if="productoAbierto?.descripcion" class="text-sm text-[#6c655c]">{{ productoAbierto.descripcion }}</p>
 
         <div v-if="comboAbierto">

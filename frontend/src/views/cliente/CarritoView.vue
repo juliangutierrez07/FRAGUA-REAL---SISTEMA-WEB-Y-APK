@@ -6,6 +6,7 @@
 // Mejora de diseño (16/10/2026): cada línea muestra su foto (la de la presentación si tiene), la
 // presentación, los extras, la nota para cocina, el precio por unidad y la rebaja de las promociones;
 // al lado, un resumen con subtotal, promociones y total. Antes solo se veía el nombre y la cantidad.
+import FotoCompleta from '@/components/common/FotoCompleta.vue'
 import { ArrowLeft, Minus, NotebookPen, Plus, ShoppingBag, Tag, Trash2 } from 'lucide-vue-next'
 import mascota from '@/assets/img/mascota-fragua-real.png'
 import { computed } from 'vue'
@@ -90,7 +91,7 @@ function formatoPrecio(valor: number) {
           <div
             class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60 sm:size-24"
           >
-            <img v-if="foto(linea)" :src="foto(linea)" :alt="carrito.nombreLinea(linea)" loading="lazy" class="size-full object-cover" />
+            <FotoCompleta v-if="foto(linea)" :src="foto(linea)" :alt="carrito.nombreLinea(linea)" />
             <component :is="iconoPorNombre(linea.combo ? 'combo' : carrito.nombreLinea(linea))" v-else :size="30" :stroke-width="1.5" />
           </div>
 

@@ -12,6 +12,7 @@
 // Rediseño del Inicio (29/10/2026): portada oscura con fotos reales de la cocina (antes, en el celular, la primera
 // pantalla era solo texto), categorías que se deslizan en el celular, «Pedir es así de fácil» en vez de la franja
 // de beneficios, reservas con dos fotos y lo que incluye, y un cierre oscuro con foto para pedir o escribir por WhatsApp.
+import FotoCompleta from '@/components/common/FotoCompleta.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, Bike, CalendarDays, Check, Crown, Flame, MapPin, MessageCircle, Plus, QrCode, Radar, ShoppingBag, SlidersHorizontal, Store } from 'lucide-vue-next'
@@ -245,14 +246,8 @@ const puntosReserva = [
           :to="{ name: 'menu', query: { categoria: producto.categoria?.nombre, producto: producto.id } }"
           class="group flex flex-col rounded-2xl border border-[#e3ded4] bg-white p-2.5 transition hover:border-brand-300 sm:p-4"
         >
-          <div class="mb-2.5 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-[#fbf0d9] sm:mb-3">
-            <img
-              v-if="producto.imagen_url"
-              :src="producto.imagen_url"
-              :alt="producto.nombre"
-              class="size-full object-cover transition duration-300 group-hover:scale-[1.03]"
-              loading="lazy"
-            />
+          <div class="mb-2.5 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#fbf0d9] sm:mb-3">
+            <FotoCompleta v-if="producto.imagen_url" :src="producto.imagen_url" :alt="producto.nombre" />
             <component v-else :is="iconoPorNombre(producto.nombre)" :size="30" :stroke-width="1.5" class="text-brand-500" />
           </div>
           <p class="font-display text-[15px] leading-snug text-ink sm:text-lg">{{ producto.nombre }}</p>

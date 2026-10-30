@@ -8,6 +8,7 @@
 // todo y su fila se guarda para los pedidos de antes (con contraseña, EliminarModal).
 // 27/10/2026 (RF-M04-057 a 060): lo mismo en categorías, combos, extras generales y promociones, y eliminar
 // pasa a ser definitivo: ya no hay «Eliminados» ni restaurar, y no se pide motivo.
+import FotoCompleta from '@/components/common/FotoCompleta.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { Boxes, Download, FileSpreadsheet, Image as ImageIcon, Layers, PackageCheck, PackageX, Pencil, Percent, Plus, Tags, Trash2, Upload } from 'lucide-vue-next'
 import AccionesFila, { type AccionFila } from '@/components/common/AccionesFila.vue'
@@ -1568,7 +1569,7 @@ onMounted(cargar)
           <p class="field-label">Foto (opcional)</p>
           <div class="flex items-center gap-4">
             <div class="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50 text-gray-300">
-              <img v-if="fotoMostrada" :src="fotoMostrada" alt="Foto del producto" class="size-full object-cover" />
+              <FotoCompleta v-if="fotoMostrada" :src="fotoMostrada" alt="Foto del producto" carga="eager" />
               <ImageIcon v-else :size="28" />
             </div>
             <div class="min-w-0 space-y-2">

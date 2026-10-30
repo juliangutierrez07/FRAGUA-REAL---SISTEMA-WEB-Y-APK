@@ -5,6 +5,7 @@
 // disponibles, RN-M04-11/16). Sin ofertas ni combos, la sección no aparece.
 // Un producto sencillo o un combo se agregan al pedido con un toque; uno con presentaciones lleva al
 // Menú para elegirla. El precio es para mostrar: el total real lo calcula el servidor (RF-M04-035).
+import FotoCompleta from '@/components/common/FotoCompleta.vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Check, ChevronRight, Plus, Sparkles } from 'lucide-vue-next'
@@ -126,8 +127,8 @@ function agregar(o: Oferta) {
         :key="o.clave"
         class="relative flex w-[44%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#e3ded4] bg-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(47,38,20,0.10)] sm:w-auto"
       >
-        <div class="relative flex aspect-[4/3] items-center justify-center bg-[#fbf0d9]">
-          <img v-if="o.foto" :src="o.foto" :alt="o.nombre" class="size-full object-cover" loading="lazy" />
+        <div class="relative flex aspect-square items-center justify-center bg-[#fbf0d9] sm:aspect-[4/3] lg:aspect-square">
+          <FotoCompleta v-if="o.foto" :src="o.foto" :alt="o.nombre" />
           <component v-else :is="iconoPorNombre(o.nombre)" :size="30" :stroke-width="1.5" class="text-brand-500" aria-hidden="true" />
           <span
             class="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[11px]"

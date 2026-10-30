@@ -7,6 +7,7 @@
 //
 // Revisión por rol (13/10/2026, RF-M04-020/031): pestaña "Combos" con GET /combos (solo los
 // que hoy se pueden pedir). Antes el Cliente no podía pedir combos ni en la web ni por QR.
+import FotoCompleta from '@/components/common/FotoCompleta.vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, X } from 'lucide-vue-next'
@@ -376,10 +377,10 @@ function formatoPrecio(valor: number) {
               @click="elegirProducto(producto)"
             >
               <div
-                class="mb-2.5 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl sm:mb-3 bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
+                class="mb-2.5 flex aspect-square items-center justify-center overflow-hidden rounded-xl sm:mb-3 sm:aspect-[4/3] bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
               >
-                <!-- Fase 7, tarea 3 (RF-M04-004): la foto del producto si la tiene. -->
-                <img v-if="producto.imagen_url" :src="producto.imagen_url" :alt="producto.nombre" loading="lazy" class="size-full object-cover" />
+                <!-- Fase 7, tarea 3 (RF-M04-004): la foto del producto si la tiene. 30/10/2026: completa y en marco cuadrado. -->
+                <FotoCompleta v-if="producto.imagen_url" :src="producto.imagen_url" :alt="producto.nombre" />
                 <component :is="iconoPara(producto.nombre)" v-else :size="30" :stroke-width="1.5" />
               </div>
               <p class="font-display text-[15px] leading-snug text-ink sm:text-lg">
@@ -450,14 +451,14 @@ function formatoPrecio(valor: number) {
                crecía más que la pantalla y había que bajar por todo el menú para llegar al botón. -->
           <div class="min-h-0 flex-1 overflow-y-auto px-5">
             <div
-              class="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60 lg:aspect-[16/9]"
+              class="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
             >
-              <img
+              <FotoCompleta
                 v-if="productoSeleccionado && fotoSeleccion"
                 :key="fotoSeleccion"
                 :src="fotoSeleccion"
                 :alt="varianteSeleccionada ? `${productoSeleccionado.nombre} ${varianteSeleccionada.nombre}` : productoSeleccionado.nombre"
-                class="size-full object-cover"
+                carga="eager"
               />
               <component :is="iconoPara(comboSeleccionado?.nombre ?? productoSeleccionado?.nombre ?? '')" v-else :size="56" :stroke-width="1.5" />
             </div>

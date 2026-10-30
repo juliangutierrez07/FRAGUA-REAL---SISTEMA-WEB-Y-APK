@@ -362,6 +362,8 @@ Antes: el SuperAdmin puso al menos una cuenta en Configuración > «Cuentas para
       devuelve a donde estabas.
 - [ ] En computador, un producto con muchas variantes muestra «Agregar a mi pedido» sin bajar por el menú; las
       presentaciones se desplazan dentro del panel.
+- [ ] Las fotos de los productos se ven completas (verticales y horizontales) en el inicio, el menú, el panel del
+      producto, el carrito y el pedido por QR.
 - [ ] En el celular, las categorías avanzan solas cada 3 segundos y vuelven al inicio; al tocarlas se detienen unos
       segundos. Con «reducir movimiento» activado también avanzan, pero sin el deslizamiento suave.
 - [ ] «Pedir es así de fácil» muestra los tres pasos y «Empezar mi pedido» lleva al menú.

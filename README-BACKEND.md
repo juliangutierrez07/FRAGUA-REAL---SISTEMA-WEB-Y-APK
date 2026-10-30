@@ -2203,4 +2203,7 @@ inconsistencias con lo que existía o era correcto en Laravel:
       sola hasta Contacto. Atrás y Adelante siguen volviendo a la posición guardada.
     - Menú en computador: el panel del producto usa solo lo que queda de pantalla (`ajustarPanel` en `MenuView.vue`) y
       su contenido se desplaza por dentro, así «Agregar a mi pedido» siempre se ve, aunque tenga muchas variantes.
+    - Fotos de los productos completas (`FotoCompleta.vue`): el servidor siempre las guardó enteras, pero la pantalla
+      las recortaba para llenar un marco horizontal. Ahora entran enteras y lo que sobra del marco se rellena con la
+      misma foto difuminada. En el teléfono, las tarjetas del menú, el inicio y las ofertas pasan a marco cuadrado.
 

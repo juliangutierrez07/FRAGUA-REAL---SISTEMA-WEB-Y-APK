@@ -10,6 +10,7 @@
 // datos del cliente: nombre, teléfono y, en domicilio, dirección, barrio y referencia
 // (RN-M07-01), más las observaciones de entrega (RF-M07-010). Se cobra contra entrega o al
 // recoger, como cualquier pedido remoto (Mesero > Cobrar).
+import FotoCompleta from '@/components/common/FotoCompleta.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Armchair, Bike, ChevronUp, Minus, Plus, ReceiptText, Search, ShoppingBag, ShoppingBasket, SplitSquareHorizontal, X } from 'lucide-vue-next'
@@ -705,7 +706,7 @@ onMounted(() => {
                   class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-gray-100 to-gray-200/70 text-brand-700/60 sm:mb-3 sm:aspect-[4/3] sm:size-auto sm:w-full"
                 >
                   <!-- Fase 7, tarea 3 (RF-M04-004): la foto del producto si la tiene. -->
-                  <img v-if="producto.imagen_url" :src="producto.imagen_url" :alt="producto.nombre" loading="lazy" class="size-full object-cover" />
+                  <FotoCompleta v-if="producto.imagen_url" :src="producto.imagen_url" :alt="producto.nombre" />
                   <component :is="iconoPorNombre(producto.nombre)" v-else :size="28" :stroke-width="1.5" />
                 </div>
                 <div class="min-w-0 flex-1 sm:flex-none">
