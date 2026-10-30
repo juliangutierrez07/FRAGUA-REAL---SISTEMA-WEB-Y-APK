@@ -7,7 +7,7 @@
 //
 // Revisión por rol (13/10/2026, RF-M04-020/031): pestaña "Combos" con GET /combos (solo los
 // que hoy se pueden pedir). Antes el Cliente no podía pedir combos ni en la web ni por QR.
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, X } from 'lucide-vue-next'
 import CarritoFlotante from '@/components/common/CarritoFlotante.vue'
@@ -77,7 +77,18 @@ async function cargar() {
     categoriaActivaId.value = pideCombos
       ? CATEGORIA_COMBOS
       : (categoriaPreseleccionada?.id ?? categorias.value[0]?.id ?? (combos.value.length ? CATEGORIA_COMBOS : null))
-    seleccionarPrimeroDeCategoria()
+    // 30/10/2026: desde el Inicio se llega con un combo o un producto concreto (?combo=3, ?producto=7) y se abre.
+    const combo = combos.value.find((c) => c.id === Number(route.query.combo))
+    const producto = productos.value.find((p) => p.id === Number(route.query.producto))
+    if (combo) {
+      categoriaActivaId.value = CATEGORIA_COMBOS
+      elegirCombo(combo)
+    } else if (producto) {
+      categoriaActivaId.value = producto.categoria_id
+      elegirProducto(producto)
+    } else {
+      seleccionarPrimeroDeCategoria()
+    }
   } catch {
     error.value = 'No se pudo cargar el menú. Intenta de nuevo.'
   } finally {
@@ -86,6 +97,30 @@ async function cargar() {
 }
 
 onMounted(cargar)
+
+// Corrección (30/10/2026): en computador el panel usa solo lo que queda de pantalla, para que «Agregar» se vea sin
+// bajar por el menú, aunque la página esté arriba del todo o el producto tenga muchas variantes. Lo demás se
+// desplaza dentro del panel. En el teléfono es la hoja inferior, con su propio alto.
+const panel = ref<HTMLElement | null>(null)
+function ajustarPanel() {
+  const el = panel.value
+  if (!el) return
+  if (window.innerWidth < 1024) {
+    el.style.maxHeight = ''
+    return
+  }
+  const arriba = Math.max(el.getBoundingClientRect().top, 96)
+  el.style.maxHeight = `${Math.max(window.innerHeight - arriba - 16, 340)}px`
+}
+watch(panel, ajustarPanel)
+onMounted(() => {
+  window.addEventListener('scroll', ajustarPanel, { passive: true })
+  window.addEventListener('resize', ajustarPanel)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', ajustarPanel)
+  window.removeEventListener('resize', ajustarPanel)
+})
 
 const enCombos = computed(() => categoriaActivaId.value === CATEGORIA_COMBOS)
 // Mejora (26/10/2026, RF-M04-056): a una bebida no se le pregunta qué ingrediente quitar (interruptor de la categoría).
@@ -388,7 +423,8 @@ function formatoPrecio(valor: number) {
 
         <aside
           v-if="haySeleccion"
-          class="fixed inset-x-0 bottom-0 z-40 flex max-h-[85vh] flex-col rounded-t-3xl border-t border-[#ded7cc] bg-[#fffdf9] shadow-[0_-18px_40px_rgba(53,42,20,0.18)] transition-transform duration-300 ease-out lg:sticky lg:top-24 lg:inset-x-auto lg:bottom-auto lg:z-auto lg:h-fit lg:max-h-none lg:translate-y-0 lg:rounded-2xl lg:border lg:shadow-[0_18px_22.5px_rgba(53,42,20,0.08)]"
+          ref="panel"
+          class="fixed inset-x-0 bottom-0 z-40 flex max-h-[85vh] flex-col rounded-t-3xl border-t border-[#ded7cc] bg-[#fffdf9] shadow-[0_-18px_40px_rgba(53,42,20,0.18)] transition-transform duration-300 ease-out lg:sticky lg:top-24 lg:inset-x-auto lg:bottom-auto lg:z-auto lg:h-fit lg:max-h-[calc(100dvh-7rem)] lg:translate-y-0 lg:rounded-2xl lg:border lg:shadow-[0_18px_22.5px_rgba(53,42,20,0.08)]"
           :class="mostrarConfiguradorMovil ? 'translate-y-0' : 'translate-y-full'"
         >
           <!-- Encabezado: fijo (no se desplaza con el contenido), para que el botón de
@@ -409,11 +445,12 @@ function formatoPrecio(valor: number) {
             </div>
           </div>
 
-          <!-- Cuerpo: lo único que se desplaza en móvil cuando el producto tiene
-               muchas variantes/extras — el botón "Agregar" de abajo nunca se mueve. -->
-          <div class="min-h-0 flex-1 overflow-y-auto px-5 lg:overflow-visible">
+          <!-- Cuerpo: lo único que se desplaza cuando el producto tiene muchas variantes/extras — el botón
+               "Agregar" de abajo nunca se mueve. Corrección (30/10/2026): también en computador; antes el panel
+               crecía más que la pantalla y había que bajar por todo el menú para llegar al botón. -->
+          <div class="min-h-0 flex-1 overflow-y-auto px-5">
             <div
-              class="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60"
+              class="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#efe8db] to-[#e0d6c2] text-brand-700/60 lg:aspect-[16/9]"
             >
               <img
                 v-if="productoSeleccionado && fotoSeleccion"

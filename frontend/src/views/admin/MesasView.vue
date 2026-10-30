@@ -6,7 +6,8 @@
 // historial sale de todo y su fila se guarda para los reportes (con contraseña, EliminarModal).
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Armchair, CalendarClock, LayoutGrid, Pencil, Plus, QrCode, Trash2 } from 'lucide-vue-next'
+import { Armchair, Ban, CalendarClock, LayoutGrid, Pencil, Plus, QrCode, RotateCcw, ShieldAlert, Trash2, Unlock } from 'lucide-vue-next'
+import AccionesFila, { type AccionFila } from '@/components/common/AccionesFila.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import EliminarModal from '@/components/common/EliminarModal.vue'
@@ -190,6 +191,39 @@ const contadorTexto = computed(() =>
 // ---- QR de mesa: ver/descargar/imprimir/regenerar (RF-M05-005/006) ----
 const mesaQr = ref<Mesa | null>(null)
 
+// Mejora del panel (30/10/2026): las acciones de cada mesa, en botones desde tableta y en una hoja en el teléfono.
+function accionesDe(mesa: Mesa): AccionFila[] {
+  const ocupado = procesando.value === mesa.id
+  const acciones: AccionFila[] = [
+    { texto: 'Ver reservas', icono: CalendarClock, soloConsulta: true, alTocar: () => router.push({ name: 'admin-reservas', query: { mesa_id: mesa.id, mesa_nombre: mesa.nombre } }) },
+    { texto: 'Ver QR', icono: QrCode, soloConsulta: true, alTocar: () => (mesaQr.value = mesa) },
+    { texto: 'Cambiar nombre', icono: Pencil, ancha: true, alTocar: () => abrirEditar(mesa) },
+  ]
+  if (mesa.activa) {
+    if (mesa.estado !== 'libre') {
+      acciones.push(
+        { texto: 'Liberar', icono: Unlock, deshabilitada: ocupado, alTocar: () => liberar(mesa) },
+        { texto: 'Liberar forzada', icono: ShieldAlert, deshabilitada: ocupado, alTocar: () => abrirForzada(mesa) },
+      )
+    }
+    acciones.push({ texto: 'Dar de baja', icono: Ban, ancha: true, peligro: true, deshabilitada: ocupado, alTocar: () => alternarActiva(mesa) })
+  } else {
+    acciones.push({ texto: 'Reactivar', icono: RotateCcw, ancha: true, destacada: true, deshabilitada: ocupado, alTocar: () => alternarActiva(mesa) })
+  }
+  acciones.push({
+    texto: 'Eliminar mesa',
+    icono: Trash2,
+    ancha: true,
+    peligro: true,
+    deshabilitada: ocupado,
+    alTocar: () => {
+      mesaAEliminar.value = mesa
+      exito.value = ''
+    },
+  })
+  return acciones
+}
+
 function alCerrarOActualizarQr(actualizada: Mesa | null) {
   if (actualizada) reemplazar(actualizada)
   mesaQr.value = actualizada
@@ -224,19 +258,21 @@ onMounted(cargar)
 
     <template v-else>
       <p class="mt-4 text-xs text-gray-500">{{ contadorTexto }}</p>
-      <ul class="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <!-- Mejora del panel (30/10/2026): en el teléfono, dos tarjetas por fila como las del menú; las acciones
+           están en el botón «⋯» (AccionesFila). -->
+      <ul class="mt-2 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <li
           v-for="mesa in mesas"
           :key="mesa.id"
-          class="card flex flex-col gap-4 p-4 sm:p-5"
+          class="card relative flex flex-col gap-2.5 p-3 sm:gap-4 sm:p-5"
           :class="{ 'opacity-60': !mesa.activa }"
         >
-          <div class="flex items-center gap-3.5">
-            <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl" :class="ESTADOS[mesa.estado].icono">
-              <Armchair :size="22" />
+          <div class="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3.5">
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl sm:size-12 sm:rounded-2xl" :class="ESTADOS[mesa.estado].icono">
+              <Armchair :size="20" />
             </span>
-            <div class="min-w-0">
-              <p class="font-display text-lg font-medium leading-tight text-ink">{{ mesa.nombre }}</p>
+            <div class="w-full min-w-0">
+              <p class="truncate font-display text-[15px] font-medium leading-tight text-ink sm:text-lg">{{ mesa.nombre }}</p>
               <p class="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <span class="badge" :class="ESTADOS[mesa.estado].clase">
                   {{ ESTADOS[mesa.estado].texto }}
@@ -245,77 +281,11 @@ onMounted(cargar)
               </p>
             </div>
           </div>
-          <p v-if="mesa.qr_code" class="-mt-1 truncate text-xs text-gray-400" :title="mesa.qr_code">
+          <p v-if="mesa.qr_code" class="-mt-1 hidden truncate text-xs text-gray-400 sm:block" :title="mesa.qr_code">
             QR: {{ mesa.qr_code }}
           </p>
 
-          <div class="mt-auto grid grid-cols-2 gap-2">
-            <BaseButton
-              variant="ghost"
-              size="sm"
-              @click="router.push({ name: 'admin-reservas', query: { mesa_id: mesa.id, mesa_nombre: mesa.nombre } })"
-            >
-              <CalendarClock :size="14" />
-              Ver reservas
-            </BaseButton>
-            <BaseButton variant="ghost" size="sm" @click="mesaQr = mesa">
-              <QrCode :size="14" />
-              Ver QR
-            </BaseButton>
-            <BaseButton v-escritura variant="ghost" size="sm" class="col-span-2" @click="abrirEditar(mesa)">
-              <Pencil :size="14" />
-              Cambiar nombre
-            </BaseButton>
-            <template v-if="mesa.activa">
-              <BaseButton v-escritura
-                v-if="mesa.estado !== 'libre'"
-                variant="ghost"
-                size="sm"
-                :disabled="procesando === mesa.id"
-                @click="liberar(mesa)"
-              >
-                Liberar
-              </BaseButton>
-              <BaseButton v-escritura
-                v-if="mesa.estado !== 'libre'"
-                variant="ghost"
-                size="sm"
-                :disabled="procesando === mesa.id"
-                @click="abrirForzada(mesa)"
-              >
-                Liberar forzada
-              </BaseButton>
-              <BaseButton v-escritura
-                variant="ghost"
-                size="sm"
-                class="col-span-2 !text-red-700 hover:!border-red-300 hover:!bg-red-50"
-                :disabled="procesando === mesa.id"
-                @click="alternarActiva(mesa)"
-              >
-                Dar de baja
-              </BaseButton>
-            </template>
-            <BaseButton v-escritura
-              v-else
-              variant="primary"
-              size="sm"
-              class="col-span-2"
-              :disabled="procesando === mesa.id"
-              @click="alternarActiva(mesa)"
-            >
-              Reactivar
-            </BaseButton>
-            <BaseButton v-escritura
-              variant="ghost"
-              size="sm"
-              class="col-span-2 !text-red-700 hover:!border-red-300 hover:!bg-red-50"
-              :disabled="procesando === mesa.id"
-              @click="(mesaAEliminar = mesa), (exito = '')"
-            >
-              <Trash2 :size="14" />
-              Eliminar mesa
-            </BaseButton>
-          </div>
+          <AccionesFila class="absolute right-2 top-2 sm:static sm:mt-auto" rejilla :titulo="mesa.nombre" :acciones="accionesDe(mesa)" />
         </li>
       </ul>
     </template>

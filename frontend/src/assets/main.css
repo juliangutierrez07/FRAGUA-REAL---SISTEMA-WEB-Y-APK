@@ -13,7 +13,9 @@
     @apply bg-cream font-sans text-ink;
   }
   /* Cifras alineadas (lining) en todos los títulos: las «de estilo antiguo» de algunas fuentes con
-     serifa (el 10 se lee como "1o") quedan mal en precios, números de mesa y de pedido. */
+     serifa (el 10 se lee como "1o") quedan mal en precios, números de mesa y de pedido.
+     30/10/2026: el archivo de Fraunces que entrega Google no trae esa variante, así que las cifras grandes
+     (precios, totales, tarjetas de métricas) se escriben en la letra de texto: font-sans font-semibold. */
   .font-display {
     font-variant-numeric: lining-nums;
   }

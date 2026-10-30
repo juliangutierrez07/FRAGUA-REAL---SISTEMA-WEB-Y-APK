@@ -25,6 +25,7 @@ import fotoSandwich from '@/assets/img/platos/sandwich-platano.jpg'
 import CarritoFlotante from '@/components/common/CarritoFlotante.vue'
 import MapaUbicacion from '@/components/common/MapaUbicacion.vue'
 import OfertasDeHoy from '@/components/inicio/OfertasDeHoy.vue'
+import { useCarruselAutomatico } from '@/composables/useCarruselAutomatico'
 import { catalogoService } from '@/services/catalogo.service'
 import { useCarritoStore } from '@/stores/carrito'
 import { useNegocioStore } from '@/stores/negocio'
@@ -58,6 +59,8 @@ onMounted(async () => {
 })
 
 const categoriasDestacadas = computed(() => categorias.value.slice(0, 6))
+const filaCategorias = ref<HTMLElement | null>(null)
+useCarruselAutomatico(filaCategorias)
 // Destacados: disponibles, sin los que ya salen en «Ofertas de hoy», primero los que tienen foto y
 // después los platos antes que las bebidas.
 const productosDestacados = computed(() =>
@@ -201,7 +204,7 @@ const puntosReserva = [
     </div>
 
     <!-- Accesos rápidos por categoría. 29/10/2026: en el celular, una fila que se desliza (antes dos filas de
-         tres que ocupaban media pantalla). -->
+         tres que ocupaban media pantalla). 30/10/2026: avanza sola (useCarruselAutomatico). -->
     <section v-if="categoriasDestacadas.length" class="mx-auto max-w-6xl pb-4 sm:px-6">
       <div class="px-4 sm:px-0">
         <div class="mb-3 flex items-center gap-3">
@@ -210,7 +213,7 @@ const puntosReserva = [
         </div>
         <h2 class="font-display text-3xl font-medium tracking-tight text-ink">¿Qué se te antoja hoy?</h2>
       </div>
-      <div class="mt-6 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:grid sm:grid-cols-6 sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
+      <div ref="filaCategorias" class="mt-6 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:grid sm:grid-cols-6 sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
         <router-link
           v-for="categoria in categoriasDestacadas"
           :key="categoria.id"
@@ -239,7 +242,7 @@ const puntosReserva = [
         <router-link
           v-for="producto in productosDestacados"
           :key="producto.id"
-          :to="{ name: 'menu', query: { categoria: producto.categoria?.nombre } }"
+          :to="{ name: 'menu', query: { categoria: producto.categoria?.nombre, producto: producto.id } }"
           class="group flex flex-col rounded-2xl border border-[#e3ded4] bg-white p-2.5 transition hover:border-brand-300 sm:p-4"
         >
           <div class="mb-2.5 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-[#fbf0d9] sm:mb-3">

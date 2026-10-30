@@ -485,7 +485,7 @@ onMounted(() => {
           </div>
 
           <div class="flex shrink-0 items-center justify-between gap-3 border-t border-gray-100 pt-3 sm:justify-end sm:border-0 sm:pt-0">
-            <span class="font-display text-xl font-medium text-ink">{{ formatoPrecio(registro.valor) }}</span>
+            <span class="font-sans text-xl font-semibold text-ink">{{ formatoPrecio(registro.valor) }}</span>
             <div v-if="registro.estado === 'activo'" class="flex gap-1.5">
               <button v-escritura type="button" class="flex size-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:border-brand-400 hover:bg-brand-50 hover:text-ink" title="Editar" aria-label="Editar" @click="abrirEditar(registro)">
                 <Pencil :size="16" />

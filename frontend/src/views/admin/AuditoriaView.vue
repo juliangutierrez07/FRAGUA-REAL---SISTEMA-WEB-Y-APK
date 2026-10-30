@@ -196,16 +196,20 @@ onMounted(() => {
 
     <!-- Eventos de seguridad de las últimas 24 horas (RF-M01-017/024) -->
     <section v-if="seguridad" class="mt-6">
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <!-- Mejora del panel (30/10/2026): en el teléfono, las tres cifras en una fila. -->
+      <p class="mb-2 text-xs font-medium text-gray-500 sm:hidden">Últimas 24 horas</p>
+      <div class="grid grid-cols-3 gap-2 sm:gap-3">
         <StatCard
+          compacta
           etiqueta="Inicios fallidos (24 h)"
+          etiqueta-corta="Inicios fallidos"
           :valor="seguridad.inicios_fallidos_24h"
           detalle="Contraseña incorrecta, cuenta inexistente o desactivada"
           :icono="ShieldAlert"
           :destacada="seguridad.inicios_fallidos_24h > 0"
         />
-        <StatCard etiqueta="Inicios de sesión (24 h)" :valor="seguridad.inicios_exitosos_24h" :icono="LogIn" />
-        <StatCard etiqueta="Contraseñas restablecidas (24 h)" :valor="seguridad.restablecimientos_24h" :icono="KeyRound" />
+        <StatCard compacta etiqueta="Inicios de sesión (24 h)" etiqueta-corta="Inicios de sesión" :valor="seguridad.inicios_exitosos_24h" :icono="LogIn" />
+        <StatCard compacta etiqueta="Contraseñas restablecidas (24 h)" etiqueta-corta="Claves restablecidas" :valor="seguridad.restablecimientos_24h" :icono="KeyRound" />
       </div>
       <div v-if="seguridad.ips_con_intentos_repetidos.length" class="mt-3 alert-error">
         <p class="font-semibold">Intentos repetidos desde la misma IP en las últimas 24 horas:</p>

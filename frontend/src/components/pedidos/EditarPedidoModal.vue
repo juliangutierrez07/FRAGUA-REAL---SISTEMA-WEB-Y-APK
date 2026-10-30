@@ -370,7 +370,7 @@ const lineasPreparadas = computed(() => (props.pedido?.detalles ?? []).filter((d
 
       <div class="mt-5 flex items-center justify-between border-t border-gray-200 pt-3">
         <span class="text-xs font-semibold uppercase tracking-[0.1em] text-gray-500">Total del pedido</span>
-        <span class="font-display text-xl font-medium text-ink">{{ formatoPrecio(pedido.total) }}</span>
+        <span class="font-sans text-xl font-semibold text-ink">{{ formatoPrecio(pedido.total) }}</span>
       </div>
       <BaseButton variant="ghost" class="mt-3 w-full" @click="emit('cerrar')">Listo</BaseButton>
     </template>

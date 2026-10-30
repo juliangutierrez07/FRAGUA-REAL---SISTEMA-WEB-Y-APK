@@ -241,7 +241,7 @@ async function cobrar() {
         <p v-if="abonoDeposito > 0" class="text-right text-xs text-emerald-700">Incluye {{ formatoPrecio(abonoDeposito) }} del depósito de la reserva</p>
         <div class="flex items-baseline justify-between pt-1">
           <dt class="text-xs font-semibold uppercase tracking-[0.1em] text-gray-500">Saldo</dt>
-          <dd class="font-display text-2xl font-medium text-ink">{{ formatoPrecio(cuenta.saldo) }}</dd>
+          <dd class="font-sans text-2xl font-semibold text-ink">{{ formatoPrecio(cuenta.saldo) }}</dd>
         </div>
       </dl>
 

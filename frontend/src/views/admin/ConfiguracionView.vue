@@ -7,6 +7,7 @@
 // Lee con GET /configuracion (incluye el valor de respaldo si la tabla aún no tiene la fila) y
 // guarda con PUT /configuraciones. Desde el 27/10/2026 también la hora de cierre de la caja y la
 // tolerancia antes de que se cierre sola (RF-M06-039).
+import TarjetaConfiguracion from '@/components/configuracion/TarjetaConfiguracion.vue'
 import { computed, onMounted, ref } from 'vue'
 import { Bike, CalendarClock, LockKeyhole, Timer } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -159,6 +160,17 @@ async function guardar() {
 }
 
 onMounted(cargar)
+
+// Mejora del panel (30/10/2026): atajos a cada sección en el teléfono.
+const SECCIONES = [
+  { id: 'conf-negocio', texto: 'Negocio' },
+  { id: 'conf-pagos', texto: 'Pagos' },
+  { id: 'conf-valores', texto: 'Valores' },
+  { id: 'conf-sistema', texto: 'Sistema' },
+]
+function irA(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 </script>
 
 <template>
@@ -171,132 +183,105 @@ onMounted(cargar)
 
     <div v-if="cargando" class="loading-state">Cargando configuración…</div>
 
+    <!-- Mejora del panel (30/10/2026): en el teléfono la página es larga; estos atajos llevan a cada sección. -->
+    <nav v-if="!cargando" class="segmented mt-5 sm:hidden" aria-label="Secciones de Configuración">
+      <button v-for="s in SECCIONES" :key="s.id" type="button" class="segmented-item" @click="irA(s.id)">{{ s.texto }}</button>
+    </nav>
+
     <!-- Mejora (19/10/2026): dirección, teléfono y logo del negocio (se guardan aparte). -->
-    <div v-if="!cargando" class="mt-6 max-w-2xl">
+    <div v-if="!cargando" id="conf-negocio" class="mt-4 max-w-2xl scroll-mt-20 sm:mt-6">
       <DatosNegocio />
     </div>
 
     <!-- Pago directo (22/10/2026): cuentas de Nequi, Bancolombia y Bre-B (las cambia el SuperAdmin). -->
-    <div v-if="!cargando" class="mt-4 max-w-2xl">
+    <div v-if="!cargando" id="conf-pagos" class="mt-4 max-w-2xl scroll-mt-20">
       <PagosDirectos />
     </div>
 
-    <form v-if="!cargando" class="mt-4 max-w-2xl space-y-4" novalidate @submit.prevent="guardar">
-      <div class="card p-4 sm:p-5">
-        <div class="flex items-start gap-3">
-          <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
-            <Bike :size="21" />
-          </span>
-          <div class="min-w-0 flex-1">
-            <h2 class="text-[15px] font-semibold text-ink">Valor del domicilio</h2>
-            <p class="mt-0.5 text-xs text-gray-500">
-              Valor fijo igual para toda la ciudad, sin zonas ni tarifas por barrio. La recogida en el
-              local no tiene costo.
-            </p>
-            <div class="mt-3">
-              <BaseInput formato="pesos"
-                v-model="domicilio"
-                label="Valor en pesos (COP)"
-                type="text"
-                placeholder="2000"
-                :error="errores.valor_domicilio"
-              />
-              <!-- El error ya lo muestra BaseInput debajo del campo. -->
-              <p v-if="!errores.valor_domicilio && domicilio && !Number.isNaN(aNumero(domicilio))" class="mt-1 text-xs text-gray-500">
-                Se cobrará {{ formatoPrecio(aNumero(domicilio)) }} por cada domicilio.
-              </p>
-            </div>
-          </div>
+    <form v-if="!cargando" id="conf-valores" class="mt-4 max-w-2xl scroll-mt-20 space-y-4" novalidate @submit.prevent="guardar">
+      <TarjetaConfiguracion :icono="Bike" tono="bg-sky-50 text-sky-700" titulo="Valor del domicilio">
+        <template #descripcion>
+          Valor fijo igual para toda la ciudad, sin zonas ni tarifas por barrio. La recogida en el
+          local no tiene costo.
+        </template>
+        <div>
+          <BaseInput formato="pesos"
+            v-model="domicilio"
+            label="Valor en pesos (COP)"
+            type="text"
+            placeholder="2000"
+            :error="errores.valor_domicilio"
+          />
+          <!-- El error ya lo muestra BaseInput debajo del campo. -->
+          <p v-if="!errores.valor_domicilio && domicilio && !Number.isNaN(aNumero(domicilio))" class="mt-1 text-xs text-gray-500">
+            Se cobrará {{ formatoPrecio(aNumero(domicilio)) }} por cada domicilio.
+          </p>
         </div>
-      </div>
+      </TarjetaConfiguracion>
 
-      <div class="card p-4 sm:p-5">
-        <div class="flex items-start gap-3">
-          <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-            <CalendarClock :size="21" />
-          </span>
-          <div class="min-w-0 flex-1">
-            <h2 class="text-[15px] font-semibold text-ink">Depósito de reserva</h2>
-            <p class="mt-0.5 text-xs text-gray-500">
-              Valor fijo obligatorio para toda reserva, sin importar el número de personas. Se reembolsa
-              si se cancela a tiempo, se retiene si hay no-show y se abona al pedido si el cliente llega.
-            </p>
-            <div class="mt-3">
-              <BaseInput formato="pesos"
-                v-model="deposito"
-                label="Valor en pesos (COP)"
-                type="text"
-                placeholder="20000"
-                :error="errores.deposito_reserva"
-              />
-              <!-- El error ya lo muestra BaseInput debajo del campo. -->
-              <p v-if="!errores.deposito_reserva && deposito && !Number.isNaN(aNumero(deposito))" class="mt-1 text-xs text-gray-500">
-                Cada reserva exigirá {{ formatoPrecio(aNumero(deposito)) }} de depósito.
-              </p>
-            </div>
-          </div>
+      <TarjetaConfiguracion :icono="CalendarClock" tono="bg-brand-50 text-brand-700" titulo="Depósito de reserva">
+        <template #descripcion>
+          Valor fijo obligatorio para toda reserva, sin importar el número de personas. Se reembolsa
+          si se cancela a tiempo, se retiene si hay no-show y se abona al pedido si el cliente llega.
+        </template>
+        <div>
+          <BaseInput formato="pesos"
+            v-model="deposito"
+            label="Valor en pesos (COP)"
+            type="text"
+            placeholder="20000"
+            :error="errores.deposito_reserva"
+          />
+          <!-- El error ya lo muestra BaseInput debajo del campo. -->
+          <p v-if="!errores.deposito_reserva && deposito && !Number.isNaN(aNumero(deposito))" class="mt-1 text-xs text-gray-500">
+            Cada reserva exigirá {{ formatoPrecio(aNumero(deposito)) }} de depósito.
+          </p>
         </div>
-      </div>
+      </TarjetaConfiguracion>
 
       <!-- Fase 4, tarea 2 (RF-M05-017/026, RN-M05-07/08/13, decisión D6) -->
-      <div class="card p-4 sm:p-5">
-        <div class="flex items-start gap-3">
-          <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-            <Timer :size="21" />
-          </span>
-          <div class="min-w-0 flex-1">
-            <h2 class="text-[15px] font-semibold text-ink">Tiempos de las reservas</h2>
-            <p class="mt-0.5 text-xs text-gray-500">
-              En minutos. Los usan el no-show automático, el recordatorio al cliente y el estado de la mesa.
+      <TarjetaConfiguracion :icono="Timer" tono="bg-amber-50 text-amber-700" titulo="Tiempos de las reservas">
+        <template #descripcion>
+          En minutos. Los usan el no-show automático, el recordatorio al cliente y el estado de la mesa.
+        </template>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div>
+            <BaseInput formato="entero" :maxlength="4" v-model="tolerancia" label="Tolerancia (no-show)" type="text" placeholder="15" :error="errores.reserva_tolerancia_minutos" />
+            <p v-if="!errores.reserva_tolerancia_minutos" class="mt-1 text-xs text-gray-500">
+              Si el cliente no llega {{ duracionTexto(tolerancia) || '…' }} después de la hora, la reserva se libera y el depósito se retiene.
             </p>
-            <div class="mt-3 grid gap-4 sm:grid-cols-3">
-              <div>
-                <BaseInput formato="entero" :maxlength="4" v-model="tolerancia" label="Tolerancia (no-show)" type="text" placeholder="15" :error="errores.reserva_tolerancia_minutos" />
-                <p v-if="!errores.reserva_tolerancia_minutos" class="mt-1 text-xs text-gray-500">
-                  Si el cliente no llega {{ duracionTexto(tolerancia) || '…' }} después de la hora, la reserva se libera y el depósito se retiene.
-                </p>
-              </div>
-              <div>
-                <BaseInput formato="entero" :maxlength="4" v-model="recordatorio" label="Recordatorio" type="text" placeholder="120" :error="errores.reserva_recordatorio_minutos" />
-                <p v-if="!errores.reserva_recordatorio_minutos" class="mt-1 text-xs text-gray-500">Se avisa al cliente {{ duracionTexto(recordatorio) || '…' }} antes.</p>
-              </div>
-              <div>
-                <BaseInput formato="entero" :maxlength="4" v-model="ventana" label="Mesa Reservada" type="text" placeholder="60" :error="errores.reserva_ventana_reservada_minutos" />
-                <p v-if="!errores.reserva_ventana_reservada_minutos" class="mt-1 text-xs text-gray-500">La mesa se ve Reservada desde {{ duracionTexto(ventana) || '…' }} antes.</p>
-              </div>
-            </div>
+          </div>
+          <div>
+            <BaseInput formato="entero" :maxlength="4" v-model="recordatorio" label="Recordatorio" type="text" placeholder="120" :error="errores.reserva_recordatorio_minutos" />
+            <p v-if="!errores.reserva_recordatorio_minutos" class="mt-1 text-xs text-gray-500">Se avisa al cliente {{ duracionTexto(recordatorio) || '…' }} antes.</p>
+          </div>
+          <div>
+            <BaseInput formato="entero" :maxlength="4" v-model="ventana" label="Mesa Reservada" type="text" placeholder="60" :error="errores.reserva_ventana_reservada_minutos" />
+            <p v-if="!errores.reserva_ventana_reservada_minutos" class="mt-1 text-xs text-gray-500">La mesa se ve Reservada desde {{ duracionTexto(ventana) || '…' }} antes.</p>
           </div>
         </div>
-      </div>
+      </TarjetaConfiguracion>
 
       <!-- 27/10/2026 (RF-M06-039, RN-M06-22): la caja que nadie cerró se cierra sola. -->
-      <div class="card p-4 sm:p-5">
-        <div class="flex items-start gap-3">
-          <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-            <LockKeyhole :size="21" />
-          </span>
-          <div class="min-w-0 flex-1">
-            <h2 class="text-[15px] font-semibold text-ink">Cierre automático de la caja</h2>
-            <p class="mt-0.5 text-xs text-gray-500">
-              Si nadie cierra el turno, se cierra solo pasada la tolerancia, sin contar el efectivo. Después registras
-              lo que contaste en Caja. Los pedidos que queden abiertos se avisan en la campana y se cobran con la caja
-              del día siguiente.
+      <TarjetaConfiguracion :icono="LockKeyhole" tono="bg-emerald-50 text-emerald-700" titulo="Cierre automático de la caja">
+        <template #descripcion>
+          Si nadie cierra el turno, se cierra solo pasada la tolerancia, sin contar el efectivo. Después registras
+          lo que contaste en Caja. Los pedidos que queden abiertos se avisan en la campana y se cobran con la caja
+          del día siguiente.
+        </template>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <BaseInput v-model="horaCierre" label="Hora de cierre del negocio" type="time" :error="errores.caja_hora_cierre" />
+            <p v-if="!errores.caja_hora_cierre" class="mt-1 text-xs text-gray-500">Antes de las 6:00 a. m. cuenta como la madrugada siguiente.</p>
+          </div>
+          <div>
+            <BaseInput formato="entero" :maxlength="3" v-model="toleranciaCaja" label="Tolerancia (minutos)" type="text" placeholder="60" :error="errores.caja_tolerancia_minutos" />
+            <p v-if="!errores.caja_tolerancia_minutos && cierreSolaTexto" class="mt-1 text-xs text-gray-500">
+              La caja se cierra sola a las {{ cierreSolaTexto }}
             </p>
-            <div class="mt-3 grid gap-4 sm:grid-cols-2">
-              <div>
-                <BaseInput v-model="horaCierre" label="Hora de cierre del negocio" type="time" :error="errores.caja_hora_cierre" />
-                <p v-if="!errores.caja_hora_cierre" class="mt-1 text-xs text-gray-500">Antes de las 6:00 a. m. cuenta como la madrugada siguiente.</p>
-              </div>
-              <div>
-                <BaseInput formato="entero" :maxlength="3" v-model="toleranciaCaja" label="Tolerancia (minutos)" type="text" placeholder="60" :error="errores.caja_tolerancia_minutos" />
-                <p v-if="!errores.caja_tolerancia_minutos && cierreSolaTexto" class="mt-1 text-xs text-gray-500">
-                  La caja se cierra sola a las {{ cierreSolaTexto }}
-                </p>
-              </div>
-            </div>
           </div>
         </div>
-      </div>
+      </TarjetaConfiguracion>
 
       <p v-if="error" class="alert-error">{{ error }}</p>
       <p v-if="exito" class="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ exito }}</p>
@@ -305,19 +290,19 @@ onMounted(cargar)
         <p class="text-xs text-gray-500">
           Los pedidos y reservas ya creados conservan el valor con que se hicieron.
         </p>
-        <BaseButton v-escritura type="submit" variant="primary" :disabled="guardando || !hayCambios">
+        <BaseButton v-escritura type="submit" variant="primary" class="w-full sm:w-auto" :disabled="guardando || !hayCambios">
           {{ guardando ? 'Guardando…' : 'Guardar cambios' }}
         </BaseButton>
       </div>
     </form>
 
     <!-- Fase 4, tarea 1: estado del programador y de la cola en el servidor. -->
-    <div v-if="!cargando" class="mt-8 max-w-2xl">
+    <div v-if="!cargando" id="conf-sistema" class="mt-6 max-w-2xl scroll-mt-20 sm:mt-8">
       <EstadoTareasAutomaticas />
     </div>
 
     <!-- Endurecimiento (13/10/2026): revisión de seguridad antes de abrir al público. -->
-    <div v-if="!cargando" class="mt-6 max-w-2xl">
+    <div v-if="!cargando" class="mt-4 max-w-2xl sm:mt-6">
       <RevisionProduccion />
     </div>
   </div>

@@ -185,7 +185,7 @@ function formatoPrecio(valor: number) {
           </div>
           <div class="flex items-baseline justify-between gap-3 border-t border-[#e9e3d8] pt-3">
             <dt class="font-medium text-ink">Total</dt>
-            <dd class="font-display text-3xl text-ink">{{ formatoPrecio(totalConPromociones) }}</dd>
+            <dd class="font-sans font-semibold text-3xl text-ink">{{ formatoPrecio(totalConPromociones) }}</dd>
           </div>
         </dl>
         <p class="mt-2 text-xs text-[#7d756b]">Si eliges domicilio, el valor del envío se suma en el siguiente paso.</p>

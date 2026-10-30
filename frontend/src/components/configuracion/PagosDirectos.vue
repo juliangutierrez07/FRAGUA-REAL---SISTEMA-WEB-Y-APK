@@ -4,6 +4,7 @@
 // SuperAdmin las cambia (es a donde llega el dinero) y cada cambio queda en la Auditoría; el
 // Administrador las ve. Un medio sin sus datos obligatorios no se le ofrece al Cliente; si ninguno
 // está completo, el pago en línea no aparece y se paga al recibir.
+import TarjetaConfiguracion from '@/components/configuracion/TarjetaConfiguracion.vue'
 import { computed, onMounted, ref } from 'vue'
 import { Landmark, ShieldCheck, Smartphone, Zap } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -73,30 +74,25 @@ async function guardar() {
 </script>
 
 <template>
-  <form class="card p-4 sm:p-5" novalidate @submit.prevent="guardar">
-    <div class="flex items-start gap-3">
-      <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
-        <Landmark :size="21" />
-      </span>
-      <div class="min-w-0 flex-1">
-        <h2 class="text-[15px] font-semibold text-ink">Cuentas para pagos en línea</h2>
-        <p class="mt-0.5 text-xs text-gray-500">
-          El Cliente transfiere a estas cuentas desde su app y sube la captura; el personal la revisa en Cobrar,
-          Pedidos o Reservas. Deja vacío un medio para no ofrecerlo.
-        </p>
+  <form novalidate @submit.prevent="guardar">
+    <TarjetaConfiguracion :icono="Landmark" tono="bg-sky-50 text-sky-700" titulo="Cuentas para pagos en línea">
+      <template #descripcion>
+        El Cliente transfiere a estas cuentas desde su app y sube la captura; el personal la revisa en Cobrar,
+        Pedidos o Reservas. Deja vacío un medio para no ofrecerlo.
+      </template>
         <p
           v-if="publico?.automatico"
-          class="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800"
+          class="mb-4 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800"
         >
           Wompi está activo: los pagos en línea se hacen en la pasarela y estas cuentas no se muestran.
         </p>
-        <p v-else-if="!cargando && !puedeEditar" class="mt-3 flex items-start gap-2 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600">
+        <p v-else-if="!cargando && !puedeEditar" class="mb-4 flex items-start gap-2 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600">
           <ShieldCheck :size="15" class="mt-px shrink-0" />
           Solo el SuperAdmin cambia las cuentas donde se recibe el dinero.
         </p>
 
-        <div v-if="cargando" class="mt-4 h-40 animate-pulse rounded-xl bg-gray-100" />
-        <div v-else class="mt-4 space-y-4">
+        <div v-if="cargando" class="h-40 animate-pulse rounded-xl bg-gray-100" />
+        <div v-else class="space-y-4">
           <!-- Nequi -->
           <fieldset class="rounded-xl border border-[#ece6db] p-3.5">
             <legend class="flex items-center gap-2 px-1 text-sm font-semibold text-ink">
@@ -154,11 +150,10 @@ async function guardar() {
         <p v-if="exito" class="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{{ exito }}</p>
 
         <div v-if="puedeEditar" class="mt-4 flex justify-end">
-          <BaseButton v-escritura type="submit" variant="primary" :disabled="guardando || !hayCambios || cargando">
+          <BaseButton v-escritura type="submit" variant="primary" class="w-full sm:w-auto" :disabled="guardando || !hayCambios || cargando">
             {{ guardando ? 'Guardando…' : 'Guardar cuentas' }}
           </BaseButton>
         </div>
-      </div>
-    </div>
+    </TarjetaConfiguracion>
   </form>
 </template>

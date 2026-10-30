@@ -377,7 +377,7 @@ const maxOcupacionPorMesa = computed(() =>
         <div class="relative overflow-hidden rounded-2xl bg-ink-900 p-5 text-white shadow-pop sm:p-6">
           <span class="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-brand-500/20 blur-3xl" aria-hidden="true" />
           <p class="relative text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">Monto vendido en el periodo</p>
-          <p class="relative mt-3 font-display text-4xl font-medium leading-none text-brand-400">{{ formatoMoneda(ventasTotales.resumen.monto_total) }}</p>
+          <p class="relative mt-3 font-sans text-4xl font-semibold leading-none text-brand-400">{{ formatoMoneda(ventasTotales.resumen.monto_total) }}</p>
           <p
             v-if="badgeVariacion(comparacionVentasTotales?.variacion.monto_total)"
             class="mt-1 text-xs font-semibold"
@@ -390,7 +390,7 @@ const maxOcupacionPorMesa = computed(() =>
         </div>
         <div class="card p-4 sm:p-5">
           <p class="text-xs font-medium text-gray-500">Pedidos finalizados</p>
-          <p class="mt-1 font-display text-3xl font-medium text-ink">{{ ventasTotales.resumen.cantidad_pedidos }}</p>
+          <p class="mt-1 font-sans text-3xl font-semibold text-ink">{{ ventasTotales.resumen.cantidad_pedidos }}</p>
           <p
             v-if="badgeVariacion(comparacionVentasTotales?.variacion.cantidad_pedidos)"
             class="mt-1 text-xs font-semibold"
@@ -526,7 +526,7 @@ const maxOcupacionPorMesa = computed(() =>
         <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div class="rounded-xl bg-gray-50 p-3.5">
             <p class="text-xs font-medium text-gray-500">Total compras</p>
-            <p class="mt-1 font-display text-2xl font-medium text-ink">{{ formatoMoneda(comprasYGastos.resumen.total_compras) }}</p>
+            <p class="mt-1 font-sans text-2xl font-semibold text-ink">{{ formatoMoneda(comprasYGastos.resumen.total_compras) }}</p>
             <p
               v-if="badgeVariacion(comparacionComprasYGastos?.variacion.total_compras)"
               class="mt-1 text-xs font-semibold"
@@ -538,7 +538,7 @@ const maxOcupacionPorMesa = computed(() =>
           </div>
           <div class="rounded-xl bg-gray-50 p-3.5">
             <p class="text-xs font-medium text-gray-500">Total gastos</p>
-            <p class="mt-1 font-display text-2xl font-medium text-ink">{{ formatoMoneda(comprasYGastos.resumen.total_gastos) }}</p>
+            <p class="mt-1 font-sans text-2xl font-semibold text-ink">{{ formatoMoneda(comprasYGastos.resumen.total_gastos) }}</p>
             <p
               v-if="badgeVariacion(comparacionComprasYGastos?.variacion.total_gastos)"
               class="mt-1 text-xs font-semibold"
@@ -581,7 +581,7 @@ const maxOcupacionPorMesa = computed(() =>
         <div class="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-5">
           <div>
             <p class="text-xs font-medium text-gray-500">Ventas</p>
-            <p class="mt-1 font-display text-xl font-medium text-ink">{{ formatoMoneda(resultadoOperativo.resumen.total_ventas) }}</p>
+            <p class="mt-1 font-sans text-xl font-semibold text-ink">{{ formatoMoneda(resultadoOperativo.resumen.total_ventas) }}</p>
             <p
               v-if="badgeVariacion(comparacionResultadoOperativo?.variacion.total_ventas)"
               class="mt-1 text-xs font-semibold"
@@ -594,7 +594,7 @@ const maxOcupacionPorMesa = computed(() =>
           <!-- Mejora (16/10/2026): el depósito que el negocio retuvo cuando el cliente no llegó. -->
           <div>
             <p class="text-xs font-medium text-gray-500">Depósitos retenidos (no-show)</p>
-            <p class="mt-1 font-display text-xl font-medium text-ink">{{ formatoMoneda(resultadoOperativo.resumen.otros_ingresos ?? 0) }}</p>
+            <p class="mt-1 font-sans text-xl font-semibold text-ink">{{ formatoMoneda(resultadoOperativo.resumen.otros_ingresos ?? 0) }}</p>
             <p
               v-if="badgeVariacion(comparacionResultadoOperativo?.variacion.otros_ingresos)"
               class="mt-1 text-xs font-semibold"
@@ -606,7 +606,7 @@ const maxOcupacionPorMesa = computed(() =>
           </div>
           <div>
             <p class="text-xs font-medium text-gray-500">Compras</p>
-            <p class="mt-1 font-display text-xl font-medium text-ink">{{ formatoMoneda(resultadoOperativo.resumen.total_compras) }}</p>
+            <p class="mt-1 font-sans text-xl font-semibold text-ink">{{ formatoMoneda(resultadoOperativo.resumen.total_compras) }}</p>
             <p
               v-if="badgeVariacion(comparacionResultadoOperativo?.variacion.total_compras)"
               class="mt-1 text-xs font-semibold"
@@ -618,7 +618,7 @@ const maxOcupacionPorMesa = computed(() =>
           </div>
           <div>
             <p class="text-xs font-medium text-gray-500">Gastos</p>
-            <p class="mt-1 font-display text-xl font-medium text-ink">{{ formatoMoneda(resultadoOperativo.resumen.total_gastos) }}</p>
+            <p class="mt-1 font-sans text-xl font-semibold text-ink">{{ formatoMoneda(resultadoOperativo.resumen.total_gastos) }}</p>
             <p
               v-if="badgeVariacion(comparacionResultadoOperativo?.variacion.total_gastos)"
               class="mt-1 text-xs font-semibold"

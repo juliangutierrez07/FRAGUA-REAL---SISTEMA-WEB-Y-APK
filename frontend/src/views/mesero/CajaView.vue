@@ -365,7 +365,7 @@ onMounted(cargar)
                 #{{ pedido.id }} · {{ TIPOS_PEDIDO_UI[pedido.tipo].texto }} ·
                 {{ nombreMedio(pago.pasarela) }}
               </p>
-              <p class="mt-1.5 font-display text-xl font-medium text-ink">{{ formatoPrecio(pago.monto) }}</p>
+              <p class="mt-1.5 font-sans text-xl font-semibold text-ink">{{ formatoPrecio(pago.monto) }}</p>
               <!-- Fase 6, tarea 1: el intento en la pasarela, si lo hubo. -->
               <p v-if="pago.transaccion_pasarela" class="mt-1 text-xs text-sky-700">
                 En proceso en Wompi<template v-if="pago.transaccion_pasarela.metodo_pago"> · {{ metodoPasarela(pago.transaccion_pasarela.metodo_pago) }}</template>
@@ -406,7 +406,7 @@ onMounted(cargar)
               <p class="mt-0.5 text-xs text-gray-500">
                 {{ mesa.pedidos }} {{ mesa.pedidos === 1 ? 'pedido' : 'pedidos' }} por pagar
               </p>
-              <p class="mt-1 font-display text-xl font-medium text-ink">{{ formatoPrecio(mesa.saldo) }}</p>
+              <p class="mt-1 font-sans text-xl font-semibold text-ink">{{ formatoPrecio(mesa.saldo) }}</p>
             </div>
             <BaseButton variant="primary" class="shrink-0" :disabled="!cajaAbierta" @click="cuentaDe = mesa.id">Cobrar mesa</BaseButton>
           </li>

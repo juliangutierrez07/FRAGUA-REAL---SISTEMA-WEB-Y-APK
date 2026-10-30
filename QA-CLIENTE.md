@@ -356,6 +356,14 @@ Antes: el SuperAdmin puso al menos una cuenta en Configuración > «Cuentas para
 - [ ] En el celular, la primera pantalla muestra la portada oscura con «Pedir ahora» y «Reservar mesa» lado a
       lado y, debajo, la foto de la hamburguesa con la mascota; nada se sale de la pantalla a los lados.
 - [ ] Las categorías se deslizan con el dedo; cada una abre el menú en esa categoría.
+- [ ] Al tocar una tarjeta de «Ofertas y combos de hoy» o de los destacados se abre el menú con ese combo o producto;
+      el botón «+» de las ofertas lo agrega al pedido sin salir del inicio.
+- [ ] Tocar «Contacto» baja a esa sección; al recargar, la página vuelve arriba y queda marcado «Inicio». Atrás
+      devuelve a donde estabas.
+- [ ] En computador, un producto con muchas variantes muestra «Agregar a mi pedido» sin bajar por el menú; las
+      presentaciones se desplazan dentro del panel.
+- [ ] En el celular, las categorías avanzan solas cada 3 segundos y vuelven al inicio; al tocarlas se detienen unos
+      segundos. Con «reducir movimiento» activado también avanzan, pero sin el deslizamiento suave.
 - [ ] «Pedir es así de fácil» muestra los tres pasos y «Empezar mi pedido» lleva al menú.
 - [ ] El cierre oscuro «¿Ya se te antojó?» muestra la foto con la mascota, «Pedir ahora» y «WhatsApp» (en el celular,
       los dos botones lado a lado y la foto debajo).

@@ -72,9 +72,16 @@ function formatoPrecio(valor: number) {
   return valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 }
 
+// 30/10/2026: toda la tarjeta lleva al menú con esa oferta abierta (antes solo respondía el botón).
+function enlace(o: Oferta) {
+  return o.tipo === 'combo'
+    ? { name: 'menu', query: { categoria: 'combos', combo: o.combo.id } }
+    : { name: 'menu', query: { categoria: o.producto.categoria?.nombre, producto: o.producto.id } }
+}
+
 function agregar(o: Oferta) {
   if (!o.directo && o.tipo === 'producto') {
-    router.push({ name: 'menu', query: { categoria: o.producto.categoria?.nombre } })
+    router.push(enlace(o))
     return
   }
   if (o.tipo === 'combo') {
@@ -117,7 +124,7 @@ function agregar(o: Oferta) {
       <article
         v-for="o in ofertas"
         :key="o.clave"
-        class="flex w-[44%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#e3ded4] bg-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(47,38,20,0.10)] sm:w-auto"
+        class="relative flex w-[44%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#e3ded4] bg-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(47,38,20,0.10)] sm:w-auto"
       >
         <div class="relative flex aspect-[4/3] items-center justify-center bg-[#fbf0d9]">
           <img v-if="o.foto" :src="o.foto" :alt="o.nombre" class="size-full object-cover" loading="lazy" />
@@ -130,7 +137,7 @@ function agregar(o: Oferta) {
           </span>
         </div>
         <div class="flex flex-1 flex-col p-2.5 sm:p-4">
-          <p class="font-display text-[15px] leading-snug text-ink sm:text-lg">{{ o.nombre }}</p>
+          <router-link :to="enlace(o)" class="font-display text-[15px] leading-snug text-ink after:absolute after:inset-0 sm:text-lg">{{ o.nombre }}</router-link>
           <p v-if="o.detalle" class="mt-1 line-clamp-2 text-[11px] text-[#6c655c] sm:text-xs">{{ o.detalle }}</p>
           <div class="mt-auto flex items-end justify-between gap-2 pt-2.5 sm:gap-3 sm:pt-4">
             <p class="min-w-0 leading-tight">
@@ -141,7 +148,7 @@ function agregar(o: Oferta) {
             </p>
             <button
               type="button"
-              class="inline-flex size-8 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition sm:size-auto sm:min-h-10 sm:rounded-xl sm:px-3.5"
+              class="relative z-10 inline-flex size-8 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition sm:size-auto sm:min-h-10 sm:rounded-xl sm:px-3.5"
               :class="recienAgregado === o.clave ? 'bg-emerald-600 text-white' : 'bg-brand-500 text-ink hover:bg-brand-400'"
               :aria-label="o.directo ? `Agregar ${o.nombre} al pedido` : `Elegir presentación de ${o.nombre}`"
               @click="agregar(o)"

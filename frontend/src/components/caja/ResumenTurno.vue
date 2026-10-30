@@ -58,7 +58,7 @@ const lineasEfectivo = computed(() => {
             <component :is="METODOS[m.metodo].icono" :size="14" />
             {{ METODOS[m.metodo].texto }}
           </p>
-          <p class="mt-1 font-display text-lg font-medium text-ink">{{ pesos(m.monto) }}</p>
+          <p class="mt-1 font-sans text-lg font-semibold text-ink">{{ pesos(m.monto) }}</p>
           <p class="text-[11px] text-gray-600">
             {{ cantidadTexto(m.cantidad, m.metodo === 'en_linea' ? 'pago' : 'cobro', m.metodo === 'en_linea' ? 'pagos' : 'cobros') }}
             · {{ METODOS[m.metodo].nota }}

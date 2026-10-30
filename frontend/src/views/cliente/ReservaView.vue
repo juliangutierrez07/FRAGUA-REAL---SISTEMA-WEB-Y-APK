@@ -407,7 +407,7 @@ async function pagarDeposito(datosPago: PagoEnLineaPayload) {
       <!-- Depósito y condiciones -->
       <aside class="rounded-2xl bg-ink p-6 text-white lg:sticky lg:top-24">
         <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-white/60">Depósito de la reserva</p>
-        <p class="mt-1 font-display text-4xl text-brand-400">{{ formatoPrecio(depositoValor) }}</p>
+        <p class="mt-1 font-sans font-semibold text-4xl text-brand-400">{{ formatoPrecio(depositoValor) }}</p>
         <ul class="mt-5 space-y-4 text-sm text-white/85">
           <li class="flex gap-3">
             <ReceiptText :size="18" class="mt-0.5 shrink-0 text-brand-400" />

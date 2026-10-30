@@ -934,7 +934,7 @@ onMounted(() => {
           </div>
           <div class="mb-3 flex items-center justify-between">
             <span class="text-xs font-semibold uppercase tracking-[0.1em] text-gray-500">Total</span>
-            <span class="font-display text-2xl font-medium text-ink">{{ formatoPrecio(totalCarrito) }}</span>
+            <span class="font-sans text-2xl font-semibold text-ink">{{ formatoPrecio(totalCarrito) }}</span>
           </div>
           <button
             type="button"
@@ -957,7 +957,7 @@ onMounted(() => {
           <span class="text-sm font-medium">{{ cantidadCarrito }} producto{{ cantidadCarrito === 1 ? '' : 's' }}</span>
         </span>
         <span class="flex items-center gap-2 text-white">
-          <span class="font-display text-lg font-medium text-brand-400">{{ formatoPrecio(totalCarrito) }}</span>
+          <span class="font-sans text-lg font-semibold text-brand-400">{{ formatoPrecio(totalCarrito) }}</span>
           <ChevronUp :size="16" class="transition" :class="{ 'rotate-180': carritoAbierto }" />
         </span>
       </button>

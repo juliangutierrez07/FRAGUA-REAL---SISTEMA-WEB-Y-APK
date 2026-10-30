@@ -327,7 +327,7 @@ onMounted(async () => {
           </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-[#6c655c]">Total</span>
-            <span class="font-display text-2xl text-ink">{{ formatoPrecio(totalConPromociones) }}</span>
+            <span class="font-sans font-semibold text-2xl text-ink">{{ formatoPrecio(totalConPromociones) }}</span>
           </div>
         </div>
 

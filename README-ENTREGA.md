@@ -851,6 +851,9 @@ Al escribir `QA-CLIENTE.md` y `QA-MESERO.md` se cruzó cada pantalla con el cód
   no hace falta configurar nada nuevo en nginx. En el servidor: `php artisan migrate --force`; las
   tareas `notificaciones:revisar` (cada minuto) y `notificaciones:limpiar` (cada noche) ya entran con
   el cron de siempre. Las horas se cambian con `FRAGUA_REAL_NOTIF_*` en el `.env`.
+- **Panel en el celular (30/10/2026).** Mesas en dos columnas, catálogo en filas compactas, métricas de Auditoría en
+  una fila y Configuración a todo el ancho con atajos. Las acciones de cada tarjeta están en el botón «⋯». Solo cambia
+  el frontend.
 - **Comprobantes y comandas con diseño (29/10/2026).** El comprobante impreso y el PDF que llega por correo
   llevan la marca, el número destacado y el total grande; el PDF digital ahora es una tira que se lee bien en el
   celular. La comanda se lee de lejos en la cocina: número del pedido, mesa, cantidades y notas destacados. Solo

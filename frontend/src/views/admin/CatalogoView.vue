@@ -9,7 +9,8 @@
 // 27/10/2026 (RF-M04-057 a 060): lo mismo en categorías, combos, extras generales y promociones, y eliminar
 // pasa a ser definitivo: ya no hay «Eliminados» ni restaurar, y no se pide motivo.
 import { computed, onMounted, ref, watch } from 'vue'
-import { Boxes, Download, FileSpreadsheet, Image as ImageIcon, Layers, Pencil, Percent, Plus, Tags, Trash2, Upload } from 'lucide-vue-next'
+import { Boxes, Download, FileSpreadsheet, Image as ImageIcon, Layers, PackageCheck, PackageX, Pencil, Percent, Plus, Tags, Trash2, Upload } from 'lucide-vue-next'
+import AccionesFila, { type AccionFila } from '@/components/common/AccionesFila.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import CampoPesos from '@/components/common/CampoPesos.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -528,6 +529,36 @@ async function confirmarImportacion() {
   } finally {
     importando.value = false
   }
+}
+
+// ---- Mejora del panel (30/10/2026): acciones de cada fila (botones desde tableta; en el teléfono, íconos o una hoja) ----
+function editarYEliminar(editar: () => void, eliminar: () => void): AccionFila[] {
+  return [
+    { texto: 'Editar', icono: Pencil, alTocar: editar },
+    { texto: 'Eliminar', icono: Trash2, peligro: true, alTocar: eliminar },
+  ]
+}
+
+function accionesProducto(producto: Producto): AccionFila[] {
+  return [
+    { texto: producto.oferta ? 'Cambiar oferta' : 'Poner en oferta', icono: Percent, alTocar: () => abrirOferta(producto) },
+    {
+      texto: producto.disponible ? 'Marcar agotado' : 'Marcar disponible',
+      icono: producto.disponible ? PackageX : PackageCheck,
+      deshabilitada: procesandoDisponibilidad.value === producto.id,
+      alTocar: () => alternarDisponible(producto),
+    },
+    { texto: 'Editar', icono: Pencil, alTocar: () => abrirEditarProducto(producto) },
+    {
+      texto: 'Eliminar',
+      icono: Trash2,
+      peligro: true,
+      alTocar: () => {
+        productoAEliminar.value = producto
+        avisoProductos.value = ''
+      },
+    },
+  ]
 }
 
 // ---- Mejora (16/10/2026): atajo «Poner en oferta» ----
@@ -1125,9 +1156,10 @@ onMounted(cargar)
         <!-- Fase 1, tarea 5: agotar o habilitar productos y tamaños de un vistazo (RF-M04-016/017). -->
         <router-link
           :to="{ name: 'admin-disponibilidad' }"
-          class="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-ink transition hover:border-brand-400 hover:bg-brand-50"
+          class="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-ink transition hover:border-brand-400 hover:bg-brand-50"
         >
-          Agotados y disponibilidad
+          <span class="sm:hidden">Disponibilidad</span>
+          <span class="hidden sm:inline">Agotados y disponibilidad</span>
         </router-link>
         <BaseButton v-escritura v-if="seccion === 'productos'" variant="secondary" @click="abrirImportar">
           <FileSpreadsheet :size="17" />
@@ -1156,7 +1188,7 @@ onMounted(cargar)
       </template>
     </PageHeader>
 
-    <div class="segmented mt-7 sm:inline-flex">
+    <div class="segmented mt-5 sm:mt-7 sm:inline-flex">
       <button
         type="button"
         class="segmented-item"
@@ -1215,14 +1247,14 @@ onMounted(cargar)
         <Tags :size="32" class="mx-auto text-gray-300" />
         <p class="mt-3 text-sm text-gray-500">Todavía no hay categorías.</p>
       </div>
-      <ul v-else class="mt-6 space-y-3">
+      <ul v-else class="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
         <li
           v-for="categoria in categorias"
           :key="categoria.id"
-          class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="card flex items-center justify-between gap-3 p-3 sm:p-4"
         >
           <div class="min-w-0">
-            <p class="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-ink">
+            <p class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-ink sm:gap-2 sm:text-[15px]">
               {{ categoria.nombre }}
               <span
                 class="badge"
@@ -1235,22 +1267,7 @@ onMounted(cargar)
               {{ categoria.productos?.length ?? 0 }} producto(s)
             </p>
           </div>
-          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
-            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarCategoria(categoria)">
-              <Pencil :size="14" />
-              Editar
-            </BaseButton>
-            <BaseButton
-              v-escritura
-              variant="ghost"
-              size="sm"
-              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
-              @click="eliminarDe('categorias', categoria)"
-            >
-              <Trash2 :size="14" />
-              Eliminar
-            </BaseButton>
-          </div>
+          <AccionesFila class="shrink-0" :titulo="categoria.nombre" :acciones="editarYEliminar(() => abrirEditarCategoria(categoria), () => eliminarDe('categorias', categoria))" />
         </li>
       </ul>
     </template>
@@ -1291,34 +1308,34 @@ onMounted(cargar)
         <Boxes :size="32" class="mx-auto text-gray-300" />
         <p class="mt-3 text-sm text-gray-500">No hay productos en este filtro.</p>
       </div>
-      <ul v-else class="mt-4 space-y-3">
+      <ul v-else class="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
         <li
           v-for="producto in productosFiltrados"
           :key="producto.id"
-          class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="card flex items-center justify-between gap-3 p-3 sm:p-4"
         >
-          <div class="min-w-0">
-            <img
-              v-if="producto.imagen_url"
-              :src="producto.imagen_url"
-              alt=""
-              loading="lazy"
-              class="float-left mr-3 size-14 rounded-lg object-cover"
-            />
-            <p class="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-ink">
+          <img
+            v-if="producto.imagen_url"
+            :src="producto.imagen_url"
+            alt=""
+            loading="lazy"
+            class="size-12 shrink-0 rounded-lg object-cover sm:size-14"
+          />
+          <div class="min-w-0 flex-1">
+            <p class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-ink sm:gap-2 sm:text-[15px]">
               {{ producto.nombre }}
-              <span class="badge bg-gray-100 text-gray-500 ring-gray-500/20">
+              <span class="badge hidden bg-gray-100 text-gray-500 ring-gray-500/20 sm:inline-flex">
                 {{ categoriaPorId.get(producto.categoria_id)?.nombre ?? '—' }}
               </span>
               <span
                 class="badge"
-                :class="producto.activo ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-red-50 text-red-700 ring-red-600/20'"
+                :class="producto.activo ? 'hidden bg-emerald-50 text-emerald-700 ring-emerald-600/20 sm:inline-flex' : 'bg-red-50 text-red-700 ring-red-600/20'"
               >
                 {{ producto.activo ? 'Activo' : 'Inactivo' }}
               </span>
               <span
                 class="badge"
-                :class="producto.disponible ? 'bg-brand-50 text-brand-700 ring-brand-600/20' : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'"
+                :class="producto.disponible ? 'hidden bg-brand-50 text-brand-700 ring-brand-600/20 sm:inline-flex' : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20'"
               >
                 {{ producto.disponible ? 'Disponible' : 'Agotado' }}
               </span>
@@ -1333,8 +1350,9 @@ onMounted(cargar)
               </span>
             </p>
             <p class="mt-1 text-xs text-gray-500">
-              {{ formatoMoneda(producto.precio_base) }} ·
-              {{ TIPOS_VENTA.find((t) => t.v === producto.tipo_venta)?.t ?? producto.tipo_venta }}
+              <span class="sm:hidden">{{ categoriaPorId.get(producto.categoria_id)?.nombre ?? '—' }} · </span>
+              {{ formatoMoneda(producto.precio_base) }}
+              <span class="hidden sm:inline">· {{ TIPOS_VENTA.find((t) => t.v === producto.tipo_venta)?.t ?? producto.tipo_venta }}</span>
               <template v-if="producto.variantes?.length"> · {{ producto.variantes.length }} variante(s)</template>
               <template v-if="producto.extras_especificos?.length"> · {{ producto.extras_especificos.length }} extra(s)</template>
             </p>
@@ -1342,34 +1360,7 @@ onMounted(cargar)
               No se ofrece: ninguna presentación está activa y disponible.
             </p>
           </div>
-          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
-            <BaseButton v-escritura variant="ghost" size="sm" class="col-span-2 sm:col-span-1" @click="abrirOferta(producto)">
-              <Percent :size="14" />
-              {{ producto.oferta ? 'Cambiar oferta' : 'Poner en oferta' }}
-            </BaseButton>
-            <BaseButton v-escritura
-              variant="ghost"
-              size="sm"
-              :disabled="procesandoDisponibilidad === producto.id"
-              @click="alternarDisponible(producto)"
-            >
-              {{ producto.disponible ? 'Marcar agotado' : 'Marcar disponible' }}
-            </BaseButton>
-            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarProducto(producto)">
-              <Pencil :size="14" />
-              Editar
-            </BaseButton>
-            <BaseButton
-              v-escritura
-              variant="ghost"
-              size="sm"
-              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
-              @click="(productoAEliminar = producto), (avisoProductos = '')"
-            >
-              <Trash2 :size="14" />
-              Eliminar
-            </BaseButton>
-          </div>
+          <AccionesFila class="shrink-0" :titulo="producto.nombre" :acciones="accionesProducto(producto)" />
         </li>
       </ul>
       <EliminarModal tipo="productos" articulo="el producto" :registro="productoAEliminar" @cerrar="productoAEliminar = null" @eliminado="alEliminarProducto" />
@@ -1382,14 +1373,14 @@ onMounted(cargar)
         <Layers :size="32" class="mx-auto text-gray-300" />
         <p class="mt-3 text-sm text-gray-500">Todavía no hay combos.</p>
       </div>
-      <ul v-else class="mt-6 space-y-3">
+      <ul v-else class="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
         <li
           v-for="combo in combos"
           :key="combo.id"
-          class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="card flex items-center justify-between gap-3 p-3 sm:p-4"
         >
           <div class="min-w-0">
-            <p class="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-ink">
+            <p class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-ink sm:gap-2 sm:text-[15px]">
               {{ combo.nombre }}
               <span
                 class="badge"
@@ -1410,22 +1401,7 @@ onMounted(cargar)
               {{ comparacionCombo(combo.precio, sumaComponentesCombo(combo))?.texto }}
             </p>
           </div>
-          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
-            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarCombo(combo)">
-              <Pencil :size="14" />
-              Editar
-            </BaseButton>
-            <BaseButton
-              v-escritura
-              variant="ghost"
-              size="sm"
-              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
-              @click="eliminarDe('combos', combo)"
-            >
-              <Trash2 :size="14" />
-              Eliminar
-            </BaseButton>
-          </div>
+          <AccionesFila class="shrink-0" :titulo="combo.nombre" :acciones="editarYEliminar(() => abrirEditarCombo(combo), () => eliminarDe('combos', combo))" />
         </li>
       </ul>
     </template>
@@ -1437,14 +1413,14 @@ onMounted(cargar)
         <Layers :size="32" class="mx-auto text-gray-300" />
         <p class="mt-3 text-sm text-gray-500">Todavía no hay extras generales. Créalos aquí y elige en cada producto (al editarlo) cuáles ofrece. Un extra que no se marca en ningún producto no se ofrece.</p>
       </div>
-      <ul v-else class="mt-6 space-y-3">
+      <ul v-else class="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
         <li
           v-for="extra in extrasGenerales"
           :key="extra.id"
-          class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="card flex items-center justify-between gap-3 p-3 sm:p-4"
         >
           <div class="min-w-0">
-            <p class="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-ink">
+            <p class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-ink sm:gap-2 sm:text-[15px]">
               {{ extra.nombre }}
               <span
                 class="badge"
@@ -1453,27 +1429,12 @@ onMounted(cargar)
                 {{ extra.activo ? 'Activo' : 'Inactivo' }}
               </span>
             </p>
-            <p class="mt-1 text-xs text-gray-500">
+            <p class="mt-1 line-clamp-2 text-xs text-gray-500 sm:line-clamp-none">
               {{ formatoMoneda(extra.precio) }} ·
               {{ extra.productos?.length ? `se ofrece con ${extra.productos.map((p) => p.nombre).join(', ')}` : 'no se ofrece con ningún producto: márcalo en los productos que lo llevan' }}
             </p>
           </div>
-          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
-            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarExtraGeneral(extra)">
-              <Pencil :size="14" />
-              Editar
-            </BaseButton>
-            <BaseButton
-              v-escritura
-              variant="ghost"
-              size="sm"
-              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
-              @click="eliminarDe('extras', extra)"
-            >
-              <Trash2 :size="14" />
-              Eliminar
-            </BaseButton>
-          </div>
+          <AccionesFila class="shrink-0" :titulo="extra.nombre" :acciones="editarYEliminar(() => abrirEditarExtraGeneral(extra), () => eliminarDe('extras', extra))" />
         </li>
       </ul>
     </template>
@@ -1487,14 +1448,14 @@ onMounted(cargar)
           Todavía no hay promociones. Créalas para fechas como Navidad o Amor y Amistad con su rango de fechas.
         </p>
       </div>
-      <ul v-else class="mt-6 space-y-3">
+      <ul v-else class="mt-4 space-y-2 sm:mt-6 sm:space-y-3">
         <li
           v-for="promocion in promociones"
           :key="promocion.id"
-          class="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="card flex items-center justify-between gap-3 p-3 sm:p-4"
         >
           <div class="min-w-0">
-            <p class="flex flex-wrap items-center gap-2 text-[15px] font-semibold text-ink">
+            <p class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-ink sm:gap-2 sm:text-[15px]">
               {{ promocion.nombre }}
               <span
                 class="badge"
@@ -1517,22 +1478,7 @@ onMounted(cargar)
               · {{ vigenciaTexto(promocion.vigencia_inicio, promocion.vigencia_fin) }}
             </p>
           </div>
-          <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
-            <BaseButton v-escritura variant="ghost" size="sm" @click="abrirEditarPromocion(promocion)">
-              <Pencil :size="14" />
-              Editar
-            </BaseButton>
-            <BaseButton
-              v-escritura
-              variant="ghost"
-              size="sm"
-              class="!text-red-700 hover:!border-red-300 hover:!bg-red-50"
-              @click="eliminarDe('promociones', promocion)"
-            >
-              <Trash2 :size="14" />
-              Eliminar
-            </BaseButton>
-          </div>
+          <AccionesFila class="shrink-0" :titulo="promocion.nombre" :acciones="editarYEliminar(() => abrirEditarPromocion(promocion), () => eliminarDe('promociones', promocion))" />
         </li>
       </ul>
     </template>

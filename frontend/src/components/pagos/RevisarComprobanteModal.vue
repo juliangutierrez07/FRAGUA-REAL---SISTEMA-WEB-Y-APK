@@ -104,7 +104,7 @@ function volver() {
     <dl class="grid grid-cols-2 gap-3 rounded-2xl bg-gray-50 p-3.5 text-sm sm:grid-cols-3">
       <div>
         <dt class="text-[11px] uppercase tracking-[0.06em] text-gray-500">Valor</dt>
-        <dd class="font-display text-lg font-medium text-ink">{{ formatoPrecio(monto) }}</dd>
+        <dd class="font-sans text-lg font-semibold text-ink">{{ formatoPrecio(monto) }}</dd>
       </div>
       <div>
         <dt class="text-[11px] uppercase tracking-[0.06em] text-gray-500">Medio</dt>

@@ -181,7 +181,7 @@ function enviar() {
           <div class="flex items-center gap-3 bg-white px-4 py-3">
             <div class="min-w-0 flex-1">
               <dt class="text-[11px] uppercase tracking-[0.06em] text-[#8a8378]">Valor exacto</dt>
-              <dd class="font-display text-xl text-ink">{{ formatoPrecio(monto) }}</dd>
+              <dd class="font-sans font-semibold text-xl text-ink">{{ formatoPrecio(monto) }}</dd>
             </div>
             <button
               type="button"

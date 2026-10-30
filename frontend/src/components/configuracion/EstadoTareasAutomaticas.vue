@@ -42,7 +42,7 @@ onMounted(cargar)
   <section class="card p-4 sm:p-5">
     <div class="flex items-start justify-between gap-3">
       <div class="flex items-start gap-3">
-        <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+        <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 sm:size-11">
           <Activity :size="21" />
         </span>
         <div>

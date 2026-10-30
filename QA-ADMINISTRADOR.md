@@ -785,6 +785,16 @@ Resumen; la lista completa del invitado está en `QA-CLIENTE.md` (secciones 4 a 
       número de documento ya lo tiene otro cliente». En la lista se ve «doc. …».
 - [ ] Auditoría registra «Pedido asignado a un cliente al cobrar» cuando el Mesero asigna un pedido.
 
+## 15m. Panel en el celular (30/10/2026)
+
+- [ ] Mesas: dos tarjetas por fila; el «⋯» abre una hoja con Ver reservas, Ver QR, Cambiar nombre, Liberar, Dar de baja
+      y Eliminar, y cada una hace lo mismo que antes. Desde tableta se ven los botones.
+- [ ] Catálogo: categorías, combos, extras y promociones tienen los íconos de editar y eliminar; productos, el «⋯»
+      con oferta, agotado, editar y eliminar.
+- [ ] Auditoría: las tres cifras caben en una fila.
+- [ ] Configuración: el logo y los campos usan todo el ancho; Negocio, Pagos, Valores y Sistema llevan a su sección.
+- [ ] La cuenta de Soporte no ve las acciones que cambian algo; sí Ver reservas y Ver QR.
+
 ## 15l. Sesiones que se actualizan solas (28/10/2026)
 
 - [ ] En Usuarios, cerrar la sesión de un cliente: en su teléfono la app deja de mostrar su cuenta en menos de un

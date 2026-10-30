@@ -38,7 +38,7 @@ function formatoPrecio(valor: number) {
     </div>
     <div v-if="mostrarTotal" class="flex items-center justify-between pt-1">
       <dt class="text-xs font-semibold uppercase tracking-[0.1em]" :class="tenue">Total</dt>
-      <dd class="font-display text-xl font-medium text-ink">{{ formatoPrecio(pedido.total) }}</dd>
+      <dd class="font-sans text-xl font-semibold text-ink">{{ formatoPrecio(pedido.total) }}</dd>
     </div>
   </dl>
 </template>

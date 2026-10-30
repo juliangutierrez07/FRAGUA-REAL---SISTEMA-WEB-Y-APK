@@ -6,6 +6,7 @@
 // M09 (20/10/2026): el SuperAdmin marca en el mapa el punto exacto del local (tocando o arrastrando el
 // marcador, o pegando un enlace de Google Maps); «Cómo llegar» abre Google Maps ahí. El Administrador
 // lo ve sin poder moverlo.
+import TarjetaConfiguracion from '@/components/configuracion/TarjetaConfiguracion.vue'
 import { computed, onMounted, ref } from 'vue'
 import { ImagePlus, Link2, MapPinOff, Store, Trash2 } from 'lucide-vue-next'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -167,22 +168,17 @@ async function quitarLogo() {
 </script>
 
 <template>
-  <form class="card p-4 sm:p-5" novalidate @submit.prevent="guardar">
-    <div class="flex items-start gap-3">
-      <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-        <Store :size="21" />
-      </span>
-      <div class="min-w-0 flex-1">
-        <h2 class="text-[15px] font-semibold text-ink">Datos del negocio</h2>
-        <p class="mt-0.5 text-xs text-gray-500">
-          Salen en el Inicio, el pie de página, Reservar, los encabezados de las pantallas y los PDF
-          (comprobante, cierre diario y reportes).
-        </p>
+  <form novalidate @submit.prevent="guardar">
+    <TarjetaConfiguracion :icono="Store" tono="bg-emerald-50 text-emerald-700" titulo="Datos del negocio">
+      <template #descripcion>
+        Salen en el Inicio, el pie de página, Reservar, los encabezados de las pantallas y los PDF
+        (comprobante, cierre diario y reportes).
+      </template>
 
-        <!-- Logo -->
-        <div class="mt-4 flex flex-wrap items-center gap-4 rounded-xl border border-[#ece6db] bg-[#fbfaf7] p-3">
-          <LogoNegocio tamano="size-16" texto="text-2xl" />
-          <div class="min-w-0 flex-1">
+        <!-- Logo. 30/10/2026: en el teléfono, el botón va debajo (antes apretaba el texto en una columna angosta). -->
+        <div class="grid grid-cols-[auto_1fr] items-center gap-3 rounded-xl border border-[#ece6db] bg-[#fbfaf7] p-3 sm:flex sm:gap-4">
+          <LogoNegocio tamano="size-14 sm:size-16" texto="text-xl sm:text-2xl" />
+          <div class="min-w-0 sm:flex-1">
             <p class="text-sm font-medium text-ink">Logo</p>
             <p class="text-xs text-gray-500">
               PNG, JPG o WebP de al menos 64 × 64 px; mejor cuadrado y con fondo transparente. Se ve en un
@@ -190,7 +186,7 @@ async function quitarLogo() {
             </p>
             <p v-if="errorLogo" class="mt-1 text-xs text-red-600">{{ errorLogo }}</p>
           </div>
-          <div class="flex gap-2">
+          <div class="col-span-2 flex gap-2 [&>button:first-of-type]:flex-1 sm:shrink-0 sm:[&>button:first-of-type]:flex-none">
             <input ref="entradaLogo" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" @change="elegirLogo" />
             <BaseButton v-escritura type="button" variant="secondary" :disabled="subiendo" @click="entradaLogo?.click()">
               <ImagePlus :size="16" />
@@ -238,7 +234,7 @@ async function quitarLogo() {
             </div>
 
             <MapaUbicacion
-              class="mt-3 h-64 sm:h-72"
+              class="mt-3 h-52 sm:h-72"
               :latitud="latitud"
               :longitud="longitud"
               :editable="auth.esSuperAdmin"
@@ -290,11 +286,10 @@ async function quitarLogo() {
         <p v-if="exito" class="mt-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ exito }}</p>
 
         <div class="mt-4 flex justify-end">
-          <BaseButton v-escritura type="submit" variant="primary" :disabled="guardando || !hayCambios">
+          <BaseButton v-escritura type="submit" variant="primary" class="w-full sm:w-auto" :disabled="guardando || !hayCambios">
             {{ guardando ? 'Guardando…' : 'Guardar datos del negocio' }}
           </BaseButton>
         </div>
-      </div>
-    </div>
+    </TarjetaConfiguracion>
   </form>
 </template>

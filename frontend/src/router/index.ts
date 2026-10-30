@@ -1,5 +1,5 @@
 import { watch } from 'vue'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { Rol } from '@/types/models'
 
@@ -22,11 +22,19 @@ function esperarSesionLista(auth: ReturnType<typeof useAuthStore>) {
   })
 }
 
+// Corrección (30/10/2026): recargar la página siempre empieza arriba. El menú «Contacto» deja /#contacto en la
+// dirección, y al recargar la página bajaba sola hasta esa sección (o a donde estaba la persona). Se quita el #
+// para que tampoco quede marcado «Contacto». Atrás y Adelante siguen volviendo a la posición guardada.
+const navegacion = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+const esRecarga = navegacion?.type === 'reload'
+if (esRecarga && location.hash) history.replaceState(history.state, '', location.pathname + location.search)
+
 const router = createRouter({
   history: createWebHistory(),
   // Permite enlaces con ancla (p. ej. el "Contacto" del header, que apunta a
   // #contacto en el Home) y deja el scroll donde estaba al usar atrás/adelante.
-  scrollBehavior(to, _from, savedPosition) {
+  scrollBehavior(to, from, savedPosition) {
+    if (esRecarga && from === START_LOCATION) return { top: 0 }
     if (savedPosition) return savedPosition
     if (to.hash) return { el: to.hash, behavior: 'smooth' }
     return { top: 0 }

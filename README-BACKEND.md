@@ -2182,3 +2182,25 @@ inconsistencias con lo que existía o era correcto en Laravel:
     - El municipio, «San José del Fragua», debajo de la dirección en el comprobante (`fragua_real.negocio.ciudad`,
       `FRAGUA_REAL_CIUDAD`), a pedido del negocio.
 
+89. **Panel en el celular (30/10/2026, solo frontend).** Las tarjetas ocupaban casi toda la pantalla porque cada
+    botón iba en su renglón.
+    - `AccionesFila.vue`: en el teléfono, hasta dos acciones salen como botones de solo ícono; con más, un «⋯» abre
+      una hoja inferior con todas. Desde tableta, los botones de siempre. Esconde a Soporte lo que cambia algo.
+    - Mesas: dos tarjetas por fila. Catálogo: filas compactas en categorías, productos, combos, extras y promociones;
+      en productos, los estados normales (Activo, Disponible) solo se ven desde tableta y la categoría va en el
+      renglón del precio.
+    - Auditoría: las tres cifras en una fila (`StatCard` con `compacta`).
+    - Configuración: `TarjetaConfiguracion.vue` (ícono y título arriba, contenido a todo el ancho), bloque del logo
+      sin apretar, botones de guardar a todo el ancho y atajos a cada sección.
+    - El archivo de Fraunces que entrega Google no trae cifras alineadas: los precios, totales y métricas grandes
+      pasan a la letra de texto (`font-sans font-semibold`).
+    - Inicio: en el teléfono, «¿Qué se te antoja hoy?» avanza sola de a una tarjeta cada 3 segundos
+      (`useCarruselAutomatico`). Se detiene 6 segundos al tocarla y no se mueve fuera de la pantalla. Si el dispositivo
+      pide reducir el movimiento, también avanza, pero sin el deslizamiento suave.
+    - Inicio: toda la tarjeta de «Ofertas y combos de hoy» y de los destacados abre el menú con ese combo o producto
+      listo para agregar (`/menu?combo=<id>`, `/menu?producto=<id>`). Antes la de ofertas solo respondía al botón «+».
+    - Recargar la página siempre empieza arriba (`router/index.ts`): antes, con `/#contacto` en la dirección, bajaba
+      sola hasta Contacto. Atrás y Adelante siguen volviendo a la posición guardada.
+    - Menú en computador: el panel del producto usa solo lo que queda de pantalla (`ajustarPanel` en `MenuView.vue`) y
+      su contenido se desplaza por dentro, así «Agregar a mi pedido» siempre se ve, aunque tenga muchas variantes.
+
