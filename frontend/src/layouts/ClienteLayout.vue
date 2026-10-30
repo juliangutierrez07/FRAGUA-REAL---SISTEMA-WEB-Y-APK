@@ -435,7 +435,8 @@ const anioActual = new Date().getFullYear()
         </div>
 
         <div class="mt-10 flex flex-col gap-1.5 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <p class="font-display text-base text-brand-400">El antojo tiene corona.</p>
+          <!-- 29/10/2026: el eslogan oficial del negocio. -->
+          <p class="font-display text-base italic text-brand-400">Donde la vida sabe mejor.</p>
           <p class="text-xs text-[#8b8579]">© {{ anioActual }} Fragua Real Burger. Todos los derechos reservados.</p>
         </div>
       </div>

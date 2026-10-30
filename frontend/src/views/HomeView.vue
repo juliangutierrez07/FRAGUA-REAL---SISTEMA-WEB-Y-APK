@@ -9,18 +9,19 @@
 // Mejora del Inicio (21/10/2026): franja «Ofertas y combos de hoy» (OfertasDeHoy, GET /combos y las
 // promociones vigentes de los productos), destacados elegidos entre los disponibles (primero los que
 // tienen foto) y precios bien escritos (antes salía «Desde 5000.00»).
+// Rediseño del Inicio (29/10/2026): portada oscura con fotos reales de la cocina (antes, en el celular, la primera
+// pantalla era solo texto), categorías que se deslizan en el celular, «Pedir es así de fácil» en vez de la franja
+// de beneficios, reservas con dos fotos y lo que incluye, y un cierre oscuro con foto para pedir o escribir por WhatsApp.
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bike, ChefHat, MapPin, MessageCircle, Plus, SlidersHorizontal } from 'lucide-vue-next'
+import { ArrowRight, Bike, CalendarDays, Check, Crown, Flame, MapPin, MessageCircle, Plus, QrCode, Radar, ShoppingBag, SlidersHorizontal, Store } from 'lucide-vue-next'
 import mascota from '@/assets/img/mascota-fragua-real.png'
-import fotoLocal from '@/assets/img/hamburguesas-fragua-real.jpg'
 import fotoTerraza from '@/assets/img/platos/duo-hamburguesas-terraza.jpg'
 // Fotos flotantes de fondo (decorativas, RN: no se inventan platos — son las
 // mismas fotos reales que ya usa el proyecto en Menú/Home).
 import fotoBacon from '@/assets/img/platos/hamburguesa-bacon-cheddar.jpg'
 import fotoSalchipapa from '@/assets/img/platos/salchipapa.jpg'
 import fotoSandwich from '@/assets/img/platos/sandwich-platano.jpg'
-import fotoDuo1 from '@/assets/img/platos/duo-hamburguesas-1.jpg'
 import CarritoFlotante from '@/components/common/CarritoFlotante.vue'
 import MapaUbicacion from '@/components/common/MapaUbicacion.vue'
 import OfertasDeHoy from '@/components/inicio/OfertasDeHoy.vue'
@@ -96,158 +97,140 @@ const mapaUrl = computed(() => negocio.mapaUrl)
 const latitud = computed(() => negocio.datos.latitud ?? null)
 const longitud = computed(() => negocio.datos.longitud ?? null)
 
-const beneficios = [
-  { icono: ChefHat, titulo: 'Hecho al momento', texto: 'Preparamos tu pedido al confirmarlo.' },
-  { icono: SlidersHorizontal, titulo: 'Como tú lo prefieras', texto: 'Personaliza los ingredientes de tu pedido.' },
-  { icono: Bike, titulo: 'Domicilio o recogida', texto: 'Elige cómo quieres recibirlo.' },
+// Rediseño del Inicio (29/10/2026): lo que se ve en la portada y en «Pedir es así de fácil». Solo lo que el sistema
+// ya hace (domicilio, recogida, el QR de la mesa, personalizar y el seguimiento en vivo).
+const canales = [
+  { icono: Bike, texto: 'Domicilio' },
+  { icono: Store, texto: 'Recoge en el local' },
+  { icono: QrCode, texto: 'Pide desde tu mesa' },
+]
+const pasos = [
+  { icono: SlidersHorizontal, titulo: 'Elige y personaliza', texto: 'Arma tu pedido en el menú y quita o agrega ingredientes a tu gusto.' },
+  { icono: Bike, titulo: 'Escoge cómo recibirlo', texto: 'A domicilio, para recoger en el local o desde tu mesa con el código QR.' },
+  { icono: Radar, titulo: 'Síguelo en vivo', texto: 'Mira cuándo lo confirmamos, lo preparamos y sale hacia ti.' },
+]
+const puntosReserva = [
+  'Eliges el día, la hora y la mesa desde aquí.',
+  'Te confirmamos por correo y te recordamos antes de llegar.',
+  'Tu depósito se descuenta de la cuenta el día de tu visita.',
 ]
 </script>
 
 <template>
   <div class="bg-gradient-to-b from-[#fdf9f0] via-cream to-[#f7f1e2]">
-    <!-- Hero -->
-    <section class="relative overflow-hidden">
+    <!-- Rediseño del Inicio (29/10/2026): portada oscura con fotos reales de la cocina. Antes, en el celular la
+         primera pantalla era solo texto (la comida aparecía al bajar) y en el computador una foto flotante tapaba
+         la frase de arriba. -->
+    <section class="relative isolate overflow-hidden bg-ink text-white">
+      <div class="pointer-events-none absolute -right-32 -top-40 -z-10 size-[520px] rounded-full bg-brand-500/25 blur-3xl" aria-hidden="true" />
+      <div class="pointer-events-none absolute -bottom-48 -left-32 -z-10 size-[460px] rounded-full bg-[#e8956b]/15 blur-3xl" aria-hidden="true" />
       <div
-        class="pointer-events-none absolute -right-24 -top-24 size-[420px] rounded-full bg-brand-200/40 blur-3xl"
-        aria-hidden="true"
-      />
-      <div
-        class="pointer-events-none absolute -bottom-32 -left-20 size-[360px] rounded-full bg-brand-300/25 blur-3xl"
+        class="pointer-events-none absolute inset-0 -z-10 opacity-[0.07] [background-image:radial-gradient(#d6a43a_1px,transparent_1px)] [background-size:22px_22px]"
         aria-hidden="true"
       />
 
-      <!-- Fotos flotantes: decoran las esquinas del hero, fuera del contenido central,
-           con una animación suave de flotación + resplandor de color (ver <style scoped>
-           al final del archivo). La rotación fija va "horneada" dentro de cada @keyframes
-           propio (flotar-1/2/3/4) para que no se pierda durante la animación. -->
-      <div class="foto-flotante-1 pointer-events-none absolute left-[1%] top-[4%] hidden w-28 lg:block" aria-hidden="true">
-        <div class="absolute -inset-5 -z-10 rounded-full bg-brand-400/35 blur-2xl" aria-hidden="true" />
-        <div class="overflow-hidden rounded-[1.25rem] ring-1 ring-white/70 shadow-[0_25px_45px_-12px_rgba(23,21,16,0.45)]">
-          <img :src="fotoBacon" alt="" class="aspect-square w-full object-cover" />
-        </div>
-      </div>
-      <div class="foto-flotante-2 pointer-events-none absolute right-[2%] top-[8%] hidden w-24 lg:block" aria-hidden="true">
-        <div class="absolute -inset-5 -z-10 rounded-full bg-[#e8956b]/35 blur-2xl" aria-hidden="true" />
-        <div class="overflow-hidden rounded-[1.25rem] ring-1 ring-white/70 shadow-[0_25px_45px_-12px_rgba(23,21,16,0.45)]">
-          <img :src="fotoSalchipapa" alt="" class="aspect-square w-full object-cover" />
-        </div>
-      </div>
-      <div class="foto-flotante-3 pointer-events-none absolute bottom-[8%] left-[3%] hidden w-24 xl:block" aria-hidden="true">
-        <div class="absolute -inset-5 -z-10 rounded-full bg-brand-300/35 blur-2xl" aria-hidden="true" />
-        <div class="overflow-hidden rounded-[1.25rem] ring-1 ring-white/70 shadow-[0_25px_45px_-12px_rgba(23,21,16,0.45)]">
-          <img :src="fotoSandwich" alt="" class="aspect-square w-full object-cover" />
-        </div>
-      </div>
-
-      <div class="relative mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:py-24">
+      <div class="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-10 sm:px-6 sm:pt-14 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pb-24 lg:pt-20">
         <div>
-          <div class="mb-6 flex items-center gap-3">
-            <span class="h-0.5 w-6 bg-brand-500" aria-hidden="true" />
-            <span class="text-[11px] font-medium tracking-[2px] text-brand-700">
-              SABOR HECHO AL MOMENTO
-            </span>
-          </div>
-          <h1 class="font-display text-5xl font-medium leading-[1.05] tracking-tight text-ink sm:text-6xl lg:text-[4.5rem]">
-            El antojo tiene corona.
-          </h1>
-          <p class="mt-6 max-w-md text-[17px] leading-relaxed text-[#696159]">
-            Hamburguesas, perros y mucho más, preparados al momento.
+          <p class="inline-flex items-center gap-2 rounded-full border border-brand-500/40 bg-brand-500/10 px-3 py-1 text-[11px] font-medium tracking-[2px] text-brand-300">
+            <Flame :size="13" aria-hidden="true" />
+            HECHO AL MOMENTO
           </p>
-          <div class="mt-8 flex flex-wrap gap-3">
+          <h1 class="mt-5 font-display text-[2.7rem] font-medium leading-[1.02] tracking-tight sm:text-6xl lg:text-[4.6rem]">
+            <!-- 29/10/2026: el eslogan oficial del negocio (antes «El antojo tiene corona.», provisional). -->
+            Donde la vida <span class="italic text-brand-400">sabe mejor.</span>
+          </h1>
+          <p class="mt-5 max-w-md text-[16px] leading-relaxed text-white/70 sm:text-[17px]">
+            Hamburguesas, perros, salchipapas y mucho más, preparados al momento y como tú los prefieras.
+          </p>
+          <div class="mt-7 grid grid-cols-2 gap-3 sm:flex">
             <router-link
               to="/menu"
-              class="rounded-xl bg-brand-500 px-6 py-3 text-sm font-medium text-ink transition hover:bg-brand-400"
+              class="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-brand-500 px-3 py-3 text-[13px] font-semibold text-ink shadow-[0_12px_30px_rgba(214,164,58,0.35)] transition hover:-translate-y-0.5 hover:bg-brand-400 sm:px-7 sm:text-sm"
             >
-              Ver el menú
+              <ShoppingBag :size="17" />
+              Pedir ahora
             </router-link>
             <router-link
               to="/reservar"
-              class="rounded-xl border border-ink px-6 py-3 text-sm font-medium text-ink transition hover:bg-ink hover:text-white"
+              class="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/25 px-3 py-3 text-[13px] font-medium text-white transition hover:border-white/60 hover:bg-white/5 sm:px-7 sm:text-sm"
             >
+              <CalendarDays :size="17" />
               Reservar mesa
             </router-link>
           </div>
-          <p class="mt-8 flex items-center gap-2 text-xs text-[#6a645c]">
-            <Bike :size="15" class="text-brand-700" />
-            Pide a domicilio o recoge en el local.
-          </p>
+          <ul class="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/60">
+            <li v-for="canal in canales" :key="canal.texto" class="flex items-center gap-1.5">
+              <component :is="canal.icono" :size="14" class="text-brand-400" aria-hidden="true" />
+              {{ canal.texto }}
+            </li>
+          </ul>
         </div>
 
-        <div class="relative">
-          <div class="overflow-hidden rounded-3xl border border-[#e3ded4] bg-white shadow-[0_20px_55px_rgba(47,38,20,0.13)]">
-            <div class="aspect-[4/3] overflow-hidden">
-              <img
-                :src="fotoLocal"
-                alt="Hamburguesas de Fragua Real Burger servidas en el local"
-                class="size-full object-cover"
-              />
-            </div>
-            <!-- relative + z-10 + bg-white: esta franja necesita quedar SIEMPRE por encima de
-                 la mascota (ver abajo) y con fondo opaco propio — si no, la mascota (que se
-                 dibuja después en el DOM) tapa "NUESTRA CASA..." en cualquier ancho, de
-                 escritorio a móvil, porque su alto casi siempre cubre esta franja completa. -->
-            <div class="relative z-10 flex items-center justify-between gap-4 bg-white p-5">
-              <div>
-                <p class="text-[10px] font-medium tracking-[1.6px] text-brand-700">
-                  NUESTRA CASA, TU PRÓXIMO ANTOJO
-                </p>
-                <p class="mt-1 font-display text-lg text-ink">Conoce Fragua Real</p>
-              </div>
-              <router-link
-                to="/menu"
-                class="flex size-10 shrink-0 items-center justify-center rounded-full border border-[#ddd7cd] text-ink transition hover:border-brand-500"
-                aria-label="Ver el menú"
-              >
-                →
-              </router-link>
-            </div>
+        <!-- Fotos reales: la principal, una segunda más pequeña y la mascota.
+             29/10/2026: en el celular la foto va alineada con el texto (antes tenía sangría), es cuadrada para que la
+             portada no quede tan larga, la salchipapa baja a la esquina izquierda y el letrero sube a la derecha,
+             donde la mascota ya no lo tapa. -->
+        <div class="relative mx-auto w-full max-w-[420px] pb-6 sm:max-w-[460px] sm:pl-6 lg:max-w-none lg:pl-10">
+          <div class="relative overflow-hidden rounded-[2rem] shadow-[0_35px_70px_-20px_rgba(0,0,0,0.75)] ring-1 ring-white/10">
+            <img
+              :src="fotoBacon"
+              alt="Hamburguesa doble con queso cheddar derretido y tocineta de Fragua Real"
+              class="aspect-square w-full object-cover object-[50%_60%] sm:aspect-[4/4.2]"
+              fetchpriority="high"
+            />
+            <p class="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-ink/75 py-1.5 pl-1.5 pr-3 text-xs font-medium text-white backdrop-blur-sm">
+              <span class="flex size-6 items-center justify-center rounded-full bg-brand-500 text-ink" aria-hidden="true"><Crown :size="12" /></span>
+              Recién salida de la cocina
+            </p>
           </div>
-          <!-- Mascota como acento: se superpone a la FOTO a propósito (se ve bien), pero
-               nunca puede llegar a cruzar la franja de texto de abajo — la franja tiene
-               una altura fija (texto de tamaño fijo, no responsivo) así que "bottom-24"
-               deja un margen contra esa franja igual en cualquier ancho. Antes bajaba
-               hasta salirse de la tarjeta (-bottom-16) y terminaba cruzando la franja por
-               la mitad; el z-10 + bg-white de esa franja evitaba que tapara el texto, pero
-               dejaba a la mascota con medio cuerpo "cortado" por un borde recto — se ve
-               mejor completa, sin cruzar esa línea en absoluto. -->
+          <div class="foto-flotante-1 absolute -left-2 bottom-12 w-[32%] overflow-hidden rounded-2xl border-4 border-ink shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7)] sm:bottom-auto sm:left-0 sm:top-10 sm:w-[36%]" aria-hidden="true">
+            <img :src="fotoSalchipapa" alt="" class="aspect-square w-full object-cover" />
+          </div>
           <img
             :src="mascota"
-            alt="Mascota de Fragua Real Burger saludando con el pulgar arriba"
-            class="pointer-events-none absolute bottom-24 -left-12 w-44 drop-shadow-[0_15px_25px_rgba(0,0,0,0.25)] sm:w-56 lg:w-64"
+            alt="Mascota de Fragua Real Burger con el pulgar arriba"
+            class="mascota-flotante pointer-events-none absolute -bottom-2 -right-2 w-[36%] drop-shadow-[0_18px_28px_rgba(0,0,0,0.55)] sm:-right-6 sm:w-[40%] lg:-right-10"
           />
         </div>
       </div>
     </section>
 
     <!-- Mejora del Inicio (21/10/2026): ofertas y combos que se pueden pedir hoy -->
-    <OfertasDeHoy :productos="productos" :combos="combos" @agregado="alAgregar" />
+    <div class="pt-12 sm:pt-14">
+      <OfertasDeHoy :productos="productos" :combos="combos" @agregado="alAgregar" />
+    </div>
 
-    <!-- Accesos rápidos por categoría -->
-    <section v-if="categoriasDestacadas.length" class="mx-auto max-w-6xl px-4 pb-4 sm:px-6">
-      <div class="mb-6 flex items-center gap-3">
-        <span class="h-0.5 w-6 bg-brand-500" aria-hidden="true" />
-        <span class="text-[11px] font-medium tracking-[2px] text-brand-700">NUESTRA CARTA</span>
+    <!-- Accesos rápidos por categoría. 29/10/2026: en el celular, una fila que se desliza (antes dos filas de
+         tres que ocupaban media pantalla). -->
+    <section v-if="categoriasDestacadas.length" class="mx-auto max-w-6xl pb-4 sm:px-6">
+      <div class="px-4 sm:px-0">
+        <div class="mb-3 flex items-center gap-3">
+          <span class="h-0.5 w-6 bg-brand-500" aria-hidden="true" />
+          <span class="text-[11px] font-medium tracking-[2px] text-brand-700">NUESTRA CARTA</span>
+        </div>
+        <h2 class="font-display text-3xl font-medium tracking-tight text-ink">¿Qué se te antoja hoy?</h2>
       </div>
-      <h2 class="font-display text-3xl font-medium tracking-tight text-ink">¿Qué se te antoja hoy?</h2>
-      <div class="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
+      <div class="mt-6 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:grid sm:grid-cols-6 sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
         <router-link
           v-for="categoria in categoriasDestacadas"
           :key="categoria.id"
           :to="{ name: 'menu', query: { categoria: categoria.nombre } }"
-          class="flex flex-col items-center gap-2 rounded-2xl border border-[#e3ded4] bg-white px-3 py-5 text-center transition hover:-translate-y-0.5 hover:border-brand-500 hover:shadow-[0_10px_20px_rgba(47,38,20,0.08)]"
+          class="group flex w-[6.5rem] shrink-0 snap-start flex-col items-center gap-3 rounded-2xl border border-[#e3ded4] bg-white px-3 py-5 text-center transition hover:-translate-y-0.5 hover:border-brand-500 hover:shadow-[0_14px_28px_rgba(47,38,20,0.10)] sm:w-auto"
         >
-          <component :is="iconoPorNombre(categoria.nombre)" :size="22" class="text-brand-600" />
-          <span class="text-xs font-medium text-ink">{{ categoria.nombre }}</span>
+          <span class="flex size-12 items-center justify-center rounded-full bg-[#fbf0d9] text-brand-700 transition group-hover:bg-brand-500 group-hover:text-ink">
+            <component :is="iconoPorNombre(categoria.nombre)" :size="22" />
+          </span>
+          <span class="text-xs font-semibold text-ink">{{ categoria.nombre }}</span>
         </router-link>
       </div>
     </section>
 
     <!-- Productos destacados -->
     <section v-if="productosDestacados.length" class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      <div class="mb-6 flex items-center justify-between gap-4">
-        <h2 class="font-display text-3xl font-medium tracking-tight text-ink">Empieza por un buen antojo.</h2>
-        <router-link to="/menu" class="shrink-0 text-sm font-medium text-brand-700 hover:text-brand-800">
-          Ver menú completo →
+      <div class="mb-6 flex items-end justify-between gap-4">
+        <h2 class="font-display text-2xl font-medium tracking-tight text-ink sm:text-3xl">Empieza por un buen antojo.</h2>
+        <router-link to="/menu" class="shrink-0 pb-1 text-xs font-medium text-brand-700 hover:text-brand-800 sm:text-sm">
+          Ver todo →
         </router-link>
       </div>
       <!-- Mejora (28/10/2026): en el celular, dos tarjetas por fila del mismo tamaño que las del menú (antes una
@@ -282,56 +265,58 @@ const beneficios = [
       </div>
     </section>
 
-    <!-- Beneficios -->
-    <!-- El fondo de color va en una capa aparte con un degradado de opacidad
-         (mask-image) que lo desvanece arriba y abajo, para que la franja se
-         funda con el fondo crema de la página en vez de cortar en una línea
-         recta — de ahí el padding extra, que le da espacio al desvanecido. -->
-    <section class="relative overflow-hidden py-14">
-      <div
-        class="pointer-events-none absolute inset-0 -z-20 bg-gradient-to-r from-[#f2ead9] via-[#f6efe1] to-[#f2ead9] [mask-image:linear-gradient(to_bottom,transparent,black_28%,black_72%,transparent)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,black_28%,black_72%,transparent)]"
-        aria-hidden="true"
-      />
-      <div
-        class="pointer-events-none absolute -left-16 top-1/2 size-56 -translate-y-1/2 rounded-full bg-brand-300/30 blur-3xl"
-        aria-hidden="true"
-      />
-      <div
-        class="pointer-events-none absolute -right-16 top-1/2 size-56 -translate-y-1/2 rounded-full bg-[#e8956b]/20 blur-3xl"
-        aria-hidden="true"
-      />
-      <div class="relative mx-auto grid max-w-6xl gap-6 divide-y divide-[#e3d7bd] px-4 sm:px-6 md:grid-cols-3 md:divide-x md:divide-y-0">
-        <div v-for="b in beneficios" :key="b.titulo" class="flex items-center gap-3 pt-6 first:pt-0 md:justify-center md:px-6 md:pt-0">
-          <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-brand-700" aria-hidden="true">
-            <component :is="b.icono" :size="17" />
-          </span>
-          <span>
-            <span class="block text-sm font-medium text-ink">{{ b.titulo }}</span>
-            <span class="block text-xs text-[#8a8168]">{{ b.texto }}</span>
-          </span>
+    <!-- Rediseño del Inicio (29/10/2026): «Pedir es así de fácil» en una franja oscura. Reemplaza la franja de
+         beneficios, que casi no se veía (texto claro sobre crema). Todo lo que dice ya lo hace el sistema. -->
+    <section class="relative isolate overflow-hidden bg-ink py-14 text-white sm:py-20">
+      <div class="pointer-events-none absolute -left-24 top-0 -z-10 size-[380px] rounded-full bg-brand-500/15 blur-3xl" aria-hidden="true" />
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="flex items-center gap-3">
+          <span class="h-0.5 w-6 bg-brand-500" aria-hidden="true" />
+          <span class="text-[11px] font-medium tracking-[2px] text-brand-300">CÓMO PEDIR</span>
         </div>
+        <h2 class="mt-3 font-display text-3xl font-medium tracking-tight sm:text-4xl">Pedir es así de fácil.</h2>
+        <ol class="mt-8 grid gap-3 md:mt-10 md:grid-cols-3 md:gap-6">
+          <li
+            v-for="(paso, i) in pasos"
+            :key="paso.titulo"
+            class="relative flex gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition hover:border-brand-500/50 hover:bg-white/[0.06] md:block md:p-6"
+          >
+            <span class="absolute right-5 top-4 font-display text-4xl leading-none text-white/10 md:text-5xl" aria-hidden="true">{{ i + 1 }}</span>
+            <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-ink" aria-hidden="true">
+              <component :is="paso.icono" :size="20" />
+            </span>
+            <div class="pr-6 md:pr-0">
+              <p class="font-display text-lg md:mt-5 md:text-xl">{{ paso.titulo }}</p>
+              <p class="mt-1 text-sm leading-relaxed text-white/65 md:mt-2">{{ paso.texto }}</p>
+            </div>
+          </li>
+        </ol>
+        <router-link
+          to="/menu"
+          class="mt-10 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-7 py-3 text-sm font-semibold text-ink transition hover:bg-brand-400 sm:w-auto"
+        >
+          Empezar mi pedido
+          <ArrowRight :size="16" />
+        </router-link>
       </div>
     </section>
 
-    <!-- Reservas -->
-    <section class="relative overflow-hidden px-4 py-14 sm:px-6">
-      <div
-        class="pointer-events-none absolute -right-24 top-10 size-[340px] rounded-full bg-brand-200/35 blur-3xl"
-        aria-hidden="true"
-      />
-      <div class="foto-flotante-4 pointer-events-none absolute bottom-[10%] left-[2%] hidden w-28 xl:block" aria-hidden="true">
-        <div class="absolute -inset-5 -z-10 rounded-full bg-brand-400/35 blur-2xl" aria-hidden="true" />
-        <div class="overflow-hidden rounded-[1.25rem] ring-1 ring-white/70 shadow-[0_25px_45px_-12px_rgba(23,21,16,0.45)]">
-          <img :src="fotoDuo1" alt="" class="aspect-square w-full object-cover" />
-        </div>
-      </div>
-      <div class="relative mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-2">
-        <div class="overflow-hidden rounded-3xl">
-          <img
-            :src="fotoTerraza"
-            alt="Clientes disfrutando hamburguesas de Fragua Real Burger en la terraza"
-            class="aspect-[4/3] w-full object-cover"
-          />
+    <!-- Reservas. 29/10/2026: dos fotos reales en vez de una, y lo que incluye reservar. -->
+    <section class="relative overflow-hidden px-4 py-16 sm:px-6 sm:py-20">
+      <div class="pointer-events-none absolute -right-24 top-10 size-[340px] rounded-full bg-brand-200/35 blur-3xl" aria-hidden="true" />
+      <div class="relative mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
+        <div class="relative pb-10 pr-10 sm:pb-14 sm:pr-14">
+          <div class="overflow-hidden rounded-3xl shadow-[0_25px_55px_-20px_rgba(47,38,20,0.45)]">
+            <img
+              :src="fotoTerraza"
+              alt="Hamburguesas de Fragua Real Burger servidas en la terraza"
+              class="aspect-[4/3] w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div class="foto-flotante-4 absolute bottom-0 right-0 w-[42%] overflow-hidden rounded-2xl border-4 border-cream shadow-[0_20px_40px_-12px_rgba(23,21,16,0.45)]">
+            <img :src="fotoSandwich" alt="Sándwich de plátano de Fragua Real" class="aspect-square w-full object-cover" loading="lazy" />
+          </div>
         </div>
         <div>
           <div class="mb-4 flex items-center gap-3">
@@ -342,12 +327,21 @@ const beneficios = [
             Tu próxima salida tiene lugar.
           </h2>
           <p class="mt-3 max-w-md text-[15px] leading-relaxed text-[#696159]">
-            Ven con tu familia o amigos y disfruta el sabor de Fragua Real.
+            Ven con tu familia o amigos y disfruta el sabor de Fragua Real. Separa tu mesa en un minuto.
           </p>
+          <ul class="mt-6 space-y-3">
+            <li v-for="punto in puntosReserva" :key="punto" class="flex items-start gap-3 text-sm text-ink">
+              <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-500 text-ink" aria-hidden="true">
+                <Check :size="12" :stroke-width="3" />
+              </span>
+              {{ punto }}
+            </li>
+          </ul>
           <router-link
             to="/reservar"
-            class="mt-6 inline-flex items-center justify-center rounded-xl bg-brand-500 px-6 py-3 text-sm font-medium text-ink transition hover:bg-brand-400"
+            class="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-ink px-7 py-3 text-sm font-medium text-white transition hover:bg-black"
           >
+            <CalendarDays :size="17" />
             Reservar mesa
           </router-link>
         </div>
@@ -406,6 +400,69 @@ const beneficios = [
       </div>
     </section>
 
+    <!-- Rediseño del Inicio (29/10/2026): cierre oscuro con la foto de la hamburguesa y la mascota, para pedir sin
+         volver arriba (opción A que eligió el negocio; antes era una franja dorada con solo texto). -->
+    <section class="px-4 pb-16 sm:px-6">
+      <div class="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-ink text-white">
+        <div class="pointer-events-none absolute -left-20 -top-24 size-80 rounded-full bg-brand-500/25 blur-3xl" aria-hidden="true" />
+        <div class="relative grid items-center md:grid-cols-[1.1fr_1fr]">
+          <div class="px-6 py-10 sm:px-12 sm:py-14">
+            <p class="inline-flex items-center gap-2 rounded-full border border-brand-500/40 bg-brand-500/10 px-3 py-1 text-[11px] font-medium tracking-[2px] text-brand-300">
+              <Flame :size="13" aria-hidden="true" />
+              TU ANTOJO TE ESPERA
+            </p>
+            <h2 class="mt-4 font-display text-4xl font-medium leading-tight sm:text-5xl">
+              ¿Ya se te <span class="italic text-brand-400">antojó?</span>
+            </h2>
+            <p class="mt-3 max-w-md text-[15px] leading-relaxed text-white/70">
+              Lo preparamos al momento y te lo llevamos a la puerta, o lo recoges caliente en el local.
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-3 sm:flex">
+              <router-link
+                to="/menu"
+                class="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-brand-500 px-5 text-sm font-semibold text-ink shadow-[0_12px_30px_rgba(214,164,58,0.3)] transition hover:-translate-y-0.5 hover:bg-brand-400"
+              >
+                <ShoppingBag :size="17" />
+                Pedir ahora
+              </router-link>
+              <a
+                v-if="whatsappUrl"
+                :href="whatsappUrl"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/25 px-5 text-sm font-medium text-white transition hover:border-white/60 hover:bg-white/5"
+              >
+                <MessageCircle :size="17" />
+                WhatsApp
+              </a>
+            </div>
+            <ul class="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/60">
+              <li class="flex items-center gap-1.5"><Bike :size="14" class="text-brand-400" aria-hidden="true" />Domicilio</li>
+              <li class="flex items-center gap-1.5"><Store :size="14" class="text-brand-400" aria-hidden="true" />Recoge en el local</li>
+            </ul>
+          </div>
+          <div class="relative h-64 sm:h-80 md:h-full md:min-h-[360px]">
+            <img
+              :src="fotoBacon"
+              alt="Hamburguesa doble con cheddar y tocineta de Fragua Real"
+              class="absolute inset-0 size-full object-cover object-[50%_60%]"
+              loading="lazy"
+            />
+            <div
+              class="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-transparent md:bg-gradient-to-r md:from-ink md:via-ink/20 md:to-transparent"
+              aria-hidden="true"
+            />
+            <img
+              :src="mascota"
+              alt=""
+              class="mascota-flotante pointer-events-none absolute -bottom-3 right-2 w-32 drop-shadow-[0_15px_25px_rgba(0,0,0,0.6)] sm:w-40"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- En el teléfono: el botón del pedido y el aviso de lo que se agregó desde «Ofertas de hoy». -->
     <CarritoFlotante
       v-if="carrito.totalProductos > 0"
@@ -418,49 +475,36 @@ const beneficios = [
 </template>
 
 <style scoped>
-/* Animación de las fotos flotantes de fondo (hero y reservas) — un balanceo
-   suave y continuo, sin brusquedad, para dar sensación de vida sin distraer.
-   La rotación fija de cada foto va horneada dentro de su propio @keyframes:
-   si se dejara como utilidad de Tailwind aparte (p. ej. -rotate-6), la
-   animación de "transform: translateY(...)" la pisaría en cada fotograma y
-   la foto "saltaría" a rotación 0 durante el movimiento. */
+/* Fotos y mascota que flotan suave (portada y reservas). La rotación fija de cada foto va dentro de su
+   @keyframes: si fuera una utilidad aparte (-rotate-6), el transform de la animación la pisaría.
+   29/10/2026: quien pide menos movimiento en su teléfono las ve quietas. */
 @keyframes flotar-1 {
   0%,
   100% {
     transform: translateY(0) rotate(-6deg);
   }
   50% {
-    transform: translateY(-14px) rotate(-6deg);
-  }
-}
-
-@keyframes flotar-2 {
-  0%,
-  100% {
-    transform: translateY(0) rotate(6deg);
-  }
-  50% {
-    transform: translateY(-14px) rotate(6deg);
-  }
-}
-
-@keyframes flotar-3 {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-3deg);
-  }
-  50% {
-    transform: translateY(-14px) rotate(-3deg);
+    transform: translateY(-12px) rotate(-6deg);
   }
 }
 
 @keyframes flotar-4 {
   0%,
   100% {
-    transform: translateY(0) rotate(6deg);
+    transform: translateY(0) rotate(4deg);
   }
   50% {
-    transform: translateY(-14px) rotate(6deg);
+    transform: translateY(-10px) rotate(4deg);
+  }
+}
+
+@keyframes flotar-mascota {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-2deg);
   }
 }
 
@@ -468,18 +512,21 @@ const beneficios = [
   animation: flotar-1 6s ease-in-out infinite;
 }
 
-.foto-flotante-2 {
-  animation: flotar-2 7.5s ease-in-out infinite;
-  animation-delay: 0.6s;
-}
-
-.foto-flotante-3 {
-  animation: flotar-3 5s ease-in-out infinite;
-  animation-delay: 1.1s;
-}
-
 .foto-flotante-4 {
   animation: flotar-4 7.5s ease-in-out infinite;
   animation-delay: 0.6s;
+}
+
+.mascota-flotante {
+  animation: flotar-mascota 5s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foto-flotante-1,
+  .foto-flotante-4,
+  .mascota-flotante {
+    animation: none;
+  }
 }
 </style>

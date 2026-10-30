@@ -167,8 +167,8 @@ partir de la copia guardada en la base, así una reimpresión dice exactamente l
 
 ## Pruebas automáticas
 
-`backend/tests/Feature` tiene 70 archivos y 486 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
-En total son 487.
+`backend/tests/Feature` tiene 71 archivos y 488 pruebas; `tests/Unit` tiene la de ejemplo de Laravel.
+En total son 489.
 
 ```bash
 php artisan test                    # SQLite en memoria (4 pruebas se saltan: usan funciones de PostgreSQL)
@@ -177,7 +177,7 @@ php artisan test --filter=Caja      # solo las que coinciden
 
 Para correrlas contra PostgreSQL, como en producción, se apunta a una base de prueba con las variables
 `DB_CONNECTION=pgsql`, `DB_DATABASE`, `DB_USERNAME` y `DB_PASSWORD` al lanzar `php artisan test`; ahí
-pasan las 487. Cada prueba cita el requisito que cubre. `DiaCompletoTest` recorre un día completo de
+pasan las 489. Cada prueba cita el requisito que cubre. `DiaCompletoTest` recorre un día completo de
 operación por la API con los tres roles.
 
 ## Qué falta a propósito
@@ -2146,4 +2146,39 @@ inconsistencias con lo que existía o era correcto en Laravel:
       tarjeta de resumen (pedido, reserva, saldo), el código de 6 dígitos en grande y pie con la dirección y el
       WhatsApp del negocio (`NegocioService::contacto()`). Antes salían con la plantilla gris de Laravel y
       textos en inglés («Regards», «If you're having trouble…»). `config/mail.php`: `markdown.theme` = `fragua`.
+
+87. **Rediseño del Inicio (29/10/2026, solo frontend: `HomeView.vue`).**
+    - Portada oscura con fotos reales de la cocina (la hamburguesa de tocineta y cheddar, la salchipapa y la
+      mascota), «Pedir ahora» y «Reservar mesa», y los canales (domicilio, recoger, pedir desde la mesa). Antes,
+      en el celular, la primera pantalla era solo texto y la comida aparecía al bajar; en el computador una foto
+      flotante tapaba la frase de arriba.
+    - Categorías en una fila que se desliza en el celular; «Pedir es así de fácil» (elegir y personalizar,
+      escoger cómo recibirlo, seguirlo en vivo) en una franja oscura, en vez de la franja de beneficios que casi
+      no se veía; reservas con dos fotos y lo que incluye reservar; cierre oscuro con la foto de la hamburguesa, la mascota, «Pedir ahora» y WhatsApp.
+    - Las animaciones se quedan quietas para quien pide menos movimiento en su teléfono.
+
+88. **Diseño de tickets (29/10/2026; M06: RF-M06-009/010; M02: RN-PED-06/09).** Basado en el diseño que compartió
+    el negocio (`ticket-pos-fragua-real.html`), hecho con tablas porque dompdf no entiende flex ni grid.
+    - Comprobante: `comprobantes/_recibo.blade.php` (y `_estilos`), compartido por el ticket de 80 mm y el PDF
+      digital. La marca en dos pisos (FRAGUA REAL / BURGER), el número en una caja negra, los datos del pedido
+      (canal, mesa, cliente, teléfono y dirección de entrega), las columnas CANT · PRODUCTO · VALOR, artículos,
+      subtotal, descuentos, domicilio, el TOTAL grande, los pagos con su hora y el pie. El PDF digital (el que se
+      descarga y llega por correo) pasa de media carta a una tira de 100 mm, con el logo del negocio de marca de
+      agua; el ticket térmico no la lleva (en ese papel el gris sale como puntos y ensucia los productos).
+    - Comanda: el número del pedido en una caja negra, la mesa y la cuenta o el cliente en grande, la hora, la
+      cantidad en un recuadro, el nombre en mayúsculas, la nota enmarcada y los cambios con su etiqueta
+      (AGREGAR, QUITAR tachado, CAMBIAR con «Antes: N»); el total de productos al pie de la comanda nueva.
+    - Letras de dompdf (DejaVu Sans en negrita para la marca y los números, DejaVu Sans Mono para el resto): el
+      servidor no descarga fuentes al dibujar (`isRemoteEnabled` en falso). Para usar Anton y JetBrains Mono, como
+      en el diseño original, hay que agregar sus archivos .ttf al proyecto.
+    - El alto del papel se mide (`App\Support\Documentos\AltoTicket`: se dibuja en un papel alto, se lee dónde
+      quedó `#fin-ticket` y se dibuja con ese alto); antes se estimaba contando renglones.
+    - Se conservan el formato de Impresoras (logo, letra grande, mensaje al pie, copias, hora y quién atiende),
+      las marcas de reimpresión, consulta de Soporte y anulado. `DisenoTicketsTest` (2 pruebas).
+    - Eslogan oficial «Donde la vida sabe mejor» (`fragua_real.negocio.eslogan`, `FRAGUA_REAL_ESLOGAN`): debajo de
+      la marca en el comprobante y en el pie de los correos (`NegocioService::contacto()`). En el sitio reemplaza a
+      «El antojo tiene corona.», que era provisional: título de la portada, pie de página, acceso, título de la
+      pestaña y descripción de la app.
+    - El municipio, «San José del Fragua», debajo de la dirección en el comprobante (`fragua_real.negocio.ciudad`,
+      `FRAGUA_REAL_CIUDAD`), a pedido del negocio.
 

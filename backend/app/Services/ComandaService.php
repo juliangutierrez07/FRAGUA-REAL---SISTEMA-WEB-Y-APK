@@ -7,6 +7,7 @@ use App\Models\Pedido;
 use App\Models\PedidoDetalle;
 use App\Models\PedidoModificacion;
 use App\Models\User;
+use App\Support\Documentos\AltoTicket;
 use App\Support\Documentos\RegistroImpresiones;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Collection;
@@ -391,17 +392,11 @@ class ComandaService
         $f = $formato ?? app(ImpresionService::class)->formato();
         $c = $comanda->contenido;
         $c['atiende'] ??= $comanda->pedido?->confirmadoPor?->nombre;
-        $lineas = $c['lineas'] ?? [];
-        $grande = (bool) $f['comanda_letra_grande'];
-        // dompdf no ajusta el alto solo: un renglón por línea, más extras, componentes y notas.
-        $renglones = collect($lineas)->sum(fn ($l) => 1 + (mb_strlen($l['nombre']) > ($grande ? 15 : 20) ? 1 : 0)
-            + (empty($l['extras']) ? 0 : 1) + count($l['componentes'] ?? []) + (empty($l['observaciones']) ? 0 : 2))
-            + ($reimpresion ? 2 : 0) + (empty($c['motivo']) ? 0 : 2) + 9
-            + ($f['comanda_mostrar_mesero'] && ! empty($c['atiende']) ? 1 : 0) - ($f['comanda_mostrar_hora'] ? 0 : 1)
-            + ((int) $f['copias_comanda'] > 1 ? 1 : 0);
+        $datos = ['comanda' => $comanda, 'c' => $c, 'reimpresion' => $reimpresion, 'f' => $f];
 
-        return Pdf::loadView('comandas.ticket', ['comanda' => $comanda, 'c' => $c, 'reimpresion' => $reimpresion, 'f' => $f])
+        // dompdf no ajusta el alto solo. Diseño de tickets (29/10/2026): se mide (antes se contaban renglones).
+        return AltoTicket::ajustado(fn (float $alto) => Pdf::loadView('comandas.ticket', $datos)
             ->setOption(RegistroImpresiones::OPCIONES_PDF)
-            ->setPaper([0, 0, self::ANCHO_TICKET_PUNTOS, 40 + $renglones * ($grande ? 16.5 : 13)]);
+            ->setPaper([0, 0, self::ANCHO_TICKET_PUNTOS, $alto]));
     }
 }

@@ -72,6 +72,7 @@ class NegocioService
             'direccion' => Configuracion::obtener(self::DIRECCION) ?? ($base['direccion'] ?? ''),
             'telefono' => $telefono,
             'whatsapp_url' => $this->whatsapp($telefono),
+            'eslogan' => (string) config('fragua_real.negocio.eslogan', ''),
         ];
     }
 

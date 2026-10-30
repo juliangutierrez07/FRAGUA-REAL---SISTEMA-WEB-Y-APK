@@ -351,6 +351,15 @@ Antes: el SuperAdmin puso al menos una cuenta en Configuración > «Cuentas para
       nuevo».
 - [ ] Quien se registra con el correo de otra persona no ve las reservas de esa persona.
 
+## 13h. Inicio rediseñado (29/10/2026)
+
+- [ ] En el celular, la primera pantalla muestra la portada oscura con «Pedir ahora» y «Reservar mesa» lado a
+      lado y, debajo, la foto de la hamburguesa con la mascota; nada se sale de la pantalla a los lados.
+- [ ] Las categorías se deslizan con el dedo; cada una abre el menú en esa categoría.
+- [ ] «Pedir es así de fácil» muestra los tres pasos y «Empezar mi pedido» lleva al menú.
+- [ ] El cierre oscuro «¿Ya se te antojó?» muestra la foto con la mascota, «Pedir ahora» y «WhatsApp» (en el celular,
+      los dos botones lado a lado y la foto debajo).
+
 ## 13g. Seguimiento, sesión cerrada y correos (28/10/2026)
 
 - [ ] Como invitado, al confirmar el pedido aparece «Sigue tu pedido en vivo» con «Seguir mi pedido» y «Copiar

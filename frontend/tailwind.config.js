@@ -44,8 +44,9 @@ export default {
         },
       },
       fontFamily: {
-        display: ['"Playfair Display"', 'serif'], // títulos
-        sans: ['"DM Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'], // cuerpo/UI
+        // 29/10/2026: Fraunces (títulos) y Outfit (textos y paneles); antes Playfair Display y DM Sans.
+        display: ['Fraunces', 'Georgia', 'serif'], // títulos
+        sans: ['Outfit', 'ui-sans-serif', 'system-ui', 'sans-serif'], // cuerpo/UI
       },
       boxShadow: {
         // Sombras cálidas (tinte del negro de marca, no negro puro): tarjetas de lista,

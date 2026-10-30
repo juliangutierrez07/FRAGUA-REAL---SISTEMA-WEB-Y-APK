@@ -29,6 +29,10 @@ return [
         'nit' => env('FRAGUA_REAL_NIT', ''),
         'direccion' => env('FRAGUA_REAL_DIRECCION', 'Esquina frente al malecón turístico, etapa 1'),
         'telefono' => env('FRAGUA_REAL_TELEFONO', '322 725 9965'),
+        // 29/10/2026: el municipio, debajo de la dirección en el comprobante.
+        'ciudad' => env('FRAGUA_REAL_CIUDAD', 'San José del Fragua'),
+        // 29/10/2026: el eslogan oficial, en el comprobante y en el pie de los correos.
+        'eslogan' => env('FRAGUA_REAL_ESLOGAN', 'Donde la vida sabe mejor'),
     ],
 
     // RF-M01-012/013: base del enlace que RecuperarPasswordNotification arma hacia

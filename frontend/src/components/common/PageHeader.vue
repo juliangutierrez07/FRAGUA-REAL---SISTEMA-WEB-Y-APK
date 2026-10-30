@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Encabezado común de las pantallas de Mesero/Administrador: línea dorada + sobretítulo (igual
-// que las secciones del sitio del Cliente), título en Playfair y descripción. Las acciones
+// que las secciones del sitio del Cliente), título en la fuente de títulos (Fraunces) y descripción. Las acciones
 // (slot "actions") se apilan debajo en teléfono y ocupan todo el ancho — fáciles de tocar —;
 // desde sm se alinean a la derecha del título.
 defineProps<{ titulo: string; descripcion?: string; eyebrow?: string }>()

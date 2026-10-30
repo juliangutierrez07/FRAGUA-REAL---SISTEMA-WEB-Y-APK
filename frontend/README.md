@@ -4,7 +4,7 @@ Aplicación web (SPA) en Vue 3 con TypeScript y Vite que usa la API de Laravel d
 tres zonas, una por rol: la web pública del Cliente, el panel del Mesero y el del Administrador.
 
 **Tecnología**: Vue 3 (`<script setup>`), TypeScript, Vite 6, Vue Router 4, Pinia, Tailwind CSS 3
-(paleta de marca `brand`, `ink` y `cream`; títulos en Playfair Display y texto en DM Sans, desde Google Fonts), íconos Lucide,
+(paleta de marca `brand`, `ink` y `cream`; títulos en Fraunces y texto en Outfit, desde Google Fonts — hasta el 29/10/2026 eran Playfair Display y DM Sans), íconos Lucide,
 Axios, `qrcode` y `jspdf` para el QR imprimible de las mesas, y Leaflet con OpenStreetMap para los mapas (ubicación del negocio y del domicilio).
 
 ## Correrlo

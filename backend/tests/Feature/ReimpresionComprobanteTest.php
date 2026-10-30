@@ -106,7 +106,7 @@ class ReimpresionComprobanteTest extends TestCase
         $this->assertStringContainsString('Impresa el', $copia);
 
         $pdf = view('comprobantes.pdf', $datos + ['reimpresion' => ['vez' => 2, 'fecha' => now()->toIso8601String()]])->render();
-        $this->assertStringContainsString('REIMPRESIÓN · copia 2', $pdf);
+        $this->assertStringContainsString('*** REIMPRESIÓN · COPIA 2 ***', $pdf); // 29/10/2026: el mismo diseño del ticket
     }
 
     public function test_lo_que_abre_el_cliente_o_le_llega_por_correo_no_cuenta_ni_se_marca(): void

@@ -7,7 +7,7 @@
 // Menú para elegirla. El precio es para mostrar: el total real lo calcula el servidor (RF-M04-035).
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Check, Plus, Sparkles } from 'lucide-vue-next'
+import { Check, ChevronRight, Plus, Sparkles } from 'lucide-vue-next'
 import { useCarritoStore } from '@/stores/carrito'
 import { componentesCombo } from '@/utils/combos'
 import { iconoPorNombre } from '@/utils/iconoCategoria'
@@ -110,43 +110,46 @@ function agregar(o: Oferta) {
       </router-link>
     </div>
 
-    <!-- En el teléfono se desliza de lado (con imán en cada tarjeta); desde tableta, cuadrícula. -->
-    <div class="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+    <!-- En el teléfono se desliza de lado (con imán en cada tarjeta); desde tableta, cuadrícula.
+         29/10/2026: en el teléfono, del tamaño de las tarjetas del menú (antes una ocupaba casi toda la pantalla);
+         se ven dos y un pedazo de la siguiente, y «Agregar» es el botón redondo «+». -->
+    <div class="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
       <article
         v-for="o in ofertas"
         :key="o.clave"
-        class="flex w-[78%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#e3ded4] bg-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(47,38,20,0.10)] sm:w-auto"
+        class="flex w-[44%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#e3ded4] bg-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(47,38,20,0.10)] sm:w-auto"
       >
         <div class="relative flex aspect-[4/3] items-center justify-center bg-[#fbf0d9]">
           <img v-if="o.foto" :src="o.foto" :alt="o.nombre" class="size-full object-cover" loading="lazy" />
-          <component v-else :is="iconoPorNombre(o.nombre)" :size="40" class="text-brand-500" aria-hidden="true" />
+          <component v-else :is="iconoPorNombre(o.nombre)" :size="30" :stroke-width="1.5" class="text-brand-500" aria-hidden="true" />
           <span
-            class="absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm"
+            class="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[11px]"
             :class="o.tipo === 'combo' ? 'bg-ink text-brand-300' : 'bg-red-600 text-white'"
           >
             {{ o.etiqueta }}
           </span>
         </div>
-        <div class="flex flex-1 flex-col p-4">
-          <p class="font-display text-lg leading-snug text-ink">{{ o.nombre }}</p>
-          <p v-if="o.detalle" class="mt-1 line-clamp-2 text-xs text-[#6c655c]">{{ o.detalle }}</p>
-          <div class="mt-auto flex items-end justify-between gap-3 pt-4">
-            <p class="leading-tight">
-              <span v-if="o.antes" class="block text-xs text-[#a59d90] line-through">{{ formatoPrecio(o.antes) }}</span>
-              <span class="whitespace-nowrap text-lg font-semibold text-ink">
-                <span v-if="o.tipo === 'producto' && !o.directo" class="text-xs font-medium text-[#6c655c]">Desde </span>{{ formatoPrecio(o.precio) }}
+        <div class="flex flex-1 flex-col p-2.5 sm:p-4">
+          <p class="font-display text-[15px] leading-snug text-ink sm:text-lg">{{ o.nombre }}</p>
+          <p v-if="o.detalle" class="mt-1 line-clamp-2 text-[11px] text-[#6c655c] sm:text-xs">{{ o.detalle }}</p>
+          <div class="mt-auto flex items-end justify-between gap-2 pt-2.5 sm:gap-3 sm:pt-4">
+            <p class="min-w-0 leading-tight">
+              <span v-if="o.antes" class="block text-[11px] text-[#a59d90] line-through sm:text-xs">{{ formatoPrecio(o.antes) }}</span>
+              <span class="whitespace-nowrap text-sm font-semibold text-ink sm:text-lg">
+                <span v-if="o.tipo === 'producto' && !o.directo" class="text-[11px] font-medium text-[#6c655c] sm:text-xs">Desde </span>{{ formatoPrecio(o.precio) }}
               </span>
             </p>
             <button
               type="button"
-              class="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold transition"
+              class="inline-flex size-8 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition sm:size-auto sm:min-h-10 sm:rounded-xl sm:px-3.5"
               :class="recienAgregado === o.clave ? 'bg-emerald-600 text-white' : 'bg-brand-500 text-ink hover:bg-brand-400'"
               :aria-label="o.directo ? `Agregar ${o.nombre} al pedido` : `Elegir presentación de ${o.nombre}`"
               @click="agregar(o)"
             >
               <Check v-if="recienAgregado === o.clave" :size="16" />
               <Plus v-else-if="o.directo" :size="16" />
-              {{ recienAgregado === o.clave ? 'Listo' : o.directo ? 'Agregar' : 'Elegir' }}
+              <ChevronRight v-else :size="16" class="sm:hidden" />
+              <span class="hidden sm:inline">{{ recienAgregado === o.clave ? 'Listo' : o.directo ? 'Agregar' : 'Elegir' }}</span>
             </button>
           </div>
         </div>

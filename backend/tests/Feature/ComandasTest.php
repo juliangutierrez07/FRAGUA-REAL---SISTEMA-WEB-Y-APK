@@ -184,8 +184,10 @@ class ComandasTest extends TestCase
         $this->imprimir($segunda);
         $html = view('comandas.ticket', $this->dibujado)->render();
         $this->assertStringContainsString('CAMBIOS AL PEDIDO', $html);
-        $this->assertStringContainsString('[CAMBIAR] 3 × Clásica', $html);
-        $this->assertStringContainsString('(antes 1)', $html);
+        // Diseño de tickets (29/10/2026): la acción va en su etiqueta y la cantidad en un recuadro.
+        $this->assertMatchesRegularExpression('/<span>3<\/span><\/td>\s*<td>\s*<span class="accion">CAMBIAR<\/span>/u', $html);
+        $this->assertStringContainsString('<div class="nombre">Clásica</div>', $html);
+        $this->assertStringContainsString('Antes: 1', $html);
 
         // Otro cambio después de imprimir la hoja 2: sale la hoja 3.
         $servicio->agregarLinea($pedido->fresh(), ['producto_id' => $this->papas->id, 'cantidad' => 1], $this->mesero);

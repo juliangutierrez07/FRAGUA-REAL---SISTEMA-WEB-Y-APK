@@ -84,7 +84,7 @@ const contenido = computed(() => contenidoPorRuta[String(route.name)] ?? conteni
         </div>
       </div>
 
-      <p class="mt-10 text-center text-xs text-[#a39c8f]">Fragua Real Burger · El antojo tiene corona.</p>
+      <p class="mt-10 text-center text-xs text-[#a39c8f]">Fragua Real Burger · Donde la vida sabe mejor.</p>
     </div>
   </div>
 </template>

@@ -104,10 +104,12 @@ class ComprobantePagoTest extends TestCase
         $datos = ['c' => $comprobante->detalle, 'comprobante' => $comprobante];
 
         $ticket = view('comprobantes.ticket', $datos)->render();
-        $this->assertStringContainsString('COMPROBANTE DE PAGO FR-000001', $ticket);
-        $this->assertStringContainsString('2 Clásica', $ticket);
+        // Diseño de tickets (29/10/2026): la etiqueta y el número van en renglones aparte, y la cantidad en su columna.
+        $this->assertStringContainsString('COMPROBANTE DE PAGO', $ticket);
+        $this->assertStringContainsString('<span>FR-000001</span>', $ticket);
+        $this->assertMatchesRegularExpression('/<td class="cant">2<\/td>\s*<td>Clásica/u', $ticket);
         $this->assertStringContainsString('$40.000', $ticket);
-        $this->assertStringContainsString('No es factura electrónica.', $ticket);
+        $this->assertStringContainsString('no es una factura electrónica.', $ticket);
         $this->assertStringContainsString('Fragua Real Burger', $ticket);
         $this->assertStringNotContainsString('NIT', $ticket, 'sin NIT configurado no se imprime');
 
@@ -117,7 +119,7 @@ class ComprobantePagoTest extends TestCase
         $conNit = Comprobante::latest('id')->first();
         $pdf = view('comprobantes.pdf', ['c' => $conNit->detalle, 'comprobante' => $conNit])->render();
         $this->assertStringContainsString('NIT 900.123.456-7', $pdf);
-        $this->assertStringContainsString('Comprobante de pago', $pdf);
+        $this->assertStringContainsString('COMPROBANTE DE PAGO', $pdf);
     }
 
     public function test_al_anular_el_pago_se_anula_el_comprobante_y_el_nuevo_pago_saca_otro_numero(): void

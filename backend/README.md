@@ -19,7 +19,7 @@ otras dos terminales.
 ## Pruebas
 
 ```bash
-php artisan test              # 487 pruebas, SQLite en memoria
+php artisan test              # 489 pruebas, SQLite en memoria
 ```
 
 ## Dónde está cada cosa

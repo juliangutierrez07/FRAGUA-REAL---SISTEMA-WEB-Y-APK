@@ -326,6 +326,14 @@ Usuarios.
 - [ ] Al cobrar, un cliente que no ha confirmado su correo no aparece por correo («Prueba con su documento o su
       celular»); por documento sí.
 
+## 8b-duodecies. Diseño de comprobantes y comandas (29/10/2026)
+
+- [ ] El comprobante impreso sale en una sola tira, con FRAGUA REAL arriba, el número en una caja negra, los
+      productos en columnas, el TOTAL grande y los pagos. No sobra papel en blanco al final.
+- [ ] La comanda muestra el número del pedido en negro, la mesa (y la cuenta) en grande, la cantidad en un
+      recuadro y la nota enmarcada. En una hoja de cambios, cada línea dice AGREGAR, QUITAR o CAMBIAR.
+- [ ] En Impresoras, la letra grande, el logo, el mensaje al pie y las copias siguen funcionando en la vista previa.
+
 ## 8c. Correcciones del 19/10/2026
 
 - [ ] Con una mesa dada de baja por el Administrador: no aparece en Mesas, ni en Nuevo pedido, ni en

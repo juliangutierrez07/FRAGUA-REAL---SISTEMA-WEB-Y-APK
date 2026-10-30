@@ -15,7 +15,7 @@ backend (API en Laravel) y el frontend (aplicación web en Vue).
 
 - El plan de implementación está completo: Fases 0 a 7, más el endurecimiento de seguridad, la prueba
   de un día completo de operación y las listas de revisión manual por rol.
-- 487 pruebas automáticas, que pasan en SQLite y en PostgreSQL.
+- 489 pruebas automáticas, que pasan en SQLite y en PostgreSQL.
 - Comanda automática (27/10/2026): el pedido que toma el Mesero (o el Administrador) se confirma al
   crearlo y su comanda sale sola en la impresora de la cocina; los del QR y la web se siguen confirmando.
 - Pago en línea sin Wompi (22/10/2026): el Cliente transfiere a Nequi, a la cuenta Bancolombia o a la
@@ -123,7 +123,7 @@ con la contraseña `password`. El detalle, la puesta en producción y la configu
 
 ```bash
 cd backend
-php artisan test              # 487 pruebas (SQLite en memoria)
+php artisan test              # 489 pruebas (SQLite en memoria)
 ```
 
 Cada prueba lleva en su nombre o en su comentario el requisito que cubre. `DiaCompletoTest` recorre un

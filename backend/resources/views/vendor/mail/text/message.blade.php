@@ -23,7 +23,7 @@
     {{-- Footer --}}
     <x-slot:footer>
         <x-mail::footer>
-            {{ $negocio['nombre'] }}@if ($negocio['direccion']) · {{ $negocio['direccion'] }}@endif @if ($negocio['telefono']) · WhatsApp {{ $negocio['telefono'] }}@endif
+            {{ $negocio['nombre'] }}@if ($negocio['eslogan']) · {{ $negocio['eslogan'] }}@endif @if ($negocio['direccion']) · {{ $negocio['direccion'] }}@endif @if ($negocio['telefono']) · WhatsApp {{ $negocio['telefono'] }}@endif
         </x-mail::footer>
     </x-slot:footer>
 </x-mail::layout>

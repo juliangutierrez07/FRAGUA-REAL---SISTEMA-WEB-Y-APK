@@ -12,8 +12,8 @@
   body {
     @apply bg-cream font-sans text-ink;
   }
-  /* Playfair Display usa por defecto cifras "de estilo antiguo" (el 10 se lee como "1o") — mal
-     para precios, números de mesa y de pedido. Cifras alineadas (lining) en todos los títulos. */
+  /* Cifras alineadas (lining) en todos los títulos: las «de estilo antiguo» de algunas fuentes con
+     serifa (el 10 se lee como "1o") quedan mal en precios, números de mesa y de pedido. */
   .font-display {
     font-variant-numeric: lining-nums;
   }

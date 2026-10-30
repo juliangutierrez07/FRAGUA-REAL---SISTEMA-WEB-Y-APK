@@ -851,6 +851,19 @@ Al escribir `QA-CLIENTE.md` y `QA-MESERO.md` se cruzó cada pantalla con el cód
   no hace falta configurar nada nuevo en nginx. En el servidor: `php artisan migrate --force`; las
   tareas `notificaciones:revisar` (cada minuto) y `notificaciones:limpiar` (cada noche) ya entran con
   el cron de siempre. Las horas se cambian con `FRAGUA_REAL_NOTIF_*` en el `.env`.
+- **Comprobantes y comandas con diseño (29/10/2026).** El comprobante impreso y el PDF que llega por correo
+  llevan la marca, el número destacado y el total grande; el PDF digital ahora es una tira que se lee bien en el
+  celular. La comanda se lee de lejos en la cocina: número del pedido, mesa, cantidades y notas destacados. Solo
+  cambia el servidor (no hay migraciones).
+- **Eslogan oficial (29/10/2026).** «Donde la vida sabe mejor» va en la portada, el pie del sitio, el comprobante y
+  los correos. Si algún día cambia: `FRAGUA_REAL_ESLOGAN` en el `.env` del servidor (comprobante y correos) y el
+  texto de la portada y del pie en el frontend.
+- **Municipio en el comprobante (29/10/2026).** «San José del Fragua» va debajo de la dirección; se cambia con
+  `FRAGUA_REAL_CIUDAD` en el `.env` del servidor.
+- **Inicio rediseñado (29/10/2026).** Portada oscura con fotos reales de la comida desde la primera pantalla
+  del celular, categorías que se deslizan, «Pedir es así de fácil», reservas con más fotos y un cierre para
+  pedir o escribir por WhatsApp. Las fuentes pasan a Fraunces (títulos) y Outfit (textos), en todo el sistema.
+  Solo cambia el frontend.
 - **Seguimiento, sesiones y correos (28/10/2026).** El Cliente sigue su pedido también desde «Mis pedidos»; al
   invitado, el enlace se muestra con botones («Seguir mi pedido», «Copiar enlace»). Si el Administrador cierra la
   sesión de alguien, su app lo saca enseguida (antes el pedido que hacía llegaba como de invitado) y Usuarios

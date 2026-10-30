@@ -24,6 +24,7 @@
 {{-- Footer --}}
 <x-slot:footer>
 <x-mail::footer>
+@if ($negocio['eslogan'])*{{ $negocio['eslogan'] }}*<br>@endif
 **{{ $negocio['nombre'] }}**@if ($negocio['direccion']) · {{ $negocio['direccion'] }}@endif<br>
 @if ($negocio['whatsapp_url'])
 ¿Dudas? Escríbenos por [WhatsApp al {{ $negocio['telefono'] }}]({{ $negocio['whatsapp_url'] }}) o visita [nuestro sitio]({{ rtrim((string) config('fragua_real.frontend_url'), '/') }}).

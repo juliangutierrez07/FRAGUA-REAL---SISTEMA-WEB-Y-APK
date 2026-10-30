@@ -7,6 +7,7 @@ use App\Models\Pago;
 use App\Models\Pedido;
 use App\Models\PedidoDetalle;
 use App\Models\User;
+use App\Support\Documentos\AltoTicket;
 use App\Support\Documentos\RegistroImpresiones;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DomPdf;
@@ -36,6 +37,7 @@ use Symfony\Component\HttpFoundation\Response;
 class ComprobanteService
 {
     public const ANCHO_TICKET_PUNTOS = 226.77; // 80 mm
+    public const ANCHO_DIGITAL_PUNTOS = 283.46; // 100 mm, el PDF que se descarga o llega por correo
 
     // Solo las letras usadas de la fuente (el PDF va por correo) y nada remoto al dibujar.
     private const OPCIONES = RegistroImpresiones::OPCIONES_PDF;
@@ -120,7 +122,9 @@ class ComprobanteService
         $datos = ['c' => $comprobante->detalle, 'comprobante' => $comprobante, 'reimpresion' => $reimpresion,
             'logo' => app(NegocioService::class)->logoParaPdf()];
 
-        return Pdf::loadView('comprobantes.pdf', $datos)->setOption(self::OPCIONES)->setPaper('a5', 'portrait');
+        // Diseño de tickets (29/10/2026): el mismo diseño del ticket en una tira de 100 mm (antes media carta).
+        return AltoTicket::ajustado(fn (float $alto) => Pdf::loadView('comprobantes.pdf', $datos)->setOption(self::OPCIONES)
+            ->setPaper([0, 0, self::ANCHO_DIGITAL_PUNTOS, $alto]));
     }
 
     /**
@@ -131,18 +135,11 @@ class ComprobanteService
     {
         $f = $formatoTicket ?? app(ImpresionService::class)->formato();
         $logo = $f['ticket_logo'] ? app(NegocioService::class)->logoParaPdf() : null;
-        $grande = $f['ticket_letra'] === 'grande';
-        $d = $comprobante->detalle;
-        // dompdf no ajusta el alto solo: se calcula con lo que lleva el ticket.
-        // Un renglón por línea (dos si el nombre es largo o lleva extras), pagos, descuentos y lo fijo.
-        $renglones = collect($d['lineas'] ?? [])->sum(fn ($l) => 1 + (mb_strlen($l['nombre']) > ($grande ? 19 : 24) ? 1 : 0) + (empty($l['extras']) ? 0 : 1))
-            + count($d['pagos'] ?? []) + count($d['descuentos'] ?? []) + ($comprobante->anulado_at ? 3 : 0) + ($reimpresion ? 2 : 0) + 17
-            + ($logo ? 5 : 0) + (int) ceil(mb_strlen((string) $f['ticket_mensaje_pie']) / ($grande ? 30 : 38)) - 1
-            + ((int) $f['copias_comprobante'] > 1 ? 1 : 0);
-        $datos = ['c' => $d, 'comprobante' => $comprobante, 'reimpresion' => $reimpresion, 'logo' => $logo, 'f' => $f];
+        $datos = ['c' => $comprobante->detalle, 'comprobante' => $comprobante, 'reimpresion' => $reimpresion, 'logo' => $logo, 'f' => $f];
 
-        return Pdf::loadView('comprobantes.ticket', $datos)->setOption(self::OPCIONES)
-            ->setPaper([0, 0, self::ANCHO_TICKET_PUNTOS, 30 + $renglones * ($grande ? 12.6 : 11.5)]);
+        // dompdf no ajusta el alto solo. Diseño de tickets (29/10/2026): se mide (antes se contaban renglones).
+        return AltoTicket::ajustado(fn (float $alto) => Pdf::loadView('comprobantes.ticket', $datos)->setOption(self::OPCIONES)
+            ->setPaper([0, 0, self::ANCHO_TICKET_PUNTOS, $alto]));
     }
 
     // ───────────── internos ─────────────
